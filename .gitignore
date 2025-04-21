@@ -1,0 +1,15 @@
+*.env
+.env
+/node_modules
+*/node_modules
+/.DS_Store
+/.idea
+/.vscode
+/.history
+/.eslintcache
+/.cache
+/.next
+/.nuxt
+/.nuxtignore
+
+
