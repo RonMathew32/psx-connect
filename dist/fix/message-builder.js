@@ -74,8 +74,8 @@ class FixMessageBuilder {
         const body = this.fields
             .map(field => `${field.tag}=${field.value}`)
             .join(constants_1.SOH);
-        // Calculate body length
-        const bodyLength = body.length + 2; // +2 for the SOH delimiters
+        // Calculate body length (length of the body plus the SOH after each field)
+        const bodyLength = body.length + this.fields.length - 1;
         // Create the message
         const message = `${constants_1.FieldTag.BEGIN_STRING}=${this.beginString}${constants_1.SOH}${constants_1.FieldTag.BODY_LENGTH}=${bodyLength}${constants_1.SOH}${body}${constants_1.SOH}`;
         // Calculate checksum

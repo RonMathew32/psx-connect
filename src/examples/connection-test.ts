@@ -10,8 +10,8 @@ const config = {
   port: parseInt(process.env.FIX_PORT || '8016'),
   senderCompId: process.env.FIX_SENDER || 'realtime',
   targetCompId: process.env.FIX_TARGET || 'NMDUFISQ0001',
-  username: process.env.FIX_SENDER || 'realtime',
-  password: process.env.FIX_TARGET || 'NMDUFISQ0001',
+  username: process.env.FIX_USERNAME || 'realtime',
+  password: process.env.FIX_PASSWORD || 'NMDUFISQ0001',
   heartbeatIntervalSecs: parseInt(process.env.FIX_HEARTBEAT_INTERVAL || '30')
 };
 
