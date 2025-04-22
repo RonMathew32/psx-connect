@@ -501,6 +501,7 @@ export class FixClient extends EventEmitter {
       }
       
       logger.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
+      logger.debug(`Sending: ${message}`);
       this.socket.write(message);
       this.lastActivityTime = Date.now();
     } catch (error) {
