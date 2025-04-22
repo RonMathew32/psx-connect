@@ -405,6 +405,7 @@ class FixClient extends events_1.EventEmitter {
                 message = newMessage + `10=${checksum}${constants_1.SOH}`;
             }
             logger_1.default.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
+            logger_1.default.debug(`Sending: ${message}`);
             this.socket.write(message);
             this.lastActivityTime = Date.now();
         }
