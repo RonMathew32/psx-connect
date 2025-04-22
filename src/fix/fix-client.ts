@@ -776,6 +776,7 @@ export class FixClient extends EventEmitter {
     
     logger.info("Sending logon message with exact PSX format");
     logger.debug(`Logon message: ${finalMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+    logger.debug(`Logon message: ${finalMessage}`);
     
     if (!this.socket || !this.connected) {
       logger.warn('Cannot send logon: not connected');
