@@ -52,6 +52,7 @@ var FieldTag;
     FieldTag[FieldTag["SYMBOL"] = 55] = "SYMBOL";
     FieldTag[FieldTag["MD_ENTRY_TYPE"] = 269] = "MD_ENTRY_TYPE";
     FieldTag[FieldTag["TRADING_SESSION_ID"] = 336] = "TRADING_SESSION_ID";
+    FieldTag[FieldTag["TEXT"] = 58] = "TEXT";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;

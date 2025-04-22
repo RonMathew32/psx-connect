@@ -39,25 +39,55 @@ class FixClient extends events_1.EventEmitter {
         this.disconnect();
     }
     /**
-     * Connect to the FIX server and return a promise
+     * Connect to the FIX server
      */
     connect() {
         return new Promise((resolve, reject) => {
             if (this.socket) {
+                logger_1.default.warn('Socket already exists, disconnecting first');
                 this.socket.destroy();
                 this.socket = null;
             }
+            // Reset state
+            this.connected = false;
+            this.loggedIn = false;
+            this.receivedData = '';
+            this.lastActivityTime = 0;
+            this.testRequestCount = 0;
+            // Reset sequence number on each reconnect
+            this.msgSeqNum = 1;
             logger_1.default.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
-            this.socket = new net_1.default.Socket();
-            // Set up one-time connect handler for the promise
-            this.socket.once('connect', () => {
-                resolve();
-            });
-            this.socket.once('error', (err) => {
-                reject(err);
-            });
-            this.setupSocketHandlers();
-            this.socket.connect(this.options.port, this.options.host);
+            try {
+                // Create TCP socket with settings that match the Go implementation
+                this.socket = net_1.default.createConnection({
+                    host: this.options.host,
+                    port: this.options.port,
+                    noDelay: true, // Disable Nagle's algorithm for better performance with FIX protocol
+                    keepAlive: true, // Keep connection alive
+                    timeout: 30000 // 30 second timeout
+                });
+                // Set up socket event handlers
+                this.setupSocketHandlers();
+                // Handle successful connection
+                this.socket.once('connect', () => {
+                    logger_1.default.info('Socket connected successfully');
+                    // Connection established, continue with authentication
+                    resolve();
+                });
+                // Handle connection error
+                this.socket.once('error', (error) => {
+                    logger_1.default.error(`Socket connection error: ${error.message}`);
+                    if (this.socket) {
+                        this.socket.destroy();
+                        this.socket = null;
+                    }
+                    reject(error);
+                });
+            }
+            catch (error) {
+                logger_1.default.error(`Error creating socket: ${error instanceof Error ? error.message : String(error)}`);
+                reject(error);
+            }
         });
     }
     /**
@@ -84,24 +114,36 @@ class FixClient extends events_1.EventEmitter {
         this.socket.on('connect', () => {
             logger_1.default.info('Socket connected');
             this.connected = true;
-            this.emit('connected');
-            // Log connection details for debugging
+            const localAddress = this.socket?.localAddress;
+            const localPort = this.socket?.localPort;
             logger_1.default.debug(`Connected to ${this.options.host}:${this.options.port}`);
-            logger_1.default.debug(`Local address: ${this.socket?.localAddress}:${this.socket?.localPort}`);
-            // Add a small delay before sending logon to ensure socket is fully established
+            logger_1.default.debug(`Local address: ${localAddress}:${localPort}`);
+            // Wait before sending logon to ensure socket is fully established
+            // This delay matches the behavior observed in the Go implementation
             setTimeout(() => {
-                logger_1.default.info('Sending logon message...');
+                // Send logon message to authenticate
                 this.sendLogon();
             }, 500);
+            this.emit('connected');
         });
         this.socket.on('data', (data) => {
-            const dataStr = data.toString();
-            logger_1.default.debug(`Received data: ${dataStr.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             this.handleData(data);
         });
         this.socket.on('error', (error) => {
             logger_1.default.error(`Socket error: ${error.message}`);
-            logger_1.default.error(`Error stack: ${error.stack}`);
+            if (error.stack) {
+                logger_1.default.debug(`Error stack: ${error.stack}`);
+            }
+            // Check specific error codes and respond accordingly
+            if ('code' in error) {
+                const code = error.code;
+                if (code === 'ECONNREFUSED') {
+                    logger_1.default.error(`Connection refused to ${this.options.host}:${this.options.port}. Server may be down or unreachable.`);
+                }
+                else if (code === 'ETIMEDOUT') {
+                    logger_1.default.error(`Connection timed out to ${this.options.host}:${this.options.port}`);
+                }
+            }
             this.emit('error', error);
         });
         this.socket.on('close', (hadError) => {
@@ -110,19 +152,42 @@ class FixClient extends events_1.EventEmitter {
             this.loggedIn = false;
             this.clearTimers();
             this.emit('disconnected');
+            // Check if data was ever received
+            if (this.lastActivityTime === 0) {
+                logger_1.default.warn('Connection closed without any data received - server may have rejected the connection');
+                logger_1.default.warn('Check credentials and network connectivity to the FIX server');
+                logger_1.default.warn('Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct');
+            }
             this.scheduleReconnect();
         });
         this.socket.on('timeout', () => {
             logger_1.default.warn('Socket timeout - connection inactive');
-            if (this.socket) {
-                this.socket.destroy();
-                this.socket = null;
+            if (this.connected && this.loggedIn) {
+                // If we're logged in, try sending a test request to keep the connection alive
+                logger_1.default.warn('Sending test request to check if server is still responsive');
+                try {
+                    const testRequest = message_builder_1.FixMessageBuilder.createTestRequestMessage(this.options.senderCompId, this.options.targetCompId);
+                    if (this.socket) {
+                        this.socket.write(testRequest);
+                    }
+                }
+                catch (error) {
+                    logger_1.default.error('Failed to send test request, destroying socket');
+                    if (this.socket) {
+                        this.socket.destroy();
+                        this.socket = null;
+                    }
+                }
+            }
+            else {
+                // If we're not yet logged in, the connection attempt failed
+                logger_1.default.error('Socket timeout during connection attempt - server did not respond');
+                if (this.socket) {
+                    this.socket.destroy();
+                    this.socket = null;
+                }
             }
         });
-        // Set socket options
-        this.socket.setKeepAlive(true, 30000);
-        this.socket.setTimeout(60000);
-        this.socket.setNoDelay(true);
     }
     /**
      * Schedule a reconnection attempt
@@ -181,6 +246,11 @@ class FixClient extends events_1.EventEmitter {
                 this.receivedData = this.receivedData.substring(checksumEndIndex + 1);
                 // Log the complete FIX message for debugging
                 logger_1.default.debug(`Extracted complete message: ${completeMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+                // Verify checksum before processing
+                if (!message_parser_1.FixMessageParser.verifyChecksum(completeMessage)) {
+                    logger_1.default.warn('Invalid checksum in message, skipping processing');
+                    continue;
+                }
                 // Process the message
                 this.processMessage(completeMessage);
             }
@@ -202,40 +272,83 @@ class FixClient extends events_1.EventEmitter {
      * Process a complete FIX message
      */
     processMessage(message) {
-        logger_1.default.debug(`Received: ${message.replace(/\x01/g, '|')}`);
-        if (!message_parser_1.FixMessageParser.verifyChecksum(message)) {
-            logger_1.default.warn('Invalid checksum in message');
-            return;
+        try {
+            logger_1.default.debug(`Processing received message: ${message.replace(/\x01/g, '|')}`);
+            if (!message_parser_1.FixMessageParser.verifyChecksum(message)) {
+                logger_1.default.warn('Invalid checksum in message, rejecting');
+                return;
+            }
+            const parsedMessage = message_parser_1.FixMessageParser.parse(message);
+            // Emit the raw message event for debugging and custom handling
+            this.emit('message', parsedMessage);
+            // Log the message type for debugging
+            const msgType = parsedMessage['35']; // MsgType
+            logger_1.default.debug(`Processing message type: ${msgType}`);
+            // Handle different message types
+            if (message_parser_1.FixMessageParser.isLogon(parsedMessage)) {
+                // Logon acknowledged by server
+                logger_1.default.info(`Logon response received: ${JSON.stringify(parsedMessage)}`);
+                this.handleLogon(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isLogout(parsedMessage)) {
+                // Server is logging us out
+                const text = parsedMessage['58'] || 'No reason provided'; // Text field
+                logger_1.default.info(`Logout received with reason: ${text}`);
+                this.handleLogout(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isHeartbeat(parsedMessage)) {
+                // Heartbeat from server, reset activity timer
+                logger_1.default.debug('Heartbeat received');
+                this.testRequestCount = 0; // Reset test request counter
+            }
+            else if (message_parser_1.FixMessageParser.isTestRequest(parsedMessage)) {
+                // Test request from server, respond with heartbeat
+                const testReqId = parsedMessage['112'] || ''; // TestReqID
+                logger_1.default.debug(`Test request received with ID: ${testReqId}`);
+                this.handleTestRequest(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isReject(parsedMessage)) {
+                // Message rejected by server
+                const rejectText = parsedMessage['58'] || 'No reason provided'; // Text
+                const rejectReason = parsedMessage['373'] || 'Unknown'; // SessionRejectReason
+                logger_1.default.error(`Reject message received: ${rejectText}, reason: ${rejectReason}`);
+                this.handleReject(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isMarketDataSnapshot(parsedMessage)) {
+                // Market data snapshot from server
+                // Check if this is a PSX-specific format
+                if (parsedMessage['1137'] === '9' && parsedMessage['1129'] === 'FIX5.00_PSX_1.00') {
+                    logger_1.default.debug('Received PSX-specific market data snapshot');
+                }
+                this.handleMarketDataSnapshot(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isMarketDataIncremental(parsedMessage)) {
+                // Market data incremental update from server
+                // Check if this is a PSX-specific format
+                if (parsedMessage['1137'] === '9' && parsedMessage['1129'] === 'FIX5.00_PSX_1.00') {
+                    logger_1.default.debug('Received PSX-specific market data update');
+                }
+                this.handleMarketDataIncremental(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isSecurityList(parsedMessage)) {
+                // Security list from server
+                this.handleSecurityList(parsedMessage);
+            }
+            else if (message_parser_1.FixMessageParser.isTradingSessionStatus(parsedMessage)) {
+                // Trading session status from server
+                this.handleTradingSessionStatus(parsedMessage);
+            }
+            else {
+                // Unknown message type
+                logger_1.default.debug(`Unhandled message type: ${msgType}`);
+                logger_1.default.debug(`Message content: ${JSON.stringify(parsedMessage)}`);
+            }
         }
-        const parsedMessage = message_parser_1.FixMessageParser.parse(message);
-        this.emit('message', parsedMessage);
-        if (message_parser_1.FixMessageParser.isLogon(parsedMessage)) {
-            this.handleLogon(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isLogout(parsedMessage)) {
-            this.handleLogout(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isHeartbeat(parsedMessage)) {
-            // Just reset the activity timer
-            this.testRequestCount = 0;
-        }
-        else if (message_parser_1.FixMessageParser.isTestRequest(parsedMessage)) {
-            this.handleTestRequest(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isMarketDataSnapshot(parsedMessage)) {
-            this.handleMarketDataSnapshot(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isMarketDataIncremental(parsedMessage)) {
-            this.handleMarketDataIncremental(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isSecurityList(parsedMessage)) {
-            this.handleSecurityList(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isTradingSessionStatus(parsedMessage)) {
-            this.handleTradingSessionStatus(parsedMessage);
-        }
-        else if (message_parser_1.FixMessageParser.isReject(parsedMessage)) {
-            this.handleReject(parsedMessage);
+        catch (error) {
+            logger_1.default.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
+            if (error instanceof Error && error.stack) {
+                logger_1.default.debug(`Error stack: ${error.stack}`);
+            }
         }
     }
     /**
@@ -251,22 +364,45 @@ class FixClient extends events_1.EventEmitter {
             if (!message.includes('35=A') && !message.includes('35=5')) {
                 // Not a logon or logout message - add the PSX specific fields
                 // This is similar to the Go code in ToApp method
-                // Replace the message with one containing the PSX specific fields
+                // Find position to insert PSX specific fields after MsgType
                 const msgParts = message.split(constants_1.SOH);
                 let modifiedMessage = '';
-                // Find position to insert DEFAULT_APPL_VER_ID and DEFAULT_CSTM_APPL_VER_ID
+                // Add PSX specific fields after MsgType (35=...)
                 for (let i = 0; i < msgParts.length; i++) {
                     modifiedMessage += msgParts[i] + constants_1.SOH;
-                    // After MsgType, add the PSX specific fields
+                    // After MsgType field, add PSX specific fields
                     if (msgParts[i].startsWith('35=')) {
-                        modifiedMessage += `1137=9${constants_1.SOH}`; // DEFAULT_APPL_VER_ID
-                        modifiedMessage += `1129=FIX5.00_PSX_1.00${constants_1.SOH}`; // DEFAULT_CSTM_APPL_VER_ID
-                        modifiedMessage += `115=600${constants_1.SOH}`; // ON_BEHALF_OF_COMP_ID
-                        modifiedMessage += `96=kse${constants_1.SOH}`; // RAW_DATA
-                        modifiedMessage += `95=3${constants_1.SOH}`; // RAW_DATA_LENGTH
+                        modifiedMessage += `1137=9${constants_1.SOH}`; // DefaultApplVerID
+                        modifiedMessage += `1129=FIX5.00_PSX_1.00${constants_1.SOH}`; // DefaultCstmApplVerID
+                        modifiedMessage += `115=600${constants_1.SOH}`; // OnBehalfOfCompID
+                        modifiedMessage += `96=kse${constants_1.SOH}`; // RawData
+                        modifiedMessage += `95=3${constants_1.SOH}`; // RawDataLength
                     }
                 }
+                // Use the modified message with PSX fields
                 message = modifiedMessage;
+                // Need to recalculate body length and checksum
+                // Extract the message parts (without checksum)
+                const checksumPos = message.lastIndexOf('10=');
+                const messageWithoutChecksum = message.substring(0, checksumPos);
+                // Extract the header
+                const bodyLengthPos = message.indexOf('9=');
+                const headerEnd = message.indexOf(constants_1.SOH, bodyLengthPos) + 1;
+                const header = message.substring(0, headerEnd);
+                // Extract the body
+                const body = message.substring(headerEnd, checksumPos);
+                // Calculate new body length (without SOH characters)
+                const bodyLengthValue = body.replace(new RegExp(constants_1.SOH, 'g'), '').length;
+                // Create new message with updated body length
+                const newMessage = `8=FIXT.1.1${constants_1.SOH}9=${bodyLengthValue}${constants_1.SOH}${body}`;
+                // Calculate new checksum
+                let sum = 0;
+                for (let i = 0; i < newMessage.length; i++) {
+                    sum += newMessage.charCodeAt(i);
+                }
+                const checksum = (sum % 256).toString().padStart(3, '0');
+                // Final message with updated checksum
+                message = newMessage + `10=${checksum}${constants_1.SOH}`;
             }
             logger_1.default.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
             this.socket.write(message);
@@ -280,10 +416,39 @@ class FixClient extends events_1.EventEmitter {
      * Handle a logon message response
      */
     handleLogon(message) {
-        logger_1.default.info('Logon successful');
-        this.loggedIn = true;
-        this.startHeartbeatMonitoring();
-        this.emit('logon', message);
+        try {
+            logger_1.default.info('Logon successful - authenticated with PSX server');
+            this.loggedIn = true;
+            this.testRequestCount = 0;
+            // Get server's message sequence number
+            const serverSeqNum = parseInt(message['34'] || '1', 10);
+            logger_1.default.debug(`Server message sequence number: ${serverSeqNum}`);
+            // Reset sequence number if requested
+            if (message['141'] === 'Y') { // ResetSeqNumFlag
+                this.msgSeqNum = 1;
+                logger_1.default.debug('Sequence number reset to 1 based on server response');
+            }
+            else {
+                // Increment our sequence number
+                this.msgSeqNum = 2; // After logon, next message should be 2
+                logger_1.default.debug('Sequence number set to 2 for next message');
+            }
+            // Check for PSX-specific fields
+            if (message['1137'] && message['1129']) {
+                logger_1.default.info('PSX-specific fields present in logon response');
+            }
+            // Start sending heartbeats
+            this.startHeartbeatMonitoring();
+            // Emit logon event
+            this.emit('logon', message);
+            logger_1.default.info('Ready to send FIX messages to PSX');
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling logon response: ${error instanceof Error ? error.message : String(error)}`);
+            if (error instanceof Error && error.stack) {
+                logger_1.default.debug(`Error stack: ${error.stack}`);
+            }
+        }
     }
     /**
      * Handle a logout message
@@ -436,32 +601,43 @@ class FixClient extends events_1.EventEmitter {
      * Send a logon message
      */
     sendLogon() {
-        // Create a raw FIX message string directly to match the Go implementation
-        const now = new Date().toISOString().replace(/[-:]/g, '').replace('T', '').substring(0, 17);
-        // Build the message body first - add 34=1 (MsgSeqNum) and 52=<time> (SendingTime)
+        logger_1.default.info("Sending logon message...");
+        // Format timestamp to match FIX standard: YYYYMMDD-HH:MM:SS.sss
+        const now = new Date();
+        const year = now.getUTCFullYear();
+        const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(now.getUTCDate()).padStart(2, '0');
+        const hours = String(now.getUTCHours()).padStart(2, '0');
+        const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+        const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
+        const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
+        // Build the message body in the exact order required by PSX
+        // This matches the format observed in the Go implementation
         const bodyFields = [
-            `35=A${constants_1.SOH}`, // MsgType (Logon)
-            `34=1${constants_1.SOH}`, // MsgSeqNum - adding this explicitly
+            `35=A${constants_1.SOH}`, // MsgType (Logon) - always the first field after BeginString and BodyLength
+            `34=1${constants_1.SOH}`, // MsgSeqNum - use 1 for logon to ensure proper sequence reset
             `49=${this.options.senderCompId}${constants_1.SOH}`, // SenderCompID
             `56=${this.options.targetCompId}${constants_1.SOH}`, // TargetCompID
-            `52=${now}${constants_1.SOH}`, // SendingTime - adding this explicitly
-            `98=0${constants_1.SOH}`, // EncryptMethod
-            `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt
-            `141=Y${constants_1.SOH}`, // ResetSeqNumFlag
+            `52=${timestamp}${constants_1.SOH}`, // SendingTime - exact timestamp format is critical
+            `98=0${constants_1.SOH}`, // EncryptMethod - always 0 for no encryption
+            `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt - heartbeat interval in seconds
+            `141=Y${constants_1.SOH}`, // ResetSeqNumFlag - Y to reset sequence numbers
             `553=${this.options.username}${constants_1.SOH}`, // Username
-            `554=${this.options.password}${constants_1.SOH}`, // Password - use from options
-            `1137=9${constants_1.SOH}`, // DefaultApplVerID
-            `1129=FIX5.00_PSX_1.00${constants_1.SOH}`, // DefaultCstmApplVerID - explicitly add this
-            `115=600${constants_1.SOH}`, // OnBehalfOfCompID
-            `96=kse${constants_1.SOH}`, // RawData
-            `95=3${constants_1.SOH}` // RawDataLength
+            `554=${this.options.password}${constants_1.SOH}`, // Password
+            // PSX-specific authentication fields
+            `1137=9${constants_1.SOH}`, // DefaultApplVerID - must be exactly 9 for PSX
+            `1129=FIX5.00_PSX_1.00${constants_1.SOH}`, // DefaultCstmApplVerID - exactly as specified by PSX
+            `115=600${constants_1.SOH}`, // OnBehalfOfCompID - must be exactly 600 for PSX
+            `96=kse${constants_1.SOH}`, // RawData - must be exactly "kse" for PSX
+            `95=3${constants_1.SOH}`, // RawDataLength - must be exactly 3 (length of "kse") for PSX
         ].join('');
         // Calculate body length (excluding SOH characters)
-        const bodyLength = bodyFields.replace(new RegExp(constants_1.SOH, 'g'), '').length;
+        const bodyLengthValue = bodyFields.replace(new RegExp(constants_1.SOH, 'g'), '').length;
         // Construct the complete message with header
         const message = [
-            `8=FIXT.1.1${constants_1.SOH}`, // BeginString
-            `9=${bodyLength}${constants_1.SOH}`, // BodyLength
+            `8=FIXT.1.1${constants_1.SOH}`, // BeginString - must be exactly FIXT.1.1
+            `9=${bodyLengthValue}${constants_1.SOH}`, // BodyLength
             bodyFields
         ].join('');
         // Calculate checksum - sum of ASCII values of all characters modulo 256
@@ -473,8 +649,8 @@ class FixClient extends events_1.EventEmitter {
         // Add the checksum
         const finalMessage = message + `10=${checksum}${constants_1.SOH}`;
         logger_1.default.info("Sending logon message with exact PSX format");
-        logger_1.default.info(`Logon message: ${finalMessage}`);
         logger_1.default.debug(`Logon message: ${finalMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+        logger_1.default.debug(`Logon message: ${finalMessage}`);
         if (!this.socket || !this.connected) {
             logger_1.default.warn('Cannot send logon: not connected');
             return;
@@ -500,33 +676,49 @@ class FixClient extends events_1.EventEmitter {
     startHeartbeatMonitoring() {
         if (this.heartbeatTimer) {
             clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
         }
         const heartbeatInterval = this.options.heartbeatIntervalSecs * 1000;
+        logger_1.default.info(`Starting heartbeat monitoring with interval of ${this.options.heartbeatIntervalSecs} seconds`);
         this.heartbeatTimer = setInterval(() => {
-            const currentTime = Date.now();
-            const timeSinceLastActivity = currentTime - this.lastActivityTime;
-            // If no activity for more than heartbeat interval, send a heartbeat
-            if (timeSinceLastActivity >= heartbeatInterval) {
-                // If no response to multiple test requests, consider connection dead
-                if (this.testRequestCount >= 2) {
-                    logger_1.default.warn('No response to test requests, connection may be dead');
-                    if (this.socket) {
-                        this.socket.destroy();
-                        this.socket = null;
+            try {
+                const currentTime = Date.now();
+                const timeSinceLastActivity = currentTime - this.lastActivityTime;
+                // If no activity for more than heartbeat interval, send a heartbeat
+                if (timeSinceLastActivity >= heartbeatInterval) {
+                    // If no response to multiple test requests, consider connection dead
+                    if (this.testRequestCount >= 2) {
+                        logger_1.default.warn('No response to test requests after multiple attempts, connection may be dead');
+                        logger_1.default.warn('Destroying socket and attempting to reconnect');
+                        if (this.socket) {
+                            this.socket.destroy();
+                            this.socket = null;
+                        }
+                        return;
                     }
-                    return;
+                    // After 1.5 intervals without activity, send a test request instead of heartbeat
+                    if (timeSinceLastActivity >= heartbeatInterval * 1.5) {
+                        logger_1.default.debug('Sending test request to verify connection');
+                        // Create test request with current sequence number
+                        const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 21);
+                        const testReqId = `TEST-${timestamp}`;
+                        const testRequest = message_builder_1.FixMessageBuilder.createTestRequestMessage(this.options.senderCompId, this.options.targetCompId, testReqId);
+                        this.sendMessage(testRequest);
+                        this.testRequestCount++;
+                        logger_1.default.debug(`Test request count: ${this.testRequestCount}`);
+                    }
+                    else {
+                        logger_1.default.debug('Sending heartbeat to maintain connection');
+                        // Create heartbeat with current sequence number
+                        const heartbeat = message_builder_1.FixMessageBuilder.createHeartbeatMessage(this.options.senderCompId, this.options.targetCompId);
+                        this.sendMessage(heartbeat);
+                    }
                 }
-                // After 1.5 intervals without activity, send a test request instead of heartbeat
-                if (timeSinceLastActivity >= heartbeatInterval * 1.5) {
-                    logger_1.default.debug('Sending test request');
-                    const testRequest = message_builder_1.FixMessageBuilder.createTestRequestMessage(this.options.senderCompId, this.options.targetCompId);
-                    this.sendMessage(testRequest);
-                    this.testRequestCount++;
-                }
-                else {
-                    logger_1.default.debug('Sending heartbeat');
-                    const heartbeat = message_builder_1.FixMessageBuilder.createHeartbeatMessage(this.options.senderCompId, this.options.targetCompId);
-                    this.sendMessage(heartbeat);
+            }
+            catch (error) {
+                logger_1.default.error(`Error in heartbeat monitoring: ${error instanceof Error ? error.message : String(error)}`);
+                if (error instanceof Error && error.stack) {
+                    logger_1.default.debug(`Error stack: ${error.stack}`);
                 }
             }
         }, Math.min(heartbeatInterval / 2, 10000)); // Check at half the heartbeat interval or 10 seconds, whichever is less

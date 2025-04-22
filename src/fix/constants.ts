@@ -47,7 +47,8 @@ export enum FieldTag {
   SECURITY_TYPE = 167,
   SYMBOL = 55,
   MD_ENTRY_TYPE = 269,
-  TRADING_SESSION_ID = 336
+  TRADING_SESSION_ID = 336,
+  TEXT = 58
 }
 
 // Subscription Request Types

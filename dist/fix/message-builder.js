@@ -1,11 +1,7 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FixMessageBuilder = void 0;
 const constants_1 = require("./constants");
-const moment_1 = __importDefault(require("moment"));
 const uuid_1 = require("uuid");
 class FixMessageBuilder {
     constructor(beginString = constants_1.DEFAULT_CONNECTION.VERSION) {
@@ -51,10 +47,25 @@ class FixMessageBuilder {
         return (sum % 256).toString().padStart(3, '0');
     }
     /**
+     * Get current timestamp in FIX format (YYYYMMDD-HH:MM:SS.sss)
+     */
+    static getCurrentTimestamp() {
+        const now = new Date();
+        const pad = (n, width = 2) => n.toString().padStart(width, '0');
+        const year = now.getUTCFullYear();
+        const month = pad(now.getUTCMonth() + 1);
+        const day = pad(now.getUTCDate());
+        const hours = pad(now.getUTCHours());
+        const minutes = pad(now.getUTCMinutes());
+        const seconds = pad(now.getUTCSeconds());
+        const milliseconds = pad(now.getUTCMilliseconds(), 3);
+        return `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
+    }
+    /**
      * Format a timestamp for FIX messages
      */
     formatTimestamp() {
-        return (0, moment_1.default)().format('YYYYMMDD-HH:mm:ss.SSS');
+        return FixMessageBuilder.getCurrentTimestamp();
     }
     /**
      * Build the message into a string
@@ -91,16 +102,12 @@ class FixMessageBuilder {
             .addField(constants_1.FieldTag.MSG_TYPE, constants_1.MessageType.LOGON)
             .addField(constants_1.FieldTag.SENDER_COMP_ID, senderCompId)
             .addField(constants_1.FieldTag.TARGET_COMP_ID, targetCompId)
-            .addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD)
-            .addField(constants_1.FieldTag.HEART_BT_INT, heartBtInt.toString())
-            .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, resetSeqNum ? 'Y' : 'N')
-            .addField(constants_1.FieldTag.USERNAME, username)
-            .addField(constants_1.FieldTag.PASSWORD, password)
-            .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9')
-            .addField(constants_1.FieldTag.DEFAULT_CSTM_APPL_VER_ID, 'FIX5.00_PSX_1.00')
-            .addField(constants_1.FieldTag.ON_BEHALF_OF_COMP_ID, '600')
-            .addField(constants_1.FieldTag.RAW_DATA, 'kse')
-            .addField(constants_1.FieldTag.RAW_DATA_LENGTH, '3')
+            .addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD) // should be '0'
+            .addField(constants_1.FieldTag.HEART_BT_INT, heartBtInt.toString()) // typically '30'
+            .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, resetSeqNum ? 'Y' : 'N') // usually 'Y'
+            .addField(constants_1.FieldTag.PASSWORD, password) // typically TargetCompID
+            .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9') // FIX 5.0
+            .addField(1408, 'FIX5.00_PSX_1.00') // Correct version tag
             .build();
     }
     /**
@@ -110,7 +117,8 @@ class FixMessageBuilder {
         const builder = new FixMessageBuilder()
             .addField(constants_1.FieldTag.MSG_TYPE, constants_1.MessageType.HEARTBEAT)
             .addField(constants_1.FieldTag.SENDER_COMP_ID, senderCompId)
-            .addField(constants_1.FieldTag.TARGET_COMP_ID, targetCompId);
+            .addField(constants_1.FieldTag.TARGET_COMP_ID, targetCompId)
+            .addField(constants_1.FieldTag.SENDING_TIME, this.getCurrentTimestamp());
         if (testReqId) {
             builder.addField(constants_1.FieldTag.TEST_REQ_ID, testReqId);
         }
@@ -119,13 +127,13 @@ class FixMessageBuilder {
     /**
      * Create a test request message
      */
-    static createTestRequestMessage(senderCompId, targetCompId) {
-        const testReqId = (0, uuid_1.v4)().substring(0, 8);
+    static createTestRequestMessage(senderCompId, targetCompId, testReqId) {
         return new FixMessageBuilder()
             .addField(constants_1.FieldTag.MSG_TYPE, constants_1.MessageType.TEST_REQUEST)
             .addField(constants_1.FieldTag.SENDER_COMP_ID, senderCompId)
             .addField(constants_1.FieldTag.TARGET_COMP_ID, targetCompId)
-            .addField(constants_1.FieldTag.TEST_REQ_ID, testReqId)
+            .addField(constants_1.FieldTag.SENDING_TIME, this.getCurrentTimestamp())
+            .addField(constants_1.FieldTag.TEST_REQ_ID, testReqId || new Date().getTime().toString())
             .build();
     }
     /**
@@ -135,9 +143,10 @@ class FixMessageBuilder {
         const builder = new FixMessageBuilder()
             .addField(constants_1.FieldTag.MSG_TYPE, constants_1.MessageType.LOGOUT)
             .addField(constants_1.FieldTag.SENDER_COMP_ID, senderCompId)
-            .addField(constants_1.FieldTag.TARGET_COMP_ID, targetCompId);
+            .addField(constants_1.FieldTag.TARGET_COMP_ID, targetCompId)
+            .addField(constants_1.FieldTag.SENDING_TIME, this.getCurrentTimestamp());
         if (text) {
-            builder.addField(58, text); // Text is tag 58
+            builder.addField(constants_1.FieldTag.TEXT, text);
         }
         return builder.build();
     }
