@@ -650,8 +650,8 @@ class FixClient extends events_1.EventEmitter {
         // Add the checksum
         const finalMessage = message + `10=${checksum}${constants_1.SOH}`;
         logger_1.default.info("Sending logon message with exact PSX format");
-        logger_1.default.debug(`Logon message: ${finalMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-        logger_1.default.debug(`Logon message: ${finalMessage}`);
+        logger_1.default.info(`Logon message: ${finalMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+        logger_1.default.info(`Logon message: ${finalMessage}`);
         if (!this.socket || !this.connected) {
             logger_1.default.warn('Cannot send logon: not connected');
             return;
