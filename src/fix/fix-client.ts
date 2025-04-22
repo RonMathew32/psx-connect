@@ -678,25 +678,25 @@ export class FixClient extends EventEmitter {
     const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
-    // Build the message body first - note the exact order of fields as in the Go implementation
+    // Build the message body in the exact order required by PSX
+    // This matches the format observed in the Go implementation
     const bodyFields = [
-      `35=A${SOH}`, // MsgType (Logon)
-      `34=1${SOH}`, // MsgSeqNum
+      `35=A${SOH}`, // MsgType (Logon) - always the first field after BeginString and BodyLength
+      `34=1${SOH}`, // MsgSeqNum - use 1 for logon to ensure proper sequence reset
       `49=${this.options.senderCompId}${SOH}`, // SenderCompID
       `56=${this.options.targetCompId}${SOH}`, // TargetCompID
-      `52=${timestamp}${SOH}`, // SendingTime
-      `98=0${SOH}`, // EncryptMethod
-      `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt
-      `141=Y${SOH}`, // ResetSeqNumFlag
+      `52=${timestamp}${SOH}`, // SendingTime - exact timestamp format is critical
+      `98=0${SOH}`, // EncryptMethod - always 0 for no encryption
+      `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt - heartbeat interval in seconds
+      `141=Y${SOH}`, // ResetSeqNumFlag - Y to reset sequence numbers
       `553=${this.options.username}${SOH}`, // Username
       `554=${this.options.password}${SOH}`, // Password
-      // Add these fields as they're present in the Go code ToApp method
-      `1137=9${SOH}`, // DefaultApplVerID
-      `1129=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID
-      // These fields are essential for PSX authentication
-      `115=600${SOH}`, // OnBehalfOfCompID - exactly 600 as required by PSX
-      `96=kse${SOH}`, // RawData - must be exactly "kse"
-      `95=3${SOH}`, // RawDataLength - must be exactly 3 for "kse"
+      // PSX-specific authentication fields
+      `1137=9${SOH}`, // DefaultApplVerID - must be exactly 9 for PSX
+      `1129=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID - exactly as specified by PSX
+      `115=600${SOH}`, // OnBehalfOfCompID - must be exactly 600 for PSX
+      `96=kse${SOH}`, // RawData - must be exactly "kse" for PSX
+      `95=3${SOH}`, // RawDataLength - must be exactly 3 (length of "kse") for PSX
     ].join('');
     
     // Calculate body length (excluding SOH characters)
@@ -704,7 +704,7 @@ export class FixClient extends EventEmitter {
     
     // Construct the complete message with header
     const message = [
-      `8=FIXT.1.1${SOH}`, // BeginString
+      `8=FIXT.1.1${SOH}`, // BeginString - must be exactly FIXT.1.1
       `9=${bodyLengthValue}${SOH}`, // BodyLength
       bodyFields
     ].join('');

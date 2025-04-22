@@ -1,2 +1,15 @@
 {"level":"info","message":"Starting PSX FIX client...","timestamp":"2025-04-22T05:41:34.325Z"}
 {"level":"info","message":"Connecting to PSX at 172.21.101.36:8016","timestamp":"2025-04-22T05:41:34.328Z"}
+{"level":"warn","message":"Socket timeout - connection inactive","timestamp":"2025-04-22T05:42:34.330Z"}
+{"level":"info","message":"Socket disconnected cleanly","timestamp":"2025-04-22T05:42:34.334Z"}
+{"level":"info","message":"Disconnected from PSX FIX server","timestamp":"2025-04-22T05:42:34.335Z"}
+{"level":"info","message":"Scheduling reconnect in 5 seconds","timestamp":"2025-04-22T05:42:34.336Z"}
+{"level":"info","message":"Attempting to reconnect","timestamp":"2025-04-22T05:42:39.337Z"}
+{"level":"info","message":"Connecting to PSX at 172.21.101.36:8016","timestamp":"2025-04-22T05:42:39.338Z"}
+{"level":"warn","message":"Socket timeout - connection inactive","timestamp":"2025-04-22T05:43:39.339Z"}
+{"level":"info","message":"Socket disconnected cleanly","timestamp":"2025-04-22T05:43:39.341Z"}
+{"level":"info","message":"Disconnected from PSX FIX server","timestamp":"2025-04-22T05:43:39.342Z"}
+{"level":"info","message":"Scheduling reconnect in 5 seconds","timestamp":"2025-04-22T05:43:39.343Z"}
+{"level":"info","message":"Attempting to reconnect","timestamp":"2025-04-22T05:43:44.345Z"}
+{"level":"info","message":"Connecting to PSX at 172.21.101.36:8016","timestamp":"2025-04-22T05:43:44.347Z"}
+{"level":"info","message":"Received SIGINT. Shutting down gracefully...","timestamp":"2025-04-22T05:44:00.536Z"}
