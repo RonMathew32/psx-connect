@@ -1,0 +1,3 @@
+2025-04-22T06:43:09.732Z: PSX Connection Test: Connecting to 172.21.101.36:8016...
+2025-04-22T06:43:09.743Z: Using sender: realtime, target: NMDUFISQ0001
+2025-04-22T06:44:24.755Z: Socket error: connect ETIMEDOUT 172.21.101.36:8016
