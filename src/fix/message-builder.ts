@@ -154,14 +154,17 @@ export class FixMessageBuilder {
    */
   static createTestRequestMessage(
     senderCompId: string,
-    targetCompId: string
+    targetCompId: string,
+    testReqId?: string
   ): string {
-    const testReqId = uuidv4().substring(0, 8);
+    // If no testReqId is provided, generate a random one
+    const requestId = testReqId || uuidv4().substring(0, 8);
+    
     return new FixMessageBuilder()
       .addField(FieldTag.MSG_TYPE, MessageType.TEST_REQUEST)
       .addField(FieldTag.SENDER_COMP_ID, senderCompId)
       .addField(FieldTag.TARGET_COMP_ID, targetCompId)
-      .addField(FieldTag.TEST_REQ_ID, testReqId)
+      .addField(FieldTag.TEST_REQ_ID, requestId)
       .build();
   }
 

@@ -116,24 +116,14 @@ export class FixClient extends EventEmitter {
 
       logger.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
 
-      // Create a connection timeout
-      const connectionTimeout = setTimeout(() => {
-        if (!this.connected && this.socket) {
-          logger.error('Connection attempt timed out');
-          this.socket.destroy();
-          this.socket = null;
-          reject(new Error('Connection timeout'));
-        }
-      }, 10000); // 10 second timeout
-
       try {
-        // Create TCP socket
+        // Create TCP socket with settings that match the Go implementation
         this.socket = net.createConnection({
           host: this.options.host,
           port: this.options.port,
-          timeout: 30000, // 30 second socket timeout
-          noDelay: true, // Disable Nagle's algorithm
-          keepAlive: true // Enable TCP keep-alive
+          noDelay: true, // Disable Nagle's algorithm for better performance with FIX protocol
+          keepAlive: true, // Keep connection alive
+          timeout: 30000 // 30 second timeout
         });
 
         // Set up socket event handlers
@@ -141,13 +131,13 @@ export class FixClient extends EventEmitter {
 
         // Handle successful connection
         this.socket.once('connect', () => {
-          clearTimeout(connectionTimeout);
+          logger.info('Socket connected successfully');
+          // Connection established, continue with authentication
           resolve();
         });
 
         // Handle connection error
         this.socket.once('error', (error) => {
-          clearTimeout(connectionTimeout);
           logger.error(`Socket connection error: ${error.message}`);
           
           if (this.socket) {
@@ -158,7 +148,6 @@ export class FixClient extends EventEmitter {
           reject(error);
         });
       } catch (error) {
-        clearTimeout(connectionTimeout);
         logger.error(`Error creating socket: ${error instanceof Error ? error.message : String(error)}`);
         reject(error);
       }
@@ -195,8 +184,10 @@ export class FixClient extends EventEmitter {
       logger.debug(`Connected to ${this.options.host}:${this.options.port}`);
       logger.debug(`Local address: ${localAddress}:${localPort}`);
       
-      // Wait for 500ms before sending logon to allow socket to fully establish
+      // Wait before sending logon to ensure socket is fully established
+      // This delay matches the behavior observed in the Go implementation
       setTimeout(() => {
+        // Send logon message to authenticate
         this.sendLogon();
       }, 500);
       
@@ -237,6 +228,7 @@ export class FixClient extends EventEmitter {
       if (this.lastActivityTime === 0) {
         logger.warn('Connection closed without any data received - server may have rejected the connection');
         logger.warn('Check credentials and network connectivity to the FIX server');
+        logger.warn('Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct');
       }
       
       this.scheduleReconnect();
@@ -244,19 +236,29 @@ export class FixClient extends EventEmitter {
 
     this.socket.on('timeout', () => {
       logger.warn('Socket timeout - connection inactive');
-      logger.warn('Sending test request to check if server is still responsive');
       
-      try {
-        const testRequest = FixMessageBuilder.createTestRequestMessage(
-          this.options.senderCompId,
-          this.options.targetCompId
-        );
-        
-        if (this.socket) {
-          this.socket.write(testRequest);
+      if (this.connected && this.loggedIn) {
+        // If we're logged in, try sending a test request to keep the connection alive
+        logger.warn('Sending test request to check if server is still responsive');
+        try {
+          const testRequest = FixMessageBuilder.createTestRequestMessage(
+            this.options.senderCompId,
+            this.options.targetCompId
+          );
+          
+          if (this.socket) {
+            this.socket.write(testRequest);
+          }
+        } catch (error) {
+          logger.error('Failed to send test request, destroying socket');
+          if (this.socket) {
+            this.socket.destroy();
+            this.socket = null;
+          }
         }
-      } catch (error) {
-        logger.error('Failed to send test request, destroying socket');
+      } else {
+        // If we're not yet logged in, the connection attempt failed
+        logger.error('Socket timeout during connection attempt - server did not respond');
         if (this.socket) {
           this.socket.destroy();
           this.socket = null;
@@ -357,50 +359,78 @@ export class FixClient extends EventEmitter {
    * Process a complete FIX message
    */
   private processMessage(message: string): void {
-    logger.debug(`Received: ${message.replace(/\x01/g, '|')}`);
+    try {
+      logger.debug(`Processing received message: ${message.replace(/\x01/g, '|')}`);
 
-    if (!FixMessageParser.verifyChecksum(message)) {
-      logger.warn('Invalid checksum in message');
-      return;
-    }
+      if (!FixMessageParser.verifyChecksum(message)) {
+        logger.warn('Invalid checksum in message, rejecting');
+        return;
+      }
 
-    const parsedMessage = FixMessageParser.parse(message);
-    this.emit('message', parsedMessage);
+      const parsedMessage = FixMessageParser.parse(message);
+      
+      // Emit the raw message event for debugging and custom handling
+      this.emit('message', parsedMessage);
 
-    // Log the message type for debugging
-    const msgType = parsedMessage['35']; // MsgType
-    logger.debug(`Processing message type: ${msgType}`);
+      // Log the message type for debugging
+      const msgType = parsedMessage['35']; // MsgType
+      logger.debug(`Processing message type: ${msgType}`);
 
-    if (FixMessageParser.isLogon(parsedMessage)) {
-      logger.info(`Logon response received: ${JSON.stringify(parsedMessage)}`);
-      this.handleLogon(parsedMessage);
-    } else if (FixMessageParser.isLogout(parsedMessage)) {
-      const text = parsedMessage['58'] || 'No reason provided'; // Text
-      logger.info(`Logout received with reason: ${text}`);
-      this.handleLogout(parsedMessage);
-    } else if (FixMessageParser.isHeartbeat(parsedMessage)) {
-      logger.debug('Heartbeat received');
-      // Just reset the activity timer
-      this.testRequestCount = 0;
-    } else if (FixMessageParser.isTestRequest(parsedMessage)) {
-      const testReqId = parsedMessage['112'] || ''; // TestReqID
-      logger.debug(`Test request received with ID: ${testReqId}`);
-      this.handleTestRequest(parsedMessage);
-    } else if (FixMessageParser.isReject(parsedMessage)) {
-      const rejectText = parsedMessage['58'] || 'No reason provided'; // Text
-      const rejectReason = parsedMessage['373'] || 'Unknown'; // SessionRejectReason
-      logger.error(`Reject message received: ${rejectText}, reason: ${rejectReason}`);
-      this.handleReject(parsedMessage);
-    } else if (FixMessageParser.isMarketDataSnapshot(parsedMessage)) {
-      this.handleMarketDataSnapshot(parsedMessage);
-    } else if (FixMessageParser.isMarketDataIncremental(parsedMessage)) {
-      this.handleMarketDataIncremental(parsedMessage);
-    } else if (FixMessageParser.isSecurityList(parsedMessage)) {
-      this.handleSecurityList(parsedMessage);
-    } else if (FixMessageParser.isTradingSessionStatus(parsedMessage)) {
-      this.handleTradingSessionStatus(parsedMessage);
-    } else {
-      logger.debug(`Unhandled message type: ${msgType}`);
+      // Handle different message types
+      if (FixMessageParser.isLogon(parsedMessage)) {
+        // Logon acknowledged by server
+        logger.info(`Logon response received: ${JSON.stringify(parsedMessage)}`);
+        this.handleLogon(parsedMessage);
+      } else if (FixMessageParser.isLogout(parsedMessage)) {
+        // Server is logging us out
+        const text = parsedMessage['58'] || 'No reason provided'; // Text field
+        logger.info(`Logout received with reason: ${text}`);
+        this.handleLogout(parsedMessage);
+      } else if (FixMessageParser.isHeartbeat(parsedMessage)) {
+        // Heartbeat from server, reset activity timer
+        logger.debug('Heartbeat received');
+        this.testRequestCount = 0; // Reset test request counter
+      } else if (FixMessageParser.isTestRequest(parsedMessage)) {
+        // Test request from server, respond with heartbeat
+        const testReqId = parsedMessage['112'] || ''; // TestReqID
+        logger.debug(`Test request received with ID: ${testReqId}`);
+        this.handleTestRequest(parsedMessage);
+      } else if (FixMessageParser.isReject(parsedMessage)) {
+        // Message rejected by server
+        const rejectText = parsedMessage['58'] || 'No reason provided'; // Text
+        const rejectReason = parsedMessage['373'] || 'Unknown'; // SessionRejectReason
+        logger.error(`Reject message received: ${rejectText}, reason: ${rejectReason}`);
+        this.handleReject(parsedMessage);
+      } else if (FixMessageParser.isMarketDataSnapshot(parsedMessage)) {
+        // Market data snapshot from server
+        // Check if this is a PSX-specific format
+        if (parsedMessage['1137'] === '9' && parsedMessage['1129'] === 'FIX5.00_PSX_1.00') {
+          logger.debug('Received PSX-specific market data snapshot');
+        }
+        this.handleMarketDataSnapshot(parsedMessage);
+      } else if (FixMessageParser.isMarketDataIncremental(parsedMessage)) {
+        // Market data incremental update from server
+        // Check if this is a PSX-specific format
+        if (parsedMessage['1137'] === '9' && parsedMessage['1129'] === 'FIX5.00_PSX_1.00') {
+          logger.debug('Received PSX-specific market data update');
+        }
+        this.handleMarketDataIncremental(parsedMessage);
+      } else if (FixMessageParser.isSecurityList(parsedMessage)) {
+        // Security list from server
+        this.handleSecurityList(parsedMessage);
+      } else if (FixMessageParser.isTradingSessionStatus(parsedMessage)) {
+        // Trading session status from server
+        this.handleTradingSessionStatus(parsedMessage);
+      } else {
+        // Unknown message type
+        logger.debug(`Unhandled message type: ${msgType}`);
+        logger.debug(`Message content: ${JSON.stringify(parsedMessage)}`);
+      }
+    } catch (error) {
+      logger.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        logger.debug(`Error stack: ${error.stack}`);
+      }
     }
   }
 
@@ -482,18 +512,43 @@ export class FixClient extends EventEmitter {
    * Handle a logon message response
    */
   private handleLogon(message: ParsedFixMessage): void {
-    logger.info('Logon successful');
-    this.loggedIn = true;
-    this.testRequestCount = 0;
-    
-    // Reset sequence number if needed
-    if (message['141'] === 'Y') { // ResetSeqNumFlag
-      this.msgSeqNum = 1;
-      logger.debug('Sequence number reset to 1');
+    try {
+      logger.info('Logon successful - authenticated with PSX server');
+      this.loggedIn = true;
+      this.testRequestCount = 0;
+      
+      // Get server's message sequence number
+      const serverSeqNum = parseInt(message['34'] || '1', 10);
+      logger.debug(`Server message sequence number: ${serverSeqNum}`);
+      
+      // Reset sequence number if requested
+      if (message['141'] === 'Y') { // ResetSeqNumFlag
+        this.msgSeqNum = 1;
+        logger.debug('Sequence number reset to 1 based on server response');
+      } else {
+        // Increment our sequence number
+        this.msgSeqNum = 2; // After logon, next message should be 2
+        logger.debug('Sequence number set to 2 for next message');
+      }
+      
+      // Check for PSX-specific fields
+      if (message['1137'] && message['1129']) {
+        logger.info('PSX-specific fields present in logon response');
+      }
+      
+      // Start sending heartbeats
+      this.startHeartbeatMonitoring();
+      
+      // Emit logon event
+      this.emit('logon', message);
+      
+      logger.info('Ready to send FIX messages to PSX');
+    } catch (error) {
+      logger.error(`Error handling logon response: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        logger.debug(`Error stack: ${error.stack}`);
+      }
     }
-    
-    this.startHeartbeatMonitoring();
-    this.emit('logon', message);
   }
 
   /**
@@ -753,41 +808,63 @@ export class FixClient extends EventEmitter {
   private startHeartbeatMonitoring(): void {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
 
     const heartbeatInterval = this.options.heartbeatIntervalSecs * 1000;
+    logger.info(`Starting heartbeat monitoring with interval of ${this.options.heartbeatIntervalSecs} seconds`);
+    
     this.heartbeatTimer = setInterval(() => {
-      const currentTime = Date.now();
-      const timeSinceLastActivity = currentTime - this.lastActivityTime;
+      try {
+        const currentTime = Date.now();
+        const timeSinceLastActivity = currentTime - this.lastActivityTime;
 
-      // If no activity for more than heartbeat interval, send a heartbeat
-      if (timeSinceLastActivity >= heartbeatInterval) {
-        // If no response to multiple test requests, consider connection dead
-        if (this.testRequestCount >= 2) {
-          logger.warn('No response to test requests, connection may be dead');
-          if (this.socket) {
-            this.socket.destroy();
-            this.socket = null;
+        // If no activity for more than heartbeat interval, send a heartbeat
+        if (timeSinceLastActivity >= heartbeatInterval) {
+          // If no response to multiple test requests, consider connection dead
+          if (this.testRequestCount >= 2) {
+            logger.warn('No response to test requests after multiple attempts, connection may be dead');
+            logger.warn('Destroying socket and attempting to reconnect');
+            if (this.socket) {
+              this.socket.destroy();
+              this.socket = null;
+            }
+            return;
           }
-          return;
-        }
 
-        // After 1.5 intervals without activity, send a test request instead of heartbeat
-        if (timeSinceLastActivity >= heartbeatInterval * 1.5) {
-          logger.debug('Sending test request');
-          const testRequest = FixMessageBuilder.createTestRequestMessage(
-            this.options.senderCompId,
-            this.options.targetCompId
-          );
-          this.sendMessage(testRequest);
-          this.testRequestCount++;
-        } else {
-          logger.debug('Sending heartbeat');
-          const heartbeat = FixMessageBuilder.createHeartbeatMessage(
-            this.options.senderCompId,
-            this.options.targetCompId
-          );
-          this.sendMessage(heartbeat);
+          // After 1.5 intervals without activity, send a test request instead of heartbeat
+          if (timeSinceLastActivity >= heartbeatInterval * 1.5) {
+            logger.debug('Sending test request to verify connection');
+            
+            // Create test request with current sequence number
+            const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 21);
+            const testReqId = `TEST-${timestamp}`;
+            
+            const testRequest = FixMessageBuilder.createTestRequestMessage(
+              this.options.senderCompId,
+              this.options.targetCompId,
+              testReqId
+            );
+            
+            this.sendMessage(testRequest);
+            this.testRequestCount++;
+            logger.debug(`Test request count: ${this.testRequestCount}`);
+          } else {
+            logger.debug('Sending heartbeat to maintain connection');
+            
+            // Create heartbeat with current sequence number
+            const heartbeat = FixMessageBuilder.createHeartbeatMessage(
+              this.options.senderCompId,
+              this.options.targetCompId
+            );
+            
+            this.sendMessage(heartbeat);
+          }
+        }
+      } catch (error) {
+        logger.error(`Error in heartbeat monitoring: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+          logger.debug(`Error stack: ${error.stack}`);
         }
       }
     }, Math.min(heartbeatInterval / 2, 10000)); // Check at half the heartbeat interval or 10 seconds, whichever is less
