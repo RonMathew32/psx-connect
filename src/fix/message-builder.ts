@@ -113,19 +113,29 @@ export class FixMessageBuilder {
     heartBtInt: number = 30
   ): string {
     return new FixMessageBuilder()
+      // .addField(FieldTag.MSG_TYPE, MessageType.LOGON)
+      // .addField(FieldTag.SENDER_COMP_ID, senderCompId)
+      // .addField(FieldTag.TARGET_COMP_ID, targetCompId)
+      // .addField(FieldTag.ENCRYPT_METHOD, DEFAULT_CONNECTION.ENCRYPT_METHOD)
+      // .addField(FieldTag.HEART_BT_INT, heartBtInt.toString())
+      // .addField(FieldTag.RESET_SEQ_NUM_FLAG, resetSeqNum ? 'Y' : 'N')
+      // .addField(FieldTag.USERNAME, username)
+      // .addField(FieldTag.PASSWORD, password)
+      // .addField(FieldTag.DEFAULT_APPL_VER_ID, '9')
+      // .addField(FieldTag.DEFAULT_CSTM_APPL_VER_ID, 'FIX5.00_PSX_1.00')
+      // .addField(FieldTag.ON_BEHALF_OF_COMP_ID, '600')
+      // .addField(FieldTag.RAW_DATA, 'kse')
+      // .addField(FieldTag.RAW_DATA_LENGTH, '3')
       .addField(FieldTag.MSG_TYPE, MessageType.LOGON)
       .addField(FieldTag.SENDER_COMP_ID, senderCompId)
       .addField(FieldTag.TARGET_COMP_ID, targetCompId)
-      .addField(FieldTag.ENCRYPT_METHOD, DEFAULT_CONNECTION.ENCRYPT_METHOD)
-      .addField(FieldTag.HEART_BT_INT, heartBtInt.toString())
-      .addField(FieldTag.RESET_SEQ_NUM_FLAG, resetSeqNum ? 'Y' : 'N')
-      .addField(FieldTag.USERNAME, username)
-      .addField(FieldTag.PASSWORD, password)
-      .addField(FieldTag.DEFAULT_APPL_VER_ID, '9')
-      .addField(FieldTag.DEFAULT_CSTM_APPL_VER_ID, 'FIX5.00_PSX_1.00')
-      .addField(FieldTag.ON_BEHALF_OF_COMP_ID, '600')
-      .addField(FieldTag.RAW_DATA, 'kse')
-      .addField(FieldTag.RAW_DATA_LENGTH, '3')
+      .addField(FieldTag.ENCRYPT_METHOD, DEFAULT_CONNECTION.ENCRYPT_METHOD) // should be '0'
+      .addField(FieldTag.HEART_BT_INT, heartBtInt.toString()) // typically '30'
+      .addField(FieldTag.RESET_SEQ_NUM_FLAG, resetSeqNum ? 'Y' : 'N') // usually 'Y'
+      .addField(FieldTag.PASSWORD, password) // typically TargetCompID
+      .addField(FieldTag.DEFAULT_APPL_VER_ID, '9') // FIX 5.0
+      .addField(1408, 'FIX5.00_PSX_1.00') // Correct version tag
+
       .build();
   }
 
@@ -159,7 +169,7 @@ export class FixMessageBuilder {
   ): string {
     // If no testReqId is provided, generate a random one
     const requestId = testReqId || uuidv4().substring(0, 8);
-    
+
     return new FixMessageBuilder()
       .addField(FieldTag.MSG_TYPE, MessageType.TEST_REQUEST)
       .addField(FieldTag.SENDER_COMP_ID, senderCompId)
