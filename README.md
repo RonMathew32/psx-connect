@@ -1,15 +1,12 @@
-# PSX Connect
+# PSX-Connect
 
-A Node.js implementation for connecting to the Pakistan Stock Exchange (PSX) using the FIX Protocol.
+A Node.js client for connecting to the Pakistan Stock Exchange (PSX) FIX Protocol server.
 
-## Features
+## Prerequisites
 
-- Connects to PSX Market Data Gateway (MDGW) using FIX Protocol
-- Manages authentication, heartbeats, and connection state
-- Handles market data requests and responses
-- Processes security lists
-- Monitors trading session status
-- Provides an event-based interface for easy integration
+- Node.js 18.x or later
+- npm or yarn package manager
+- Network access to the PSX FIX server (172.21.101.36:8016)
 
 ## Installation
 
@@ -20,45 +17,113 @@ cd psx-connect
 
 # Install dependencies
 npm install
-
-# Create .env file from the example
-cp .env.example .env
-
-# Edit the .env file with your PSX credentials
-nano .env
 ```
 
 ## Configuration
 
-Edit the `.env` file with your PSX connection details:
+The application uses the following configuration:
 
-```
-# FIX Protocol Connection Settings
-FIX_HOST=172.21.101.36
-FIX_PORT=8016
-FIX_SENDER=your_sender_id
-FIX_TARGET=NMDUFISQ0001
-FIX_HEARTBEAT_INTERVAL=30
-FIX_VERSION=FIXT.1.1
-FIX_DEFAULT_APPL_VER_ID=9
+- **Host**: 172.21.101.36
+- **Port**: 8016
+- **SenderCompID**: realtime
+- **TargetCompID**: NMDUFISQ0001
+- **User**: realtime
+- **Password**: NMDUFISQ0001
+- **BeginString**: FIXT.1.1
+- **DefaultApplVerID**: FIX.5.0SP2
 
-# Logging Settings
-LOG_LEVEL=info
-LOG_FILE_PATH=logs/psx-connect.log
-```
+## Directory Structure
 
-## Usage
+- `src/fix/` - FIX protocol client implementation
+- `src/examples/` - Example scripts demonstrating usage
+- `pkf-log/` - Log directory for application logs
+- `pkf-store/` - Storage directory for market data snapshots
+
+## Running the Application
 
 ```bash
-# Build the project
+# Build the TypeScript code
 npm run build
 
-# Start the application
-npm start
-
-# For development with auto-reload
-npm run dev
+# Run the PSX connection test example
+npm run test-psx
 ```
+
+## Troubleshooting
+
+If you're experiencing connection issues with the PSX FIX server, try the following troubleshooting steps:
+
+### 1. Run the Test Connection Script
+
+```bash
+./test-psx-connection.sh
+```
+
+This script will attempt to connect to the PSX FIX server and log the results.
+
+### 2. Check Network Connectivity
+
+Ensure you have network access to the PSX FIX server:
+
+```bash
+nc -zv 172.21.101.36 8016
+```
+
+If this fails, you may need to:
+- Connect to the correct VPN
+- Check firewall settings
+- Verify the server is running
+
+### 3. Inspect the FIX Protocol Messages
+
+Run the connection test with packet capture to see the exact messages being sent:
+
+```bash
+./test-psx-connection-with-wireshark.sh
+```
+
+This will create a packet capture file that can be analyzed with Wireshark.
+
+### 4. Try a Raw FIX Message
+
+Test sending a raw FIX message to isolate Node.js implementation issues:
+
+```bash
+./test-raw-fix.sh
+```
+
+### 5. Check Server Logs
+
+If you have access to the server, check its logs for any rejection messages:
+
+```bash
+./check-server-logs.sh
+```
+
+### 6. Common Issues
+
+- **Message format errors**: Ensure your FIX messages follow the correct format with proper checksums
+- **Authentication failures**: Verify SenderCompID, TargetCompID, username, and password
+- **Sequence number issues**: Check if the server expects a specific sequence number
+- **Heartbeat timing**: Make sure heartbeats are being sent within the expected interval
+
+## Logging
+
+- **Debug logging**: Set `DEBUG=*` and `LOG_LEVEL=debug` environment variables
+- **Log files**: Check the `pkf-log` directory for application logs
+
+## License
+
+MIT
+
+## Features
+
+- Connects to PSX Market Data Gateway (MDGW) using FIX Protocol
+- Manages authentication, heartbeats, and connection state
+- Handles market data requests and responses
+- Processes security lists
+- Monitors trading session status
+- Provides an event-based interface for easy integration
 
 ## Example Code
 
@@ -115,10 +180,6 @@ This library implements the following FIX message types:
 | MarketDataRequest | V | Requests market data |
 | SecurityListRequest | x | Requests list of securities |
 | TradingSessionStatusRequest | g | Requests trading session status |
-
-## License
-
-MIT
 
 ## Contributors
 

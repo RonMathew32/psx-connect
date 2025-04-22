@@ -105,7 +105,21 @@ export class FixClient extends EventEmitter {
 
       logger.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
       
+      // Verify that we're not trying to connect to ourselves
+      if (this.options.host === '127.0.0.1' || this.options.host === 'localhost') {
+        logger.warn(`Warning: Connecting to localhost (${this.options.host}). Make sure this is intentional.`);
+      }
+      
       this.socket = new net.Socket();
+      
+      // Set TCP keep-alive options to detect dead connections
+      this.socket.setKeepAlive(true, 10000); // 10 seconds 
+      
+      // Disable Nagle's algorithm for faster sending of small packets
+      this.socket.setNoDelay(true);
+      
+      // Set read timeout
+      this.socket.setTimeout(30000); // 30 seconds
       
       // Set up one-time connect handler for the promise
       this.socket.once('connect', () => {
@@ -117,7 +131,18 @@ export class FixClient extends EventEmitter {
       });
       
       this.setupSocketHandlers();
-      this.socket.connect(this.options.port, this.options.host);
+      
+      // Connect with a timeout
+      const connectTimeout = setTimeout(() => {
+        if (this.socket) {
+          this.socket.destroy();
+          reject(new Error('Connection timeout'));
+        }
+      }, 10000); // 10 second connection timeout
+      
+      this.socket.connect(this.options.port, this.options.host, () => {
+        clearTimeout(connectTimeout);
+      });
     });
   }
 
@@ -177,21 +202,36 @@ export class FixClient extends EventEmitter {
       this.loggedIn = false;
       this.clearTimers();
       this.emit('disconnected');
+      
+      // Check if data was ever received
+      if (this.lastActivityTime === 0) {
+        logger.warn('Connection closed without any data received - server may have rejected the connection');
+      }
+      
       this.scheduleReconnect();
     });
 
     this.socket.on('timeout', () => {
       logger.warn('Socket timeout - connection inactive');
-      if (this.socket) {
-        this.socket.destroy();
-        this.socket = null;
+      logger.warn('Sending test request to check if server is still responsive');
+      
+      try {
+        const testRequest = FixMessageBuilder.createTestRequestMessage(
+          this.options.senderCompId,
+          this.options.targetCompId
+        );
+        
+        if (this.socket) {
+          this.socket.write(testRequest);
+        }
+      } catch (error) {
+        logger.error('Failed to send test request, destroying socket');
+        if (this.socket) {
+          this.socket.destroy();
+          this.socket = null;
+        }
       }
     });
-
-    // Set socket options
-    this.socket.setKeepAlive(true, 30000);
-    this.socket.setTimeout(60000);
-    this.socket.setNoDelay(true);
   }
 
   /**
@@ -534,35 +574,43 @@ export class FixClient extends EventEmitter {
    * Send a logon message
    */
   public sendLogon(): void {
-    // Create a raw FIX message string directly to match the Go implementation
-    const now = new Date().toISOString().replace(/[-:]/g, '').replace('T', '').substring(0, 17);
+    // Format timestamp to match FIX standard: YYYYMMDD-HH:MM:SS.sss
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
+    const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
-    // Build the message body first - add 34=1 (MsgSeqNum) and 52=<time> (SendingTime)
+    // Build the message body first - note the exact order of fields as in the Go implementation
     const bodyFields = [
       `35=A${SOH}`, // MsgType (Logon)
-      `34=1${SOH}`, // MsgSeqNum - adding this explicitly
+      `34=1${SOH}`, // MsgSeqNum
       `49=${this.options.senderCompId}${SOH}`, // SenderCompID
       `56=${this.options.targetCompId}${SOH}`, // TargetCompID
-      `52=${now}${SOH}`, // SendingTime - adding this explicitly
+      `52=${timestamp}${SOH}`, // SendingTime
       `98=0${SOH}`, // EncryptMethod
       `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt
       `141=Y${SOH}`, // ResetSeqNumFlag
       `553=${this.options.username}${SOH}`, // Username
-      `554=${this.options.password}${SOH}`, // Password - use from options
-      `1137=9${SOH}`, // DefaultApplVerID
-      `1129=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID - explicitly add this
+      `554=${this.options.password}${SOH}`, // Password
+      `1137=9${SOH}`, // DefaultApplVerID (FIX.5.0SP2)
+      `1129=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID
       `115=600${SOH}`, // OnBehalfOfCompID
       `96=kse${SOH}`, // RawData
       `95=3${SOH}` // RawDataLength
     ].join('');
     
-    // Calculate body length (excluding SOH characters)
-    const bodyLength = bodyFields.replace(new RegExp(SOH, 'g'), '').length;
+    // Calculate body length (length of the message body without the SOH characters)
+    const bodyLengthValue = bodyFields.replace(new RegExp(SOH, 'g'), '').length;
     
     // Construct the complete message with header
     const message = [
       `8=FIXT.1.1${SOH}`, // BeginString
-      `9=${bodyLength}${SOH}`, // BodyLength
+      `9=${bodyLengthValue}${SOH}`, // BodyLength
       bodyFields
     ].join('');
     
