@@ -616,17 +616,17 @@ class FixClient extends events_1.EventEmitter {
         // Build the message body in the exact order required by PSX
         // This matches the format observed in the Go implementation
         const bodyFields = [
-            `35=A${constants_1.SOH}`, // MsgType (Logon)
-            `34=1${constants_1.SOH}`, // MsgSeqNum
-            `49=${this.options.senderCompId}${constants_1.SOH}`, // SenderCompID
-            `56=${this.options.targetCompId}${constants_1.SOH}`, // TargetCompID
-            `52=${timestamp}${constants_1.SOH}`, // SendingTime
-            `98=0${constants_1.SOH}`, // EncryptMethod
-            `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt
-            `141=Y${constants_1.SOH}`, // ResetSeqNumFlag
-            `554=${this.options.password}${constants_1.SOH}`, // Password (used instead of Username here)
-            `1137=9${constants_1.SOH}`, // DefaultApplVerID
-            `1408=FIX5.00_PSX_1.00${constants_1.SOH}`, // DefaultCstmApplVerID
+            `35=A`, // MsgType (Logon)
+            `34=1`, // MsgSeqNum
+            `49=${this.options.senderCompId}`, // SenderCompID
+            `56=${this.options.targetCompId}`, // TargetCompID
+            `52=${timestamp}`, // SendingTime
+            `98=0`, // EncryptMethod
+            `108=${this.options.heartbeatIntervalSecs}`, // HeartBtInt
+            `141=Y`, // ResetSeqNumFlag
+            `554=${this.options.password}`, // Password (used instead of Username here)
+            `1137=9`, // DefaultApplVerID
+            `1408=FIX5.00_PSX_1.00`, // DefaultCstmApplVerID
         ].join();
         // Calculate body length (excluding SOH characters)
         const bodyLengthValue = bodyFields.replace(new RegExp(constants_1.SOH, 'g'), '').length;
