@@ -22,6 +22,8 @@ class FixClient extends events_1.EventEmitter {
         this.receivedData = '';
         this.lastActivityTime = 0;
         this.testRequestCount = 0;
+        this.lastSentTime = new Date();
+        this.msgSeqNum = 1;
         this.options = options;
     }
     /**
@@ -34,6 +36,34 @@ class FixClient extends events_1.EventEmitter {
      * Stop the FIX client and disconnect from the server
      */
     stop() {
+        this.disconnect();
+    }
+    /**
+     * Connect to the FIX server and return a promise
+     */
+    connect() {
+        return new Promise((resolve, reject) => {
+            if (this.socket) {
+                this.socket.destroy();
+                this.socket = null;
+            }
+            logger_1.default.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
+            this.socket = new net_1.default.Socket();
+            // Set up one-time connect handler for the promise
+            this.socket.once('connect', () => {
+                resolve();
+            });
+            this.socket.once('error', (err) => {
+                reject(err);
+            });
+            this.setupSocketHandlers();
+            this.socket.connect(this.options.port, this.options.host);
+        });
+    }
+    /**
+     * Disconnect from the FIX server
+     */
+    disconnect() {
         this.clearTimers();
         if (this.connected && this.loggedIn) {
             this.sendLogout();
@@ -44,19 +74,6 @@ class FixClient extends events_1.EventEmitter {
         }
         this.connected = false;
         this.loggedIn = false;
-    }
-    /**
-     * Connect to the FIX server
-     */
-    connect() {
-        if (this.socket) {
-            this.socket.destroy();
-            this.socket = null;
-        }
-        logger_1.default.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
-        this.socket = new net_1.default.Socket();
-        this.setupSocketHandlers();
-        this.socket.connect(this.options.port, this.options.host);
     }
     /**
      * Set up socket event handlers
@@ -184,16 +201,42 @@ class FixClient extends events_1.EventEmitter {
         }
     }
     /**
-     * Send a message to the server
+     * Send a message via the socket
      */
     sendMessage(message) {
         if (!this.socket || !this.connected) {
             logger_1.default.warn('Cannot send message: not connected');
             return;
         }
-        logger_1.default.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
-        this.socket.write(message);
-        this.lastActivityTime = Date.now();
+        try {
+            // Similar to the Go implementation's ToApp function - add the PSX specific fields
+            if (!message.includes('35=A') && !message.includes('35=5')) {
+                // Not a logon or logout message - add the PSX specific fields
+                // This is similar to the Go code in ToApp method
+                // Replace the message with one containing the PSX specific fields
+                const msgParts = message.split(constants_1.SOH);
+                let modifiedMessage = '';
+                // Find position to insert DEFAULT_APPL_VER_ID and DEFAULT_CSTM_APPL_VER_ID
+                for (let i = 0; i < msgParts.length; i++) {
+                    modifiedMessage += msgParts[i] + constants_1.SOH;
+                    // After MsgType, add the PSX specific fields
+                    if (msgParts[i].startsWith('35=')) {
+                        modifiedMessage += `1137=9${constants_1.SOH}`; // DEFAULT_APPL_VER_ID
+                        modifiedMessage += `1129=FIX5.00_PSX_1.00${constants_1.SOH}`; // DEFAULT_CSTM_APPL_VER_ID
+                        modifiedMessage += `115=600${constants_1.SOH}`; // ON_BEHALF_OF_COMP_ID
+                        modifiedMessage += `96=kse${constants_1.SOH}`; // RAW_DATA
+                        modifiedMessage += `95=3${constants_1.SOH}`; // RAW_DATA_LENGTH
+                    }
+                }
+                message = modifiedMessage;
+            }
+            logger_1.default.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
+            this.socket.write(message);
+            this.lastActivityTime = Date.now();
+        }
+        catch (error) {
+            logger_1.default.error(`Failed to send message: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
     /**
      * Handle a logon message response
@@ -355,8 +398,53 @@ class FixClient extends events_1.EventEmitter {
      * Send a logon message
      */
     sendLogon() {
-        const logonMessage = message_builder_1.FixMessageBuilder.createLogonMessage(this.options.senderCompId, this.options.targetCompId, this.options.username, this.options.password, true, this.options.heartbeatIntervalSecs);
-        this.sendMessage(logonMessage);
+        // Create a raw FIX message string directly to match the Go implementation
+        const now = new Date().toISOString().replace(/[-:]/g, '').replace('T', '').substring(0, 17);
+        // Build the message body first
+        const bodyFields = [
+            `35=A${constants_1.SOH}`, // MsgType (Logon)
+            `49=${this.options.senderCompId}${constants_1.SOH}`, // SenderCompID
+            `56=${this.options.targetCompId}${constants_1.SOH}`, // TargetCompID
+            `98=0${constants_1.SOH}`, // EncryptMethod
+            `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt
+            `141=Y${constants_1.SOH}`, // ResetSeqNumFlag
+            `553=${this.options.username}${constants_1.SOH}`, // Username
+            `554=NMDUFISQ0001${constants_1.SOH}`, // Password (hardcoded as in Go)
+            `1137=9${constants_1.SOH}`, // DefaultApplVerID
+            `115=600${constants_1.SOH}`, // OnBehalfOfCompID
+            `96=kse${constants_1.SOH}`, // RawData
+            `95=3${constants_1.SOH}` // RawDataLength
+        ].join('');
+        // Calculate body length (excluding SOH characters)
+        const bodyLength = bodyFields.replace(new RegExp(constants_1.SOH, 'g'), '').length;
+        // Construct the complete message with header
+        const message = [
+            `8=FIXT.1.1${constants_1.SOH}`, // BeginString
+            `9=${bodyLength}${constants_1.SOH}`, // BodyLength
+            bodyFields,
+            `10=000${constants_1.SOH}` // Placeholder for checksum
+        ].join('');
+        // Calculate checksum - sum of ASCII values of all characters modulo 256
+        let sum = 0;
+        for (let i = 0; i < message.length - 7; i++) {
+            sum += message.charCodeAt(i);
+        }
+        const checksum = (sum % 256).toString().padStart(3, '0');
+        // Replace placeholder checksum with calculated one
+        const finalMessage = message.substring(0, message.length - 4) + checksum + constants_1.SOH;
+        logger_1.default.info("Sending logon message with exact PSX format");
+        logger_1.default.debug(`Logon message: ${finalMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+        if (!this.socket || !this.connected) {
+            logger_1.default.warn('Cannot send logon: not connected');
+            return;
+        }
+        try {
+            this.socket.write(finalMessage);
+            this.lastActivityTime = Date.now();
+        }
+        catch (error) {
+            logger_1.default.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
     /**
      * Send a logout message
@@ -437,6 +525,10 @@ class FixClient extends events_1.EventEmitter {
         const message = message_builder_1.FixMessageBuilder.createTradingSessionStatusRequest(this.options.senderCompId, this.options.targetCompId, tradingSessionId);
         this.sendMessage(message);
         logger_1.default.info('Sent trading session status request');
+    }
+    formatMessageForLogging(message) {
+        // Implement the logic to format the message for logging
+        return message;
     }
 }
 exports.FixClient = FixClient;

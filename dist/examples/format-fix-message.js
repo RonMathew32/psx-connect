@@ -17,8 +17,6 @@ const parsedMessage = message_parser_1.FixMessageParser.parse(logonMessage);
 console.log('FIX Logon Message (Pipe-Delimited Format):');
 console.log(logonMessage.replace(/\x01/g, '|'));
 console.log('');
-console.log(parsedMessage, 'parsedMessage');
-
 console.log('FIX Logon Message (Hex View):');
 const hexView = logonMessage.split('').map(c => {
     const code = c.charCodeAt(0);

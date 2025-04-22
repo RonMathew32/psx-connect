@@ -2,7 +2,7 @@ import net from 'net';
 import { EventEmitter } from 'events';
 import { FixMessageBuilder } from './message-builder';
 import { FixMessageParser, ParsedFixMessage } from './message-parser';
-import { SOH, MessageType } from './constants';
+import { SOH, MessageType, FieldTag } from './constants';
 import logger from '../utils/logger';
 
 export interface FixClientOptions {
@@ -13,6 +13,15 @@ export interface FixClientOptions {
   username: string;
   password: string;
   heartbeatIntervalSecs: number;
+  resetOnLogon?: boolean;
+  resetOnLogout?: boolean;
+  resetOnDisconnect?: boolean;
+  validateFieldsOutOfOrder?: boolean;
+  checkFieldsOutOfOrder?: boolean;
+  rejectInvalidMessage?: boolean;
+  forceResync?: boolean;
+  fileLogPath?: string;
+  fileStorePath?: string;
 }
 
 export interface MarketDataItem {
@@ -62,6 +71,8 @@ export class FixClient extends EventEmitter {
   private receivedData = '';
   private lastActivityTime = 0;
   private testRequestCount = 0;
+  private lastSentTime = new Date();
+  private msgSeqNum = 1;
 
   constructor(options: FixClientOptions) {
     super();
@@ -79,6 +90,41 @@ export class FixClient extends EventEmitter {
    * Stop the FIX client and disconnect from the server
    */
   public stop(): void {
+    this.disconnect();
+  }
+
+  /**
+   * Connect to the FIX server and return a promise
+   */
+  public connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.socket) {
+        this.socket.destroy();
+        this.socket = null;
+      }
+
+      logger.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
+      
+      this.socket = new net.Socket();
+      
+      // Set up one-time connect handler for the promise
+      this.socket.once('connect', () => {
+        resolve();
+      });
+      
+      this.socket.once('error', (err) => {
+        reject(err);
+      });
+      
+      this.setupSocketHandlers();
+      this.socket.connect(this.options.port, this.options.host);
+    });
+  }
+
+  /**
+   * Disconnect from the FIX server
+   */
+  public disconnect(): void {
     this.clearTimers();
     if (this.connected && this.loggedIn) {
       this.sendLogout();
@@ -89,23 +135,6 @@ export class FixClient extends EventEmitter {
     }
     this.connected = false;
     this.loggedIn = false;
-  }
-
-  /**
-   * Connect to the FIX server
-   */
-  private connect(): void {
-    if (this.socket) {
-      this.socket.destroy();
-      this.socket = null;
-    }
-
-    logger.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
-    
-    this.socket = new net.Socket();
-    this.setupSocketHandlers();
-    
-    this.socket.connect(this.options.port, this.options.host);
   }
 
   /**
@@ -241,7 +270,7 @@ export class FixClient extends EventEmitter {
   }
 
   /**
-   * Send a message to the server
+   * Send a message via the socket
    */
   private sendMessage(message: string): void {
     if (!this.socket || !this.connected) {
@@ -249,9 +278,38 @@ export class FixClient extends EventEmitter {
       return;
     }
 
-    logger.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
-    this.socket.write(message);
-    this.lastActivityTime = Date.now();
+    try {
+      // Similar to the Go implementation's ToApp function - add the PSX specific fields
+      if (!message.includes('35=A') && !message.includes('35=5')) {
+        // Not a logon or logout message - add the PSX specific fields
+        // This is similar to the Go code in ToApp method
+        // Replace the message with one containing the PSX specific fields
+        const msgParts = message.split(SOH);
+        let modifiedMessage = '';
+        
+        // Find position to insert DEFAULT_APPL_VER_ID and DEFAULT_CSTM_APPL_VER_ID
+        for (let i = 0; i < msgParts.length; i++) {
+          modifiedMessage += msgParts[i] + SOH;
+          
+          // After MsgType, add the PSX specific fields
+          if (msgParts[i].startsWith('35=')) {
+            modifiedMessage += `1137=9${SOH}`; // DEFAULT_APPL_VER_ID
+            modifiedMessage += `1129=FIX5.00_PSX_1.00${SOH}`; // DEFAULT_CSTM_APPL_VER_ID
+            modifiedMessage += `115=600${SOH}`; // ON_BEHALF_OF_COMP_ID
+            modifiedMessage += `96=kse${SOH}`; // RAW_DATA
+            modifiedMessage += `95=3${SOH}`; // RAW_DATA_LENGTH
+          }
+        }
+        
+        message = modifiedMessage;
+      }
+      
+      logger.debug(`Sending: ${message.replace(/\x01/g, '|')}`);
+      this.socket.write(message);
+      this.lastActivityTime = Date.now();
+    } catch (error) {
+      logger.error(`Failed to send message: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
@@ -433,15 +491,60 @@ export class FixClient extends EventEmitter {
    * Send a logon message
    */
   public sendLogon(): void {
-    const logonMessage = FixMessageBuilder.createLogonMessage(
-      this.options.senderCompId,
-      this.options.targetCompId,
-      this.options.username,
-      this.options.password,
-      true,
-      this.options.heartbeatIntervalSecs
-    );
-    this.sendMessage(logonMessage);
+    // Create a raw FIX message string directly to match the Go implementation
+    const now = new Date().toISOString().replace(/[-:]/g, '').replace('T', '').substring(0, 17);
+    
+    // Build the message body first
+    const bodyFields = [
+      `35=A${SOH}`, // MsgType (Logon)
+      `49=${this.options.senderCompId}${SOH}`, // SenderCompID
+      `56=${this.options.targetCompId}${SOH}`, // TargetCompID
+      `98=0${SOH}`, // EncryptMethod
+      `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt
+      `141=Y${SOH}`, // ResetSeqNumFlag
+      `553=${this.options.username}${SOH}`, // Username
+      `554=NMDUFISQ0001${SOH}`, // Password (hardcoded as in Go)
+      `1137=9${SOH}`, // DefaultApplVerID
+      `115=600${SOH}`, // OnBehalfOfCompID
+      `96=kse${SOH}`, // RawData
+      `95=3${SOH}` // RawDataLength
+    ].join('');
+    
+    // Calculate body length (excluding SOH characters)
+    const bodyLength = bodyFields.replace(new RegExp(SOH, 'g'), '').length;
+    
+    // Construct the complete message with header
+    const message = [
+      `8=FIXT.1.1${SOH}`, // BeginString
+      `9=${bodyLength}${SOH}`, // BodyLength
+      bodyFields,
+      `10=000${SOH}` // Placeholder for checksum
+    ].join('');
+    
+    // Calculate checksum - sum of ASCII values of all characters modulo 256
+    let sum = 0;
+    for (let i = 0; i < message.length - 7; i++) {
+      sum += message.charCodeAt(i);
+    }
+    const checksum = (sum % 256).toString().padStart(3, '0');
+    
+    // Replace placeholder checksum with calculated one
+    const finalMessage = message.substring(0, message.length - 4) + checksum + SOH;
+    
+    logger.info("Sending logon message with exact PSX format");
+    logger.debug(`Logon message: ${finalMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+    
+    if (!this.socket || !this.connected) {
+      logger.warn('Cannot send logon: not connected');
+      return;
+    }
+
+    try {
+      this.socket.write(finalMessage);
+      this.lastActivityTime = Date.now();
+    } catch (error) {
+      logger.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**
@@ -562,5 +665,10 @@ export class FixClient extends EventEmitter {
     );
     this.sendMessage(message);
     logger.info('Sent trading session status request');
+  }
+
+  private formatMessageForLogging(message: string): string {
+    // Implement the logic to format the message for logging
+    return message;
   }
 } 
