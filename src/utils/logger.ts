@@ -10,29 +10,36 @@ if (!fs.existsSync(logsDir)) {
 
 const logFilePath = process.env.LOG_FILE_PATH || path.join(logsDir, 'psx-connect.log');
 
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
-  winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    return `${timestamp} [${level.toUpperCase()}]: ${message} ${
-      Object.keys(meta).length ? JSON.stringify(meta) : ''
-    }`;
+// Create formatter for console output
+const consoleFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.timestamp(),
+  winston.format.printf(({ level, message, timestamp }) => {
+    return `${timestamp} [${level}]: ${message}`;
   })
 );
 
+// Create logger
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: logFormat,
+  level: process.env.LOG_LEVEL || 'debug', // Set default level to debug
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
   transports: [
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        logFormat
-      )
+      format: consoleFormat
     }),
     new winston.transports.File({ 
-      filename: logFilePath,
-      maxsize: 10485760, // 10MB
-      maxFiles: 5
+      filename: 'pkf-log/error.log', 
+      level: 'error' 
+    }),
+    new winston.transports.File({ 
+      filename: 'pkf-log/debug.log', 
+      level: 'debug' 
+    }),
+    new winston.transports.File({ 
+      filename: 'pkf-log/combined.log' 
     })
   ]
 });

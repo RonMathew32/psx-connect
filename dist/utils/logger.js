@@ -12,20 +12,28 @@ if (!fs_1.default.existsSync(logsDir)) {
     fs_1.default.mkdirSync(logsDir, { recursive: true });
 }
 const logFilePath = process.env.LOG_FILE_PATH || path_1.default.join(logsDir, 'psx-connect.log');
-const logFormat = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }), winston_1.default.format.printf(({ timestamp, level, message, ...meta }) => {
-    return `${timestamp} [${level.toUpperCase()}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+// Create formatter for console output
+const consoleFormat = winston_1.default.format.combine(winston_1.default.format.colorize(), winston_1.default.format.timestamp(), winston_1.default.format.printf(({ level, message, timestamp }) => {
+    return `${timestamp} [${level}]: ${message}`;
 }));
+// Create logger
 const logger = winston_1.default.createLogger({
-    level: process.env.LOG_LEVEL || 'info',
-    format: logFormat,
+    level: process.env.LOG_LEVEL || 'debug', // Set default level to debug
+    format: winston_1.default.format.combine(winston_1.default.format.timestamp(), winston_1.default.format.json()),
     transports: [
         new winston_1.default.transports.Console({
-            format: winston_1.default.format.combine(winston_1.default.format.colorize(), logFormat)
+            format: consoleFormat
         }),
         new winston_1.default.transports.File({
-            filename: logFilePath,
-            maxsize: 10485760, // 10MB
-            maxFiles: 5
+            filename: 'pkf-log/error.log',
+            level: 'error'
+        }),
+        new winston_1.default.transports.File({
+            filename: 'pkf-log/debug.log',
+            level: 'debug'
+        }),
+        new winston_1.default.transports.File({
+            filename: 'pkf-log/combined.log'
         })
     ]
 });

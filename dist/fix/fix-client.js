@@ -85,17 +85,27 @@ class FixClient extends events_1.EventEmitter {
             logger_1.default.info('Socket connected');
             this.connected = true;
             this.emit('connected');
-            this.sendLogon();
+            // Log connection details for debugging
+            logger_1.default.debug(`Connected to ${this.options.host}:${this.options.port}`);
+            logger_1.default.debug(`Local address: ${this.socket?.localAddress}:${this.socket?.localPort}`);
+            // Add a small delay before sending logon to ensure socket is fully established
+            setTimeout(() => {
+                logger_1.default.info('Sending logon message...');
+                this.sendLogon();
+            }, 500);
         });
         this.socket.on('data', (data) => {
+            const dataStr = data.toString();
+            logger_1.default.debug(`Received data: ${dataStr.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             this.handleData(data);
         });
         this.socket.on('error', (error) => {
             logger_1.default.error(`Socket error: ${error.message}`);
+            logger_1.default.error(`Error stack: ${error.stack}`);
             this.emit('error', error);
         });
-        this.socket.on('close', () => {
-            logger_1.default.info('Socket disconnected');
+        this.socket.on('close', (hadError) => {
+            logger_1.default.info(`Socket disconnected ${hadError ? 'due to error' : 'cleanly'}`);
             this.connected = false;
             this.loggedIn = false;
             this.clearTimers();
@@ -103,7 +113,7 @@ class FixClient extends events_1.EventEmitter {
             this.scheduleReconnect();
         });
         this.socket.on('timeout', () => {
-            logger_1.default.warn('Socket timeout');
+            logger_1.default.warn('Socket timeout - connection inactive');
             if (this.socket) {
                 this.socket.destroy();
                 this.socket = null;
@@ -144,20 +154,48 @@ class FixClient extends events_1.EventEmitter {
      * Handle incoming data from the socket
      */
     handleData(data) {
-        this.lastActivityTime = Date.now();
-        this.receivedData += data.toString();
-        // Process complete messages
-        let endIndex;
-        while ((endIndex = this.receivedData.indexOf(constants_1.SOH + '10=')) !== -1) {
-            // Find the end of the message (next SOH after the checksum)
-            const checksumEndIndex = this.receivedData.indexOf(constants_1.SOH, endIndex + 1);
-            if (checksumEndIndex === -1)
-                break;
-            // Extract the complete message
-            const completeMessage = this.receivedData.substring(0, checksumEndIndex + 1);
-            this.receivedData = this.receivedData.substring(checksumEndIndex + 1);
-            // Process the message
-            this.processMessage(completeMessage);
+        try {
+            this.lastActivityTime = Date.now();
+            const dataStr = data.toString();
+            logger_1.default.debug(`Processing received data (${dataStr.length} bytes)`);
+            // Handle binary SOH characters that might not be visible in logs
+            if (dataStr.indexOf(constants_1.SOH) === -1) {
+                logger_1.default.warn(`Received data without SOH delimiter: ${dataStr}`);
+                // Try to continue processing anyway, replacing any control chars with SOH
+                this.receivedData += dataStr.replace(/[\x00-\x1F]/g, constants_1.SOH);
+            }
+            else {
+                this.receivedData += dataStr;
+            }
+            // Process complete messages
+            let endIndex;
+            while ((endIndex = this.receivedData.indexOf(constants_1.SOH + '10=')) !== -1) {
+                // Find the end of the message (next SOH after the checksum)
+                const checksumEndIndex = this.receivedData.indexOf(constants_1.SOH, endIndex + 1);
+                if (checksumEndIndex === -1) {
+                    logger_1.default.debug('Found incomplete message, waiting for more data');
+                    break;
+                }
+                // Extract the complete message
+                const completeMessage = this.receivedData.substring(0, checksumEndIndex + 1);
+                this.receivedData = this.receivedData.substring(checksumEndIndex + 1);
+                // Log the complete FIX message for debugging
+                logger_1.default.debug(`Extracted complete message: ${completeMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+                // Process the message
+                this.processMessage(completeMessage);
+            }
+            // If there's too much unprocessed data, log a warning
+            if (this.receivedData.length > 8192) {
+                logger_1.default.warn(`Large amount of unprocessed data: ${this.receivedData.length} bytes`);
+                // Keep only the last 8K to prevent memory issues
+                this.receivedData = this.receivedData.substring(this.receivedData.length - 8192);
+            }
+        }
+        catch (error) {
+            logger_1.default.error(`Error processing received data: ${error instanceof Error ? error.message : String(error)}`);
+            if (error instanceof Error && error.stack) {
+                logger_1.default.error(`Stack trace: ${error.stack}`);
+            }
         }
     }
     /**
@@ -400,17 +438,20 @@ class FixClient extends events_1.EventEmitter {
     sendLogon() {
         // Create a raw FIX message string directly to match the Go implementation
         const now = new Date().toISOString().replace(/[-:]/g, '').replace('T', '').substring(0, 17);
-        // Build the message body first
+        // Build the message body first - add 34=1 (MsgSeqNum) and 52=<time> (SendingTime)
         const bodyFields = [
             `35=A${constants_1.SOH}`, // MsgType (Logon)
+            `34=1${constants_1.SOH}`, // MsgSeqNum - adding this explicitly
             `49=${this.options.senderCompId}${constants_1.SOH}`, // SenderCompID
             `56=${this.options.targetCompId}${constants_1.SOH}`, // TargetCompID
+            `52=${now}${constants_1.SOH}`, // SendingTime - adding this explicitly
             `98=0${constants_1.SOH}`, // EncryptMethod
             `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt
             `141=Y${constants_1.SOH}`, // ResetSeqNumFlag
             `553=${this.options.username}${constants_1.SOH}`, // Username
-            `554=NMDUFISQ0001${constants_1.SOH}`, // Password (hardcoded as in Go)
+            `554=${this.options.password}${constants_1.SOH}`, // Password - use from options
             `1137=9${constants_1.SOH}`, // DefaultApplVerID
+            `1129=FIX5.00_PSX_1.00${constants_1.SOH}`, // DefaultCstmApplVerID - explicitly add this
             `115=600${constants_1.SOH}`, // OnBehalfOfCompID
             `96=kse${constants_1.SOH}`, // RawData
             `95=3${constants_1.SOH}` // RawDataLength
@@ -421,17 +462,16 @@ class FixClient extends events_1.EventEmitter {
         const message = [
             `8=FIXT.1.1${constants_1.SOH}`, // BeginString
             `9=${bodyLength}${constants_1.SOH}`, // BodyLength
-            bodyFields,
-            `10=000${constants_1.SOH}` // Placeholder for checksum
+            bodyFields
         ].join('');
         // Calculate checksum - sum of ASCII values of all characters modulo 256
         let sum = 0;
-        for (let i = 0; i < message.length - 7; i++) {
+        for (let i = 0; i < message.length; i++) {
             sum += message.charCodeAt(i);
         }
         const checksum = (sum % 256).toString().padStart(3, '0');
-        // Replace placeholder checksum with calculated one
-        const finalMessage = message.substring(0, message.length - 4) + checksum + constants_1.SOH;
+        // Add the checksum
+        const finalMessage = message + `10=${checksum}${constants_1.SOH}`;
         logger_1.default.info("Sending logon message with exact PSX format");
         logger_1.default.debug(`Logon message: ${finalMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
         if (!this.socket || !this.connected) {
