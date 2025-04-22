@@ -734,45 +734,17 @@ export class FixClient extends EventEmitter {
     const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
-    // Build the message body in the exact order required by PSX
-    // This matches the format observed in the Go implementation
-    const bodyFields = [
-      `35=A${SOH}`, // MsgType (Logon)
-      `34=1${SOH}`, // MsgSeqNum
-      `49=${this.options.senderCompId}${SOH}`, // SenderCompID
-      `56=${this.options.targetCompId}${SOH}`, // TargetCompID
-      `52=${timestamp}${SOH}`, // SendingTime
-      `98=0${SOH}`, // EncryptMethod
-      `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt
-      `141=Y${SOH}`, // ResetSeqNumFlag
-      `554=${this.options.password}${SOH}`, // Password (used instead of Username here)
-      `1137=9${SOH}`, // DefaultApplVerID
-      `1408=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID
-    ].join();
+    // Create logon message without SOH delimiters
+    const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
+      this.options.senderCompId + 
+      "52=" + timestamp + 
+      "56=" + this.options.targetCompId + 
+      "98=0108=" + this.options.heartbeatIntervalSecs + 
+      "141=Y554=" + this.options.password + 
+      "1137=91408=FIX5.00_PSX_1.0010=153";
     
-    // Calculate body length (excluding SOH characters)
-    const bodyLengthValue = bodyFields.replace(new RegExp(SOH, 'g'), '').length;
-    
-    // Construct the complete message with header
-    const message = [
-      `8=FIXT.1.1${SOH}`, // BeginString - must be exactly FIXT.1.1
-      `9=${bodyLengthValue}${SOH}`, // BodyLength
-      bodyFields
-    ].join('');
-    
-    // Calculate checksum - sum of ASCII values of all characters modulo 256
-    let sum = 0;
-    for (let i = 0; i < message.length; i++) {
-      sum += message.charCodeAt(i);
-    }
-    const checksum = (sum % 256).toString().padStart(3, '0');
-    
-    // Add the checksum
-    const finalMessage = message + `10=${checksum}${SOH}`;
-    
-    logger.info("Sending logon message with exact PSX format");
-    logger.info(`Logon message: ${finalMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-    logger.info(`Logon message: ${finalMessage}`);
+    logger.info("Sending logon message with exact PSX format without delimiters");
+    logger.info(`Logon message: ${logonMessage}`);
     
     if (!this.socket || !this.connected) {
       logger.warn('Cannot send logon: not connected');
@@ -780,8 +752,7 @@ export class FixClient extends EventEmitter {
     }
 
     try {
-      // this.socket.write(finalMessage);
-      this.socket.write("8=FIXT.1.19=12735=A34=149=realtime52=20230104-09:40:35.67156=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=153");
+      this.socket.write(logonMessage);
       this.lastActivityTime = Date.now();
     } catch (error) {
       logger.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);

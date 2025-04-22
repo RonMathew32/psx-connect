@@ -22,3 +22,36 @@
 2025-04-22T11:49:42.180Z [info]: Starting PSX FIX client...
 2025-04-22T11:49:42.184Z [info]: Connecting to PSX at 172.21.101.36:8016
 2025-04-22T11:49:45.948Z [info]: Received SIGINT. Shutting down gracefully...
+2025-04-22T12:37:19.557Z [info]: Starting PSX FIX client...
+2025-04-22T12:37:19.560Z [info]: Connecting to PSX at 172.21.101.36:8016
+2025-04-22T12:37:49.562Z [warn]: Socket timeout - connection inactive
+2025-04-22T12:37:49.563Z [error]: Socket timeout during connection attempt - server did not respond
+2025-04-22T12:37:49.567Z [info]: Socket disconnected cleanly
+2025-04-22T12:37:49.567Z [info]: Disconnected from PSX FIX server
+2025-04-22T12:37:49.567Z [warn]: Connection closed without any data received - server may have rejected the connection
+2025-04-22T12:37:49.568Z [warn]: Check credentials and network connectivity to the FIX server
+2025-04-22T12:37:49.568Z [warn]: Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct
+2025-04-22T12:37:49.570Z [info]: Scheduling reconnect in 5 seconds
+2025-04-22T12:37:54.572Z [info]: Attempting to reconnect
+2025-04-22T12:37:54.573Z [info]: Connecting to PSX at 172.21.101.36:8016
+2025-04-22T12:38:24.575Z [warn]: Socket timeout - connection inactive
+2025-04-22T12:38:24.576Z [error]: Socket timeout during connection attempt - server did not respond
+2025-04-22T12:38:24.578Z [info]: Socket disconnected cleanly
+2025-04-22T12:38:24.578Z [info]: Disconnected from PSX FIX server
+2025-04-22T12:38:24.579Z [warn]: Connection closed without any data received - server may have rejected the connection
+2025-04-22T12:38:24.579Z [warn]: Check credentials and network connectivity to the FIX server
+2025-04-22T12:38:24.579Z [warn]: Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct
+2025-04-22T12:38:24.579Z [info]: Scheduling reconnect in 5 seconds
+2025-04-22T12:38:29.581Z [info]: Attempting to reconnect
+2025-04-22T12:38:29.582Z [info]: Connecting to PSX at 172.21.101.36:8016
+2025-04-22T12:38:59.583Z [warn]: Socket timeout - connection inactive
+2025-04-22T12:38:59.584Z [error]: Socket timeout during connection attempt - server did not respond
+2025-04-22T12:38:59.585Z [info]: Socket disconnected cleanly
+2025-04-22T12:38:59.586Z [info]: Disconnected from PSX FIX server
+2025-04-22T12:38:59.586Z [warn]: Connection closed without any data received - server may have rejected the connection
+2025-04-22T12:38:59.586Z [warn]: Check credentials and network connectivity to the FIX server
+2025-04-22T12:38:59.586Z [warn]: Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct
+2025-04-22T12:38:59.586Z [info]: Scheduling reconnect in 5 seconds
+2025-04-22T12:39:04.587Z [info]: Attempting to reconnect
+2025-04-22T12:39:04.588Z [info]: Connecting to PSX at 172.21.101.36:8016
+2025-04-22T12:39:16.653Z [info]: Received SIGINT. Shutting down gracefully...
