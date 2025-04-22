@@ -737,23 +737,18 @@ export class FixClient extends EventEmitter {
     // Build the message body in the exact order required by PSX
     // This matches the format observed in the Go implementation
     const bodyFields = [
-      `35=A${SOH}`, // MsgType (Logon) - always the first field after BeginString and BodyLength
-      `34=1${SOH}`, // MsgSeqNum - use 1 for logon to ensure proper sequence reset
+      `35=A${SOH}`, // MsgType (Logon)
+      `34=1${SOH}`, // MsgSeqNum
       `49=${this.options.senderCompId}${SOH}`, // SenderCompID
       `56=${this.options.targetCompId}${SOH}`, // TargetCompID
-      `52=${timestamp}${SOH}`, // SendingTime - exact timestamp format is critical
-      `98=0${SOH}`, // EncryptMethod - always 0 for no encryption
-      `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt - heartbeat interval in seconds
-      `141=Y${SOH}`, // ResetSeqNumFlag - Y to reset sequence numbers
-      `553=${this.options.username}${SOH}`, // Username
-      `554=${this.options.password}${SOH}`, // Password
-      // PSX-specific authentication fields
-      `1137=9${SOH}`, // DefaultApplVerID - must be exactly 9 for PSX
-      `1129=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID - exactly as specified by PSX
-      `115=600${SOH}`, // OnBehalfOfCompID - must be exactly 600 for PSX
-      `96=kse${SOH}`, // RawData - must be exactly "kse" for PSX
-      `95=3${SOH}`, // RawDataLength - must be exactly 3 (length of "kse") for PSX
-    ].join('');
+      `52=${timestamp}${SOH}`, // SendingTime
+      `98=0${SOH}`, // EncryptMethod
+      `108=${this.options.heartbeatIntervalSecs}${SOH}`, // HeartBtInt
+      `141=Y${SOH}`, // ResetSeqNumFlag
+      `554=${this.options.password}${SOH}`, // Password (used instead of Username here)
+      `1137=9${SOH}`, // DefaultApplVerID
+      `1408=FIX5.00_PSX_1.00${SOH}`, // DefaultCstmApplVerID
+    ].join();
     
     // Calculate body length (excluding SOH characters)
     const bodyLengthValue = bodyFields.replace(new RegExp(SOH, 'g'), '').length;

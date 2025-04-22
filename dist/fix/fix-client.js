@@ -616,23 +616,18 @@ class FixClient extends events_1.EventEmitter {
         // Build the message body in the exact order required by PSX
         // This matches the format observed in the Go implementation
         const bodyFields = [
-            `35=A${constants_1.SOH}`, // MsgType (Logon) - always the first field after BeginString and BodyLength
-            `34=1${constants_1.SOH}`, // MsgSeqNum - use 1 for logon to ensure proper sequence reset
+            `35=A${constants_1.SOH}`, // MsgType (Logon)
+            `34=1${constants_1.SOH}`, // MsgSeqNum
             `49=${this.options.senderCompId}${constants_1.SOH}`, // SenderCompID
             `56=${this.options.targetCompId}${constants_1.SOH}`, // TargetCompID
-            `52=${timestamp}${constants_1.SOH}`, // SendingTime - exact timestamp format is critical
-            `98=0${constants_1.SOH}`, // EncryptMethod - always 0 for no encryption
-            `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt - heartbeat interval in seconds
-            `141=Y${constants_1.SOH}`, // ResetSeqNumFlag - Y to reset sequence numbers
-            `553=${this.options.username}${constants_1.SOH}`, // Username
-            `554=${this.options.password}${constants_1.SOH}`, // Password
-            // PSX-specific authentication fields
-            `1137=9${constants_1.SOH}`, // DefaultApplVerID - must be exactly 9 for PSX
-            `1129=FIX5.00_PSX_1.00${constants_1.SOH}`, // DefaultCstmApplVerID - exactly as specified by PSX
-            `115=600${constants_1.SOH}`, // OnBehalfOfCompID - must be exactly 600 for PSX
-            `96=kse${constants_1.SOH}`, // RawData - must be exactly "kse" for PSX
-            `95=3${constants_1.SOH}`, // RawDataLength - must be exactly 3 (length of "kse") for PSX
-        ].join('');
+            `52=${timestamp}${constants_1.SOH}`, // SendingTime
+            `98=0${constants_1.SOH}`, // EncryptMethod
+            `108=${this.options.heartbeatIntervalSecs}${constants_1.SOH}`, // HeartBtInt
+            `141=Y${constants_1.SOH}`, // ResetSeqNumFlag
+            `554=${this.options.password}${constants_1.SOH}`, // Password (used instead of Username here)
+            `1137=9${constants_1.SOH}`, // DefaultApplVerID
+            `1408=FIX5.00_PSX_1.00${constants_1.SOH}`, // DefaultCstmApplVerID
+        ].join();
         // Calculate body length (excluding SOH characters)
         const bodyLengthValue = bodyFields.replace(new RegExp(constants_1.SOH, 'g'), '').length;
         // Construct the complete message with header
