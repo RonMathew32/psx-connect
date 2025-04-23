@@ -109,6 +109,62 @@ export class FixClient extends EventEmitter {
 
     logger.info(`Connecting to ${this.options.host}:${this.options.port}`);
     
+    // First try a quick TCP port check to see if the server is actually accepting connections
+    this.checkServerAvailability()
+      .then(available => {
+        if (!available) {
+          logger.error(`Server at ${this.options.host}:${this.options.port} is not accepting TCP connections!`);
+          logger.error('This indicates a network or firewall issue, or the PSX service is not running.');
+          this.emit('error', new Error('Server not accepting connections'));
+          return;
+        }
+        
+        logger.info(`Server at ${this.options.host}:${this.options.port} is accepting TCP connections.`);
+        this.doConnect();
+      })
+      .catch(error => {
+        logger.error(`Error checking server availability: ${error}`);
+        // Try to connect anyway
+        this.doConnect();
+      });
+  }
+
+  /**
+   * Check if the server is accepting TCP connections on the specified port
+   */
+  private checkServerAvailability(): Promise<boolean> {
+    return new Promise((resolve) => {
+      logger.info(`Testing if server ${this.options.host}:${this.options.port} is accepting TCP connections...`);
+      
+      const { Socket } = require('net');
+      const testSocket = new Socket();
+      testSocket.setTimeout(5000); // 5 second timeout
+      
+      testSocket.on('connect', () => {
+        logger.info('Test connection successful - server is accepting TCP connections');
+        testSocket.end();
+        resolve(true);
+      });
+      
+      testSocket.on('timeout', () => {
+        logger.warn('Test connection timed out - server not responding');
+        testSocket.destroy();
+        resolve(false);
+      });
+      
+      testSocket.on('error', (error: any) => {
+        logger.warn(`Test connection failed: ${error.message}`);
+        resolve(false);
+      });
+      
+      testSocket.connect(this.options.port, this.options.host);
+    });
+  }
+  
+  /**
+   * Perform the actual connection after checking server availability
+   */
+  private doConnect(): void {
     try {
       // Create socket with specific configuration
       this.socket = new Socket();
@@ -701,12 +757,12 @@ export class FixClient extends EventEmitter {
   }
 
   /**
-   * Check if VPN is active before sending logon message
-   * @returns A promise that resolves to true if VPN is active, false otherwise
+   * Check if server connection is available before sending logon message
+   * @returns A promise that resolves to true if server is reachable, false otherwise
    */
-  private async checkVpnConnection(): Promise<boolean> {
+  private async checkServerConnection(): Promise<boolean> {
     try {
-      logger.info("Checking VPN connectivity before sending logon message...");
+      logger.info("Checking server connectivity before sending logon message...");
       
       // Log network interfaces for debugging
       try {
@@ -721,9 +777,9 @@ export class FixClient extends EventEmitter {
               if (info.family === 'IPv4') {
                 logger.info(`  ${ifname}: ${info.address}`);
                 
-                // Check if this is likely a VPN interface (tun or tap)
-                if (ifname.includes('tun') || ifname.includes('tap')) {
-                  logger.info(`  Detected possible VPN interface: ${ifname}`);
+                // If the server IP is on a local interface, note that
+                if (info.address === this.options.host) {
+                  logger.info(`  Server IP ${this.options.host} is on local interface ${ifname}`);
                 }
               }
             });
@@ -733,7 +789,7 @@ export class FixClient extends EventEmitter {
         logger.error(`Error checking network interfaces: ${error}`);
       }
       
-      // Try to ping the PSX server to verify VPN connectivity
+      // Try to ping the server to verify connectivity
       const { exec } = require('child_process');
       
       return new Promise((resolve) => {
@@ -745,17 +801,17 @@ export class FixClient extends EventEmitter {
         
         exec(cmd, (error: any) => {
           if (error) {
-            logger.error(`VPN connection check failed: Cannot reach ${psx_host}`);
-            logger.error('Please ensure you are connected to the correct VPN before connecting to PSX');
+            logger.error(`Server connection check failed: Cannot reach ${psx_host}`);
+            logger.error('Please ensure your network configuration is correct');
             resolve(false);
           } else {
-            logger.info(`VPN connectivity to ${psx_host} confirmed`);
+            logger.info(`Server connectivity to ${psx_host} confirmed`);
             resolve(true);
           }
         });
       });
     } catch (error) {
-      logger.error(`Error checking VPN connectivity: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`Error checking server connectivity: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
@@ -766,11 +822,11 @@ export class FixClient extends EventEmitter {
   public async sendLogon(): Promise<void> {
     logger.info("Preparing to send logon message...");
     
-    // Check VPN connectivity before sending logon
-    const vpnActive = await this.checkVpnConnection();
-    if (!vpnActive) {
-      logger.error("Aborting logon attempt: No VPN connectivity detected");
-      this.emit('error', new Error('No VPN connectivity detected. Please connect to VPN before attempting to connect to PSX.'));
+    // Check server connectivity before sending logon
+    const serverReachable = await this.checkServerConnection();
+    if (!serverReachable) {
+      logger.error("Aborting logon attempt: Server not reachable");
+      this.emit('error', new Error('Server not reachable. Please check your network configuration'));
       return;
     }
     
@@ -786,36 +842,34 @@ export class FixClient extends EventEmitter {
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
     try {
-      // Important: Use exactly the same message format as the working fn-psx example
-      // Note: We're intentionally using the original "19=127" body length from the example
-      const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
-        this.options.senderCompId + 
-        "52=" + timestamp + 
-        "56=" + this.options.targetCompId + 
-        "98=0108=" + this.options.heartbeatIntervalSecs + 
-        "141=Y554=" + this.options.password + 
-        "1137=91408=FIX5.00_PSX_1.0010=153";
+      // Try sending a hard-coded logon message exactly as presented from fn-psx
+      // Replace only the timestamp which needs to be current
+      let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=TIMESTAMP56=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=153";
+      logonMessage = logonMessage.replace("TIMESTAMP", timestamp);
       
-      logger.info("Sending logon message with exact format from working example");
+      logger.info("Sending logon message with format exactly matching fn-psx");
       logger.info(`Complete message: ${logonMessage}`);
       
       if (!this.socket || !this.connected) {
         logger.warn('Cannot send logon: not connected');
         return;
       }
+
+      logger.info("Converting message to raw bytes:");
+      // Manually log each byte for debugging
+      const bytes = [];
+      for (let i = 0; i < logonMessage.length; i++) {
+        const charCode = logonMessage.charCodeAt(i);
+        bytes.push(charCode);
+        logger.info(`Byte ${i}: Character '${logonMessage[i]}', ASCII value: ${charCode}`);
+      }
       
-      // Send the message with binary encoding to ensure proper transmission
+      // Convert to buffer
       const messageBuffer = Buffer.from(logonMessage, 'ascii');
       logger.info(`Message buffer length: ${messageBuffer.length} bytes`);
       
-      // Add a tiny delay before sending - sometimes helps with socket buffering
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Debug - log connection details
-      logger.info(`Socket local address: ${this.socket.localAddress}:${this.socket.localPort}`);
-      logger.info(`Socket remote address: ${this.socket.remoteAddress}:${this.socket.remotePort}`);
-      
-      // Send as buffer to ensure proper binary transmission
+      // Send message
+      logger.info('Sending logon message...');
       const writeSuccess = this.socket.write(messageBuffer);
       
       if (writeSuccess) {
@@ -824,14 +878,30 @@ export class FixClient extends EventEmitter {
         logger.warn('Socket write returned false, socket buffer may be full');
       }
       
-      // Try to flush the socket
-      if (typeof this.socket.cork === 'function' && typeof this.socket.uncork === 'function') {
-        this.socket.cork();
-        this.socket.uncork();
-        logger.info('Socket corked and uncorked to ensure data is flushed');
-      }
-      
       this.lastActivityTime = Date.now();
+      
+      // Wait for response with a timeout for better error handling
+      await new Promise<void>((resolve, reject) => {
+        const responseTimeout = setTimeout(() => {
+          logger.error('No response received from server within 10 seconds');
+          logger.error('This likely indicates the server is not processing our logon request');
+          reject(new Error('No response from server within timeout period'));
+        }, 10000);
+        
+        // Set up a one-time handler for logon success
+        const logonHandler = () => {
+          clearTimeout(responseTimeout);
+          resolve();
+        };
+        
+        this.once('logon', logonHandler);
+        
+        // Clean up the handlers on timeout
+        responseTimeout.unref();
+      }).catch(error => {
+        logger.warn(`Logon response waiting: ${error.message}`);
+      });
+      
     } catch (error) {
       logger.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);
     }
