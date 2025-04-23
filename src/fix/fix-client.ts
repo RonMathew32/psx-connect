@@ -734,7 +734,7 @@ export class FixClient extends EventEmitter {
     const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
-    // Create logon message without SOH delimiters
+    // Create logon message without any delimiters at all
     const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
       this.options.senderCompId + 
       "52=" + timestamp + 
@@ -743,7 +743,7 @@ export class FixClient extends EventEmitter {
       "141=Y554=" + this.options.password + 
       "1137=91408=FIX5.00_PSX_1.0010=153";
     
-    logger.info("Sending logon message with exact PSX format without delimiters");
+    logger.info("Sending logon message with no delimiters");
     logger.info(`Logon message: ${logonMessage}`);
     
     if (!this.socket || !this.connected) {
