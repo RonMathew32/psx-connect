@@ -4,12 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FixClient = void 0;
-const net_1 = __importDefault(require("net"));
 const events_1 = require("events");
 const message_builder_1 = require("./message-builder");
 const message_parser_1 = require("./message-parser");
 const constants_1 = require("./constants");
 const logger_1 = __importDefault(require("../utils/logger"));
+const net_1 = require("net");
 class FixClient extends events_1.EventEmitter {
     constructor(options) {
         super();
@@ -24,6 +24,7 @@ class FixClient extends events_1.EventEmitter {
         this.testRequestCount = 0;
         this.lastSentTime = new Date();
         this.msgSeqNum = 1;
+        this.logonTimer = null;
         this.options = options;
     }
     /**
@@ -42,53 +43,83 @@ class FixClient extends events_1.EventEmitter {
      * Connect to the FIX server
      */
     connect() {
-        return new Promise((resolve, reject) => {
-            if (this.socket) {
-                logger_1.default.warn('Socket already exists, disconnecting first');
-                this.socket.destroy();
-                this.socket = null;
+        if (this.socket && this.connected) {
+            logger_1.default.warn('Already connected');
+            return;
+        }
+        logger_1.default.info(`Connecting to ${this.options.host}:${this.options.port}`);
+        this.socket = new net_1.Socket();
+        this.socket.setKeepAlive(true);
+        this.socket.setNoDelay(true);
+        // Set connection timeout
+        this.socket.setTimeout(this.options.connectTimeoutMs || 10000);
+        this.socket.on('timeout', () => {
+            logger_1.default.error('Connection timed out');
+            this.socket?.destroy();
+            this.connected = false;
+            this.emit('error', new Error('Connection timed out'));
+        });
+        this.socket.on('connect', () => {
+            logger_1.default.info(`Connected to ${this.options.host}:${this.options.port}`);
+            this.connected = true;
+            // Clear any existing timeout to prevent duplicate logon attempts
+            if (this.logonTimer) {
+                clearTimeout(this.logonTimer);
             }
-            // Reset state
+            // Send logon message after a short delay
+            this.logonTimer = setTimeout(async () => {
+                try {
+                    await this.sendLogon();
+                }
+                catch (error) {
+                    logger_1.default.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
+                    this.disconnect();
+                }
+            }, 500);
+            this.emit('connected');
+        });
+        this.socket.on('data', (data) => {
+            this.handleData(data);
+        });
+        this.socket.on('error', (error) => {
+            logger_1.default.error(`Socket error: ${error.message}`);
+            if (error.stack) {
+                logger_1.default.debug(`Error stack: ${error.stack}`);
+            }
+            // Check specific error codes and respond accordingly
+            if ('code' in error) {
+                const code = error.code;
+                if (code === 'ECONNREFUSED') {
+                    logger_1.default.error(`Connection refused to ${this.options.host}:${this.options.port}. Server may be down or unreachable.`);
+                }
+                else if (code === 'ETIMEDOUT') {
+                    logger_1.default.error(`Connection timed out to ${this.options.host}:${this.options.port}`);
+                }
+            }
+            this.emit('error', error);
+        });
+        this.socket.on('close', (hadError) => {
+            logger_1.default.info(`Socket disconnected ${hadError ? 'due to error' : 'cleanly'}`);
             this.connected = false;
             this.loggedIn = false;
-            this.receivedData = '';
-            this.lastActivityTime = 0;
-            this.testRequestCount = 0;
-            // Reset sequence number on each reconnect
-            this.msgSeqNum = 1;
-            logger_1.default.info(`Connecting to PSX at ${this.options.host}:${this.options.port}`);
-            try {
-                // Create TCP socket with settings that match the Go implementation
-                this.socket = net_1.default.createConnection({
-                    host: this.options.host,
-                    port: this.options.port,
-                    noDelay: true, // Disable Nagle's algorithm for better performance with FIX protocol
-                    keepAlive: true, // Keep connection alive
-                    timeout: 30000 // 30 second timeout
-                });
-                // Set up socket event handlers
-                this.setupSocketHandlers();
-                // Handle successful connection
-                this.socket.once('connect', () => {
-                    logger_1.default.info('Socket connected successfully');
-                    // Connection established, continue with authentication
-                    resolve();
-                });
-                // Handle connection error
-                this.socket.once('error', (error) => {
-                    logger_1.default.error(`Socket connection error: ${error.message}`);
-                    if (this.socket) {
-                        this.socket.destroy();
-                        this.socket = null;
-                    }
-                    reject(error);
-                });
+            this.clearTimers();
+            this.emit('disconnected');
+            // Check if data was ever received
+            if (this.lastActivityTime === 0) {
+                logger_1.default.warn('Connection closed without any data received - server may have rejected the connection');
+                logger_1.default.warn('Check credentials and network connectivity to the FIX server');
+                logger_1.default.warn('Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct');
             }
-            catch (error) {
-                logger_1.default.error(`Error creating socket: ${error instanceof Error ? error.message : String(error)}`);
-                reject(error);
-            }
+            this.scheduleReconnect();
         });
+        // Connect to the server
+        try {
+            this.socket.connect(this.options.port, this.options.host);
+        }
+        catch (error) {
+            logger_1.default.error(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+            this.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
+        }
     }
     /**
      * Disconnect from the FIX server
@@ -599,10 +630,49 @@ class FixClient extends events_1.EventEmitter {
         }
     }
     /**
+     * Check if VPN is active before sending logon message
+     * @returns A promise that resolves to true if VPN is active, false otherwise
+     */
+    async checkVpnConnection() {
+        try {
+            logger_1.default.info("Checking VPN connectivity before sending logon message...");
+            // Try to ping the PSX server to verify VPN connectivity
+            const { exec } = require('child_process');
+            return new Promise((resolve) => {
+                // PSX server address from options
+                const psx_host = this.options.host;
+                // Use ping to check connectivity - ping only once with 3s timeout
+                const cmd = `ping -c 1 -W 3 ${psx_host}`;
+                exec(cmd, (error) => {
+                    if (error) {
+                        logger_1.default.error(`VPN connection check failed: Cannot reach ${psx_host}`);
+                        logger_1.default.error('Please ensure you are connected to the correct VPN before connecting to PSX');
+                        resolve(false);
+                    }
+                    else {
+                        logger_1.default.info(`VPN connectivity to ${psx_host} confirmed`);
+                        resolve(true);
+                    }
+                });
+            });
+        }
+        catch (error) {
+            logger_1.default.error(`Error checking VPN connectivity: ${error instanceof Error ? error.message : String(error)}`);
+            return false;
+        }
+    }
+    /**
      * Send a logon message
      */
-    sendLogon() {
-        logger_1.default.info("Sending logon message...");
+    async sendLogon() {
+        logger_1.default.info("Preparing to send logon message...");
+        // Check VPN connectivity before sending logon
+        const vpnActive = await this.checkVpnConnection();
+        if (!vpnActive) {
+            logger_1.default.error("Aborting logon attempt: No VPN connectivity detected");
+            this.emit('error', new Error('No VPN connectivity detected. Please connect to VPN before attempting to connect to PSX.'));
+            return;
+        }
         // Format timestamp to match FIX standard: YYYYMMDD-HH:MM:SS.sss
         const now = new Date();
         const year = now.getUTCFullYear();
