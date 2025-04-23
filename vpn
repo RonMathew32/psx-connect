@@ -1,0 +1,15 @@
+host 172.16.73.18
+pass Yasir01
+FFU60017
+
+client 172.31.101.35
+dtls rsa_aes_256_sha1
+
+email 172.21.105.35
+
+
+local address:
+172.21.101.35
+mask 255.255.255.224
+gw 172.21.101.33
+
