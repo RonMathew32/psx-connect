@@ -51,8 +51,8 @@ class FixClient extends events_1.EventEmitter {
         this.socket = new net_1.Socket();
         this.socket.setKeepAlive(true);
         this.socket.setNoDelay(true);
-        // Set connection timeout
-        this.socket.setTimeout(this.options.connectTimeoutMs || 10000);
+        // Set connection timeout - increase to 30 seconds for PSX connections
+        this.socket.setTimeout(this.options.connectTimeoutMs || 30000);
         this.socket.on('timeout', () => {
             logger_1.default.error('Connection timed out');
             this.socket?.destroy();
@@ -683,21 +683,39 @@ class FixClient extends events_1.EventEmitter {
         const seconds = String(now.getUTCSeconds()).padStart(2, '0');
         const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
         const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
-        // Create logon message without any delimiters at all
-        const logonMessage = "8=FIXT.1.19=12735=A34=149=" +
-            this.options.senderCompId +
-            "52=" + timestamp +
-            "56=" + this.options.targetCompId +
-            "98=0108=" + this.options.heartbeatIntervalSecs +
-            "141=Y554=" + this.options.password +
-            "1137=91408=FIX5.00_PSX_1.0010=153";
-        logger_1.default.info("Sending logon message with no delimiters");
-        logger_1.default.info(`Logon message: ${logonMessage}`);
-        if (!this.socket || !this.connected) {
-            logger_1.default.warn('Cannot send logon: not connected');
-            return;
-        }
         try {
+            // Create the message body (without header and checksum)
+            const messageBody = `35=A${constants_1.SOH}34=1${constants_1.SOH}49=` +
+                this.options.senderCompId +
+                `${constants_1.SOH}52=` + timestamp +
+                `${constants_1.SOH}56=` + this.options.targetCompId +
+                `${constants_1.SOH}98=0${constants_1.SOH}108=` + this.options.heartbeatIntervalSecs +
+                `${constants_1.SOH}141=Y${constants_1.SOH}553=` + this.options.username +
+                `${constants_1.SOH}554=` + this.options.password +
+                // Add PSX specific fields for logon
+                `${constants_1.SOH}115=600${constants_1.SOH}` + // OnBehalfOfCompID 
+                `${constants_1.SOH}96=kse${constants_1.SOH}` + // RawData
+                `${constants_1.SOH}95=3${constants_1.SOH}` + // RawDataLength (matches "kse" length)
+                `${constants_1.SOH}1137=9${constants_1.SOH}1408=FIX5.00_PSX_1.00${constants_1.SOH}`;
+            // Calculate the body length (excluding SOH characters)
+            const bodyLength = messageBody.replace(new RegExp(constants_1.SOH, 'g'), '').length;
+            // Create the message with header but no checksum yet
+            const messageWithoutChecksum = `8=FIXT.1.1${constants_1.SOH}9=${bodyLength}${constants_1.SOH}${messageBody}`;
+            // Calculate the checksum
+            let checksumValue = 0;
+            for (let i = 0; i < messageWithoutChecksum.length; i++) {
+                checksumValue += messageWithoutChecksum.charCodeAt(i);
+            }
+            checksumValue = checksumValue % 256;
+            const checksum = checksumValue.toString().padStart(3, '0');
+            // Complete the message with the checksum
+            const logonMessage = `${messageWithoutChecksum}10=${checksum}${constants_1.SOH}`;
+            logger_1.default.info("Sending logon message with proper SOH delimiters");
+            logger_1.default.info(`Logon message: ${logonMessage.replace(/\x01/g, '|')}`);
+            if (!this.socket || !this.connected) {
+                logger_1.default.warn('Cannot send logon: not connected');
+                return;
+            }
             this.socket.write(logonMessage);
             this.lastActivityTime = Date.now();
         }

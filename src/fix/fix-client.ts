@@ -112,8 +112,8 @@ export class FixClient extends EventEmitter {
     this.socket.setKeepAlive(true);
     this.socket.setNoDelay(true);
 
-    // Set connection timeout
-    this.socket.setTimeout(this.options.connectTimeoutMs || 10000);
+    // Set connection timeout - increase to 30 seconds for PSX connections
+    this.socket.setTimeout(this.options.connectTimeoutMs || 30000);
     
     this.socket.on('timeout', () => {
       logger.error('Connection timed out');
@@ -816,24 +816,46 @@ export class FixClient extends EventEmitter {
     const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
-    // Create logon message without any delimiters at all
-    const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
-      this.options.senderCompId + 
-      "52=" + timestamp + 
-      "56=" + this.options.targetCompId + 
-      "98=0108=" + this.options.heartbeatIntervalSecs + 
-      "141=Y554=" + this.options.password + 
-      "1137=91408=FIX5.00_PSX_1.0010=153";
-    
-    logger.info("Sending logon message with no delimiters");
-    logger.info(`Logon message: ${logonMessage}`);
-    
-    if (!this.socket || !this.connected) {
-      logger.warn('Cannot send logon: not connected');
-      return;
-    }
-
     try {
+      // Create the message body (without header and checksum)
+      const messageBody = `35=A${SOH}34=1${SOH}49=` + 
+        this.options.senderCompId + 
+        `${SOH}52=` + timestamp + 
+        `${SOH}56=` + this.options.targetCompId + 
+        `${SOH}98=0${SOH}108=` + this.options.heartbeatIntervalSecs + 
+        `${SOH}141=Y${SOH}553=` + this.options.username +
+        `${SOH}554=` + this.options.password + 
+        // Add PSX specific fields for logon
+        `${SOH}115=600${SOH}` +  // OnBehalfOfCompID 
+        `${SOH}96=kse${SOH}` +   // RawData
+        `${SOH}95=3${SOH}` +     // RawDataLength (matches "kse" length)
+        `${SOH}1137=9${SOH}1408=FIX5.00_PSX_1.00${SOH}`;
+  
+      // Calculate the body length (excluding SOH characters)
+      const bodyLength = messageBody.replace(new RegExp(SOH, 'g'), '').length;
+      
+      // Create the message with header but no checksum yet
+      const messageWithoutChecksum = `8=FIXT.1.1${SOH}9=${bodyLength}${SOH}${messageBody}`;
+      
+      // Calculate the checksum
+      let checksumValue = 0;
+      for (let i = 0; i < messageWithoutChecksum.length; i++) {
+        checksumValue += messageWithoutChecksum.charCodeAt(i);
+      }
+      checksumValue = checksumValue % 256;
+      const checksum = checksumValue.toString().padStart(3, '0');
+      
+      // Complete the message with the checksum
+      const logonMessage = `${messageWithoutChecksum}10=${checksum}${SOH}`;
+      
+      logger.info("Sending logon message with proper SOH delimiters");
+      logger.info(`Logon message: ${logonMessage.replace(/\x01/g, '|')}`);
+      
+      if (!this.socket || !this.connected) {
+        logger.warn('Cannot send logon: not connected');
+        return;
+      }
+  
       this.socket.write(logonMessage);
       this.lastActivityTime = Date.now();
     } catch (error) {
@@ -987,4 +1009,4 @@ export class FixClient extends EventEmitter {
     // Implement the logic to format the message for logging
     return message;
   }
-} 
+}
