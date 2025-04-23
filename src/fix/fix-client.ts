@@ -817,39 +817,20 @@ export class FixClient extends EventEmitter {
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
     try {
-      // Create the message body (without header and checksum)
-      const messageBody = `35=A${SOH}34=1${SOH}49=` + 
+      // Create logon message without any delimiters at all, matching fn-psx format
+      const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
         this.options.senderCompId + 
-        `${SOH}52=` + timestamp + 
-        `${SOH}56=` + this.options.targetCompId + 
-        `${SOH}98=0${SOH}108=` + this.options.heartbeatIntervalSecs + 
-        `${SOH}141=Y${SOH}553=` + this.options.username +
-        `${SOH}554=` + this.options.password + 
-        // Add PSX specific fields for logon
-        `${SOH}115=600${SOH}` +  // OnBehalfOfCompID 
-        `${SOH}96=kse${SOH}` +   // RawData
-        `${SOH}95=3${SOH}` +     // RawDataLength (matches "kse" length)
-        `${SOH}1137=9${SOH}1408=FIX5.00_PSX_1.00${SOH}`;
-  
-      // Calculate the body length (excluding SOH characters)
-      const bodyLength = messageBody.replace(new RegExp(SOH, 'g'), '').length;
+        "52=" + timestamp + 
+        "56=" + this.options.targetCompId + 
+        "98=0108=" + this.options.heartbeatIntervalSecs + 
+        "141=Y553=" + this.options.username +
+        "554=" + this.options.password + 
+        // Add PSX specific fields for logon without delimiters
+        "115=60096=kse95=3" +
+        "1137=91408=FIX5.00_PSX_1.0010=153";
       
-      // Create the message with header but no checksum yet
-      const messageWithoutChecksum = `8=FIXT.1.1${SOH}9=${bodyLength}${SOH}${messageBody}`;
-      
-      // Calculate the checksum
-      let checksumValue = 0;
-      for (let i = 0; i < messageWithoutChecksum.length; i++) {
-        checksumValue += messageWithoutChecksum.charCodeAt(i);
-      }
-      checksumValue = checksumValue % 256;
-      const checksum = checksumValue.toString().padStart(3, '0');
-      
-      // Complete the message with the checksum
-      const logonMessage = `${messageWithoutChecksum}10=${checksum}${SOH}`;
-      
-      logger.info("Sending logon message with proper SOH delimiters");
-      logger.info(`Logon message: ${logonMessage.replace(/\x01/g, '|')}`);
+      logger.info("Sending logon message with no delimiters, matching fn-psx format");
+      logger.info(`Logon message: ${logonMessage}`);
       
       if (!this.socket || !this.connected) {
         logger.warn('Cannot send logon: not connected');
