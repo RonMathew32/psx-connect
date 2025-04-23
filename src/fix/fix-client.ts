@@ -108,12 +108,88 @@ export class FixClient extends EventEmitter {
     }
 
     logger.info(`Connecting to ${this.options.host}:${this.options.port}`);
-    this.socket = new Socket();
-    this.socket.setKeepAlive(true);
-    this.socket.setNoDelay(true);
+    
+    try {
+      // Create socket with specific configuration
+      this.socket = new Socket();
+      
+      // Log debug info
+      logger.info('Socket created with following configuration:');
+      logger.info('- setKeepAlive: true');
+      logger.info('- setNoDelay: true (disables Nagle\'s algorithm)');
+      
+      // Apply socket settings
+      this.socket.setKeepAlive(true);
+      this.socket.setNoDelay(true);
+      
+      // Set connection timeout - increase to 30 seconds for PSX connections
+      this.socket.setTimeout(this.options.connectTimeoutMs || 30000);
+      
+      // Setup event handlers before connecting
+      this.setupSocketHandlers();
+      
+      // Connect to the server
+      logger.info(`Establishing TCP connection to ${this.options.host}:${this.options.port}...`);
+      this.socket.connect(this.options.port, this.options.host, () => {
+        // This callback is executed when the connection is successfully established
+        const localAddr = this.socket?.localAddress;
+        const localPort = this.socket?.localPort;
+        const remoteAddr = this.socket?.remoteAddress;
+        const remotePort = this.socket?.remotePort;
+        
+        logger.info(`TCP connection established`);
+        logger.info(`Local endpoint: ${localAddr}:${localPort}`);
+        logger.info(`Remote endpoint: ${remoteAddr}:${remotePort}`);
+        
+        this.connected = true;
+        
+        // Clear any existing timeout to prevent duplicate logon attempts
+        if (this.logonTimer) {
+          clearTimeout(this.logonTimer);
+        }
+        
+        // Send logon message after a short delay
+        logger.info('Scheduling logon message to be sent in 500ms...');
+        this.logonTimer = setTimeout(async () => {
+          try {
+            logger.info('About to send logon message to PSX server...');
+            await this.sendLogon();
+            logger.info('Logon message sent successfully, waiting for response from PSX...');
+          } catch (error) {
+            logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
+            this.disconnect();
+          }
+        }, 500);
+        
+        this.emit('connected');
+      });
+    } catch (error) {
+      logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);
+      this.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
+  }
 
-    // Set connection timeout - increase to 30 seconds for PSX connections
-    this.socket.setTimeout(this.options.connectTimeoutMs || 30000);
+  /**
+   * Disconnect from the FIX server
+   */
+  public disconnect(): void {
+    this.clearTimers();
+    if (this.connected && this.loggedIn) {
+      this.sendLogout();
+    }
+    if (this.socket) {
+      this.socket.destroy();
+      this.socket = null;
+    }
+    this.connected = false;
+    this.loggedIn = false;
+  }
+
+  /**
+   * Set up socket event handlers
+   */
+  private setupSocketHandlers(): void {
+    if (!this.socket) return;
     
     this.socket.on('timeout', () => {
       logger.error('Connection timed out');
@@ -127,32 +203,8 @@ export class FixClient extends EventEmitter {
       this.emit('error', new Error('Connection timed out'));
     });
 
-    this.socket.on('connect', () => {
-      logger.info(`Connected to ${this.options.host}:${this.options.port}`);
-      this.connected = true;
-      
-      // Clear any existing timeout to prevent duplicate logon attempts
-      if (this.logonTimer) {
-        clearTimeout(this.logonTimer);
-      }
-      
-      // Send logon message after a short delay
-      this.logonTimer = setTimeout(async () => {
-        try {
-          logger.info('About to send logon message to PSX server...');
-          await this.sendLogon();
-          logger.info('Logon message sent successfully, waiting for response from PSX...');
-        } catch (error) {
-          logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
-          this.disconnect();
-        }
-      }, 500);
-      
-      this.emit('connected');
-    });
-
+    // Log any received data in detail
     this.socket.on('data', (data) => {
-      // Log any received data in detail
       logger.info(`Received data from server: ${data.length} bytes`);
       logger.info(`Raw data received: ${data.toString('hex')}`);
       logger.info(`String representation: ${data.toString('ascii').replace(/\x01/g, '|')}`);
@@ -195,127 +247,6 @@ export class FixClient extends EventEmitter {
       }
       
       this.scheduleReconnect();
-    });
-
-    // Connect to the server
-    try {
-      this.socket.connect(this.options.port, this.options.host);
-    } catch (error) {
-      logger.error(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
-      this.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
-    }
-  }
-
-  /**
-   * Disconnect from the FIX server
-   */
-  public disconnect(): void {
-    this.clearTimers();
-    if (this.connected && this.loggedIn) {
-      this.sendLogout();
-    }
-    if (this.socket) {
-      this.socket.destroy();
-      this.socket = null;
-    }
-    this.connected = false;
-    this.loggedIn = false;
-  }
-
-  /**
-   * Set up socket event handlers
-   */
-  private setupSocketHandlers(): void {
-    if (!this.socket) return;
-
-    this.socket.on('connect', () => {
-      logger.info('Socket connected');
-      this.connected = true;
-      const localAddress = this.socket?.localAddress;
-      const localPort = this.socket?.localPort;
-      logger.debug(`Connected to ${this.options.host}:${this.options.port}`);
-      logger.debug(`Local address: ${localAddress}:${localPort}`);
-      
-      // Wait before sending logon to ensure socket is fully established
-      // This delay matches the behavior observed in the Go implementation
-      setTimeout(() => {
-        // Send logon message to authenticate
-        this.sendLogon();
-      }, 500);
-      
-      this.emit('connected');
-    });
-
-    this.socket.on('data', (data) => {
-      this.handleData(data);
-    });
-
-    this.socket.on('error', (error) => {
-      logger.error(`Socket error: ${error.message}`);
-      if (error.stack) {
-        logger.debug(`Error stack: ${error.stack}`);
-      }
-      
-      // Check specific error codes and respond accordingly
-      if ('code' in error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code === 'ECONNREFUSED') {
-          logger.error(`Connection refused to ${this.options.host}:${this.options.port}. Server may be down or unreachable.`);
-        } else if (code === 'ETIMEDOUT') {
-          logger.error(`Connection timed out to ${this.options.host}:${this.options.port}`);
-        }
-      }
-      
-      this.emit('error', error);
-    });
-
-    this.socket.on('close', (hadError) => {
-      logger.info(`Socket disconnected ${hadError ? 'due to error' : 'cleanly'}`);
-      this.connected = false;
-      this.loggedIn = false;
-      this.clearTimers();
-      this.emit('disconnected');
-      
-      // Check if data was ever received
-      if (this.lastActivityTime === 0) {
-        logger.warn('Connection closed without any data received - server may have rejected the connection');
-        logger.warn('Check credentials and network connectivity to the FIX server');
-        logger.warn('Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct');
-      }
-      
-      this.scheduleReconnect();
-    });
-
-    this.socket.on('timeout', () => {
-      logger.warn('Socket timeout - connection inactive');
-      
-      if (this.connected && this.loggedIn) {
-        // If we're logged in, try sending a test request to keep the connection alive
-        logger.warn('Sending test request to check if server is still responsive');
-        try {
-          const testRequest = FixMessageBuilder.createTestRequestMessage(
-            this.options.senderCompId,
-            this.options.targetCompId
-          );
-          
-          if (this.socket) {
-            this.socket.write(testRequest);
-          }
-        } catch (error) {
-          logger.error('Failed to send test request, destroying socket');
-          if (this.socket) {
-            this.socket.destroy();
-            this.socket = null;
-          }
-        }
-      } else {
-        // If we're not yet logged in, the connection attempt failed
-        logger.error('Socket timeout during connection attempt - server did not respond');
-        if (this.socket) {
-          this.socket.destroy();
-          this.socket = null;
-        }
-      }
     });
   }
 
@@ -777,6 +708,31 @@ export class FixClient extends EventEmitter {
     try {
       logger.info("Checking VPN connectivity before sending logon message...");
       
+      // Log network interfaces for debugging
+      try {
+        const { networkInterfaces } = require('os');
+        const interfaces = networkInterfaces();
+        
+        logger.info("Network interfaces available:");
+        Object.keys(interfaces).forEach((ifname) => {
+          const iface = interfaces[ifname];
+          if (iface) {
+            iface.forEach((info: any) => {
+              if (info.family === 'IPv4') {
+                logger.info(`  ${ifname}: ${info.address}`);
+                
+                // Check if this is likely a VPN interface (tun or tap)
+                if (ifname.includes('tun') || ifname.includes('tap')) {
+                  logger.info(`  Detected possible VPN interface: ${ifname}`);
+                }
+              }
+            });
+          }
+        });
+      } catch (error) {
+        logger.error(`Error checking network interfaces: ${error}`);
+      }
+      
       // Try to ping the PSX server to verify VPN connectivity
       const { exec } = require('child_process');
       
@@ -830,32 +786,34 @@ export class FixClient extends EventEmitter {
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
     try {
-      // Create logon message with PSX specific fields
+      // Important: Use exactly the same message format as the working fn-psx example
+      // Note: We're intentionally using the original "19=127" body length from the example
       const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
         this.options.senderCompId + 
         "52=" + timestamp + 
         "56=" + this.options.targetCompId + 
         "98=0108=" + this.options.heartbeatIntervalSecs + 
         "141=Y554=" + this.options.password + 
-        "115=600" +  // OnBehalfOfCompID (critical for some PSX implementations)
-        "96=kse" +   // RawData (PSX authentication data)
-        "95=3" +     // RawDataLength (length of "kse")
         "1137=91408=FIX5.00_PSX_1.0010=153";
       
-      logger.info("Sending enhanced logon message with PSX-specific fields");
-      logger.info(`Logon message: ${logonMessage}`);
+      logger.info("Sending logon message with exact format from working example");
+      logger.info(`Complete message: ${logonMessage}`);
       
       if (!this.socket || !this.connected) {
         logger.warn('Cannot send logon: not connected');
         return;
       }
-  
-      // Try different approaches to write the message
-      // First convert to a buffer to ensure proper transmission
-      const messageBuffer = Buffer.from(logonMessage, 'ascii');
       
-      // Log buffer details for debugging
+      // Send the message with binary encoding to ensure proper transmission
+      const messageBuffer = Buffer.from(logonMessage, 'ascii');
       logger.info(`Message buffer length: ${messageBuffer.length} bytes`);
+      
+      // Add a tiny delay before sending - sometimes helps with socket buffering
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Debug - log connection details
+      logger.info(`Socket local address: ${this.socket.localAddress}:${this.socket.localPort}`);
+      logger.info(`Socket remote address: ${this.socket.remoteAddress}:${this.socket.remotePort}`);
       
       // Send as buffer to ensure proper binary transmission
       const writeSuccess = this.socket.write(messageBuffer);
@@ -864,6 +822,13 @@ export class FixClient extends EventEmitter {
         logger.info('Message buffer written to socket successfully');
       } else {
         logger.warn('Socket write returned false, socket buffer may be full');
+      }
+      
+      // Try to flush the socket
+      if (typeof this.socket.cork === 'function' && typeof this.socket.uncork === 'function') {
+        this.socket.cork();
+        this.socket.uncork();
+        logger.info('Socket corked and uncorked to ensure data is flushed');
       }
       
       this.lastActivityTime = Date.now();
