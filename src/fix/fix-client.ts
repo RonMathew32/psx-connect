@@ -117,6 +117,11 @@ export class FixClient extends EventEmitter {
     
     this.socket.on('timeout', () => {
       logger.error('Connection timed out');
+      logger.error('This could be due to:');
+      logger.error('1. The PSX server is not accepting connections');
+      logger.error('2. The PSX server is not responding to the logon message');
+      logger.error('3. Firewall or networking issues preventing communication');
+      logger.error('4. Incorrect authentication credentials or message format');
       this.socket?.destroy();
       this.connected = false;
       this.emit('error', new Error('Connection timed out'));
@@ -134,7 +139,9 @@ export class FixClient extends EventEmitter {
       // Send logon message after a short delay
       this.logonTimer = setTimeout(async () => {
         try {
+          logger.info('About to send logon message to PSX server...');
           await this.sendLogon();
+          logger.info('Logon message sent successfully, waiting for response from PSX...');
         } catch (error) {
           logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
           this.disconnect();
@@ -145,6 +152,12 @@ export class FixClient extends EventEmitter {
     });
 
     this.socket.on('data', (data) => {
+      // Log any received data in detail
+      logger.info(`Received data from server: ${data.length} bytes`);
+      logger.info(`Raw data received: ${data.toString('hex')}`);
+      logger.info(`String representation: ${data.toString('ascii').replace(/\x01/g, '|')}`);
+      
+      // Process the data normally
       this.handleData(data);
     });
 
@@ -817,16 +830,19 @@ export class FixClient extends EventEmitter {
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
     try {
-      // Create logon message with exact same tags as provided in the example
+      // Create logon message with PSX specific fields
       const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
         this.options.senderCompId + 
         "52=" + timestamp + 
         "56=" + this.options.targetCompId + 
         "98=0108=" + this.options.heartbeatIntervalSecs + 
         "141=Y554=" + this.options.password + 
+        "115=600" +  // OnBehalfOfCompID (critical for some PSX implementations)
+        "96=kse" +   // RawData (PSX authentication data)
+        "95=3" +     // RawDataLength (length of "kse")
         "1137=91408=FIX5.00_PSX_1.0010=153";
       
-      logger.info("Sending logon message with no delimiters, using exact tags from example");
+      logger.info("Sending enhanced logon message with PSX-specific fields");
       logger.info(`Logon message: ${logonMessage}`);
       
       if (!this.socket || !this.connected) {
@@ -834,7 +850,22 @@ export class FixClient extends EventEmitter {
         return;
       }
   
-      this.socket.write(logonMessage);
+      // Try different approaches to write the message
+      // First convert to a buffer to ensure proper transmission
+      const messageBuffer = Buffer.from(logonMessage, 'ascii');
+      
+      // Log buffer details for debugging
+      logger.info(`Message buffer length: ${messageBuffer.length} bytes`);
+      
+      // Send as buffer to ensure proper binary transmission
+      const writeSuccess = this.socket.write(messageBuffer);
+      
+      if (writeSuccess) {
+        logger.info('Message buffer written to socket successfully');
+      } else {
+        logger.warn('Socket write returned false, socket buffer may be full');
+      }
+      
       this.lastActivityTime = Date.now();
     } catch (error) {
       logger.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);
