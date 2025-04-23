@@ -1,4 +1,4 @@
-cat > vpn-connect.js << 'EOF'
+// cat > vpn-connect.js << 'EOF'
 const { exec, spawn } = require('child_process');
 const readline = require('readline');
 
@@ -90,4 +90,4 @@ process.on('SIGINT', () => {
   console.log('sudo pkill -SIGINT openconnect');
   process.exit();
 });
-EOF
+// EOF
