@@ -1,0 +1,3 @@
+[console_scripts]
+vpn-slice = vpn_slice.__main__:main
+
