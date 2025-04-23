@@ -109,94 +109,46 @@ export class FixClient extends EventEmitter {
 
     logger.info(`Connecting to ${this.options.host}:${this.options.port}`);
     
-    // First try a quick TCP port check to see if the server is actually accepting connections
-    this.checkServerAvailability()
-      .then(available => {
-        if (!available) {
-          logger.error(`Server at ${this.options.host}:${this.options.port} is not accepting TCP connections!`);
-          logger.error('This indicates a network or firewall issue, or the PSX service is not running.');
-          this.emit('error', new Error('Server not accepting connections'));
-          return;
-        }
-        
-        logger.info(`Server at ${this.options.host}:${this.options.port} is accepting TCP connections.`);
-        this.doConnect();
-      })
-      .catch(error => {
-        logger.error(`Error checking server availability: ${error}`);
-        // Try to connect anyway
-        this.doConnect();
-      });
-  }
-
-  /**
-   * Check if the server is accepting TCP connections on the specified port
-   */
-  private checkServerAvailability(): Promise<boolean> {
-    return new Promise((resolve) => {
-      logger.info(`Testing if server ${this.options.host}:${this.options.port} is accepting TCP connections...`);
-      
-      const { Socket } = require('net');
-      const testSocket = new Socket();
-      testSocket.setTimeout(5000); // 5 second timeout
-      
-      testSocket.on('connect', () => {
-        logger.info('Test connection successful - server is accepting TCP connections');
-        testSocket.end();
-        resolve(true);
-      });
-      
-      testSocket.on('timeout', () => {
-        logger.warn('Test connection timed out - server not responding');
-        testSocket.destroy();
-        resolve(false);
-      });
-      
-      testSocket.on('error', (error: any) => {
-        logger.warn(`Test connection failed: ${error.message}`);
-        resolve(false);
-      });
-      
-      testSocket.connect(this.options.port, this.options.host);
-    });
-  }
-  
-  /**
-   * Perform the actual connection after checking server availability
-   */
-  private doConnect(): void {
     try {
-      // Create socket with specific configuration
+      // Create socket with specific configuration - matching fn-psx
       this.socket = new Socket();
       
-      // Log debug info
-      logger.info('Socket created with following configuration:');
-      logger.info('- setKeepAlive: true');
-      logger.info('- setNoDelay: true (disables Nagle\'s algorithm)');
-      
-      // Apply socket settings
+      // Apply socket settings exactly like fn-psx
       this.socket.setKeepAlive(true);
       this.socket.setNoDelay(true);
       
-      // Set connection timeout - increase to 30 seconds for PSX connections
+      // Set connection timeout 
       this.socket.setTimeout(this.options.connectTimeoutMs || 30000);
       
-      // Setup event handlers before connecting
-      this.setupSocketHandlers();
+      // Setup event handlers
+      this.socket.on('timeout', () => {
+        logger.error('Connection timed out');
+        this.socket?.destroy();
+        this.connected = false;
+        this.emit('error', new Error('Connection timed out'));
+      });
+
+      this.socket.on('error', (error) => {
+        logger.error(`Socket error: ${error.message}`);
+        this.emit('error', error);
+      });
+
+      this.socket.on('close', () => {
+        logger.info('Socket disconnected');
+        this.connected = false;
+        this.emit('disconnected');
+        this.scheduleReconnect();
+      });
       
-      // Connect to the server
-      logger.info(`Establishing TCP connection to ${this.options.host}:${this.options.port}...`);
-      this.socket.connect(this.options.port, this.options.host, () => {
-        // This callback is executed when the connection is successfully established
-        const localAddr = this.socket?.localAddress;
-        const localPort = this.socket?.localPort;
-        const remoteAddr = this.socket?.remoteAddress;
-        const remotePort = this.socket?.remotePort;
-        
-        logger.info(`TCP connection established`);
-        logger.info(`Local endpoint: ${localAddr}:${localPort}`);
-        logger.info(`Remote endpoint: ${remoteAddr}:${remotePort}`);
-        
+      // Handle received data
+      this.socket.on('data', (data) => {
+        this.handleData(data);
+      });
+      
+      // The key difference - on connect, send logon immediately without VPN check
+      // This matches fn-psx behavior
+      this.socket.on('connect', () => {
+        logger.info(`Connected to ${this.options.host}:${this.options.port}`);
         this.connected = true;
         
         // Clear any existing timeout to prevent duplicate logon attempts
@@ -204,13 +156,11 @@ export class FixClient extends EventEmitter {
           clearTimeout(this.logonTimer);
         }
         
-        // Send logon message after a short delay
-        logger.info('Scheduling logon message to be sent in 500ms...');
-        this.logonTimer = setTimeout(async () => {
+        // Send logon message after a short delay - exactly like fn-psx
+        this.logonTimer = setTimeout(() => {
           try {
-            logger.info('About to send logon message to PSX server...');
-            await this.sendLogon();
-            logger.info('Logon message sent successfully, waiting for response from PSX...');
+            logger.info('Sending logon message...');
+            this.sendLogon();
           } catch (error) {
             logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
             this.disconnect();
@@ -219,6 +169,10 @@ export class FixClient extends EventEmitter {
         
         this.emit('connected');
       });
+      
+      // Connect to the server
+      logger.info(`Establishing TCP connection to ${this.options.host}:${this.options.port}...`);
+      this.socket.connect(this.options.port, this.options.host);
     } catch (error) {
       logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);
       this.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
@@ -239,71 +193,6 @@ export class FixClient extends EventEmitter {
     }
     this.connected = false;
     this.loggedIn = false;
-  }
-
-  /**
-   * Set up socket event handlers
-   */
-  private setupSocketHandlers(): void {
-    if (!this.socket) return;
-    
-    this.socket.on('timeout', () => {
-      logger.error('Connection timed out');
-      logger.error('This could be due to:');
-      logger.error('1. The PSX server is not accepting connections');
-      logger.error('2. The PSX server is not responding to the logon message');
-      logger.error('3. Firewall or networking issues preventing communication');
-      logger.error('4. Incorrect authentication credentials or message format');
-      this.socket?.destroy();
-      this.connected = false;
-      this.emit('error', new Error('Connection timed out'));
-    });
-
-    // Log any received data in detail
-    this.socket.on('data', (data) => {
-      logger.info(`Received data from server: ${data.length} bytes`);
-      logger.info(`Raw data received: ${data.toString('hex')}`);
-      logger.info(`String representation: ${data.toString('ascii').replace(/\x01/g, '|')}`);
-      
-      // Process the data normally
-      this.handleData(data);
-    });
-
-    this.socket.on('error', (error) => {
-      logger.error(`Socket error: ${error.message}`);
-      if (error.stack) {
-        logger.debug(`Error stack: ${error.stack}`);
-      }
-      
-      // Check specific error codes and respond accordingly
-      if ('code' in error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code === 'ECONNREFUSED') {
-          logger.error(`Connection refused to ${this.options.host}:${this.options.port}. Server may be down or unreachable.`);
-        } else if (code === 'ETIMEDOUT') {
-          logger.error(`Connection timed out to ${this.options.host}:${this.options.port}`);
-        }
-      }
-      
-      this.emit('error', error);
-    });
-
-    this.socket.on('close', (hadError) => {
-      logger.info(`Socket disconnected ${hadError ? 'due to error' : 'cleanly'}`);
-      this.connected = false;
-      this.loggedIn = false;
-      this.clearTimers();
-      this.emit('disconnected');
-      
-      // Check if data was ever received
-      if (this.lastActivityTime === 0) {
-        logger.warn('Connection closed without any data received - server may have rejected the connection');
-        logger.warn('Check credentials and network connectivity to the FIX server');
-        logger.warn('Make sure your OnBehalfOfCompID, RawData, and RawDataLength fields are correct');
-      }
-      
-      this.scheduleReconnect();
-    });
   }
 
   /**
@@ -342,55 +231,14 @@ export class FixClient extends EventEmitter {
       this.lastActivityTime = Date.now();
       const dataStr = data.toString();
       
-      logger.debug(`Processing received data (${dataStr.length} bytes)`);
+      logger.debug(`Received data: ${dataStr.length} bytes`);
       
-      // Handle binary SOH characters that might not be visible in logs
-      if (dataStr.indexOf(SOH) === -1) {
-        logger.warn(`Received data without SOH delimiter: ${dataStr}`);
-        // Try to continue processing anyway, replacing any control chars with SOH
-        this.receivedData += dataStr.replace(/[\x00-\x1F]/g, SOH);
-      } else {
-        this.receivedData += dataStr;
-      }
-
-      // Process complete messages
-      let endIndex;
-      while ((endIndex = this.receivedData.indexOf(SOH + '10=')) !== -1) {
-        // Find the end of the message (next SOH after the checksum)
-        const checksumEndIndex = this.receivedData.indexOf(SOH, endIndex + 1);
-        if (checksumEndIndex === -1) {
-          logger.debug('Found incomplete message, waiting for more data');
-          break;
-        }
-
-        // Extract the complete message
-        const completeMessage = this.receivedData.substring(0, checksumEndIndex + 1);
-        this.receivedData = this.receivedData.substring(checksumEndIndex + 1);
-
-        // Log the complete FIX message for debugging
-        logger.debug(`Extracted complete message: ${completeMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-        
-        // Verify checksum before processing
-        if (!FixMessageParser.verifyChecksum(completeMessage)) {
-          logger.warn('Invalid checksum in message, skipping processing');
-          continue;
-        }
-        
-        // Process the message
-        this.processMessage(completeMessage);
-      }
-      
-      // If there's too much unprocessed data, log a warning
-      if (this.receivedData.length > 8192) {
-        logger.warn(`Large amount of unprocessed data: ${this.receivedData.length} bytes`);
-        // Keep only the last 8K to prevent memory issues
-        this.receivedData = this.receivedData.substring(this.receivedData.length - 8192);
-      }
+      // Handle complete messages
+      this.receivedData += dataStr;
+      this.processMessage(this.receivedData);
+      this.receivedData = '';
     } catch (error) {
       logger.error(`Error processing received data: ${error instanceof Error ? error.message : String(error)}`);
-      if (error instanceof Error && error.stack) {
-        logger.error(`Stack trace: ${error.stack}`);
-      }
     }
   }
 
@@ -399,77 +247,98 @@ export class FixClient extends EventEmitter {
    */
   private processMessage(message: string): void {
     try {
-      logger.debug(`Processing received message: ${message.replace(/\x01/g, '|')}`);
+      logger.debug(`Processing message: ${message}`);
 
-      if (!FixMessageParser.verifyChecksum(message)) {
-        logger.warn('Invalid checksum in message, rejecting');
-        return;
-      }
-
-      const parsedMessage = FixMessageParser.parse(message);
+      // Basic parsing for FIX message
+      const parsedMessage = this.parseFixMessage(message);
       
-      // Emit the raw message event for debugging and custom handling
-      this.emit('message', parsedMessage);
-
-      // Log the message type for debugging
-      const msgType = parsedMessage['35']; // MsgType
-      logger.debug(`Processing message type: ${msgType}`);
+      // Simple extraction of message type
+      const msgType = this.getMessageType(message);
+      logger.debug(`Received message type: ${msgType}`);
 
       // Handle different message types
-      if (FixMessageParser.isLogon(parsedMessage)) {
-        // Logon acknowledged by server
-        logger.info(`Logon response received: ${JSON.stringify(parsedMessage)}`);
-        this.handleLogon(parsedMessage);
-      } else if (FixMessageParser.isLogout(parsedMessage)) {
-        // Server is logging us out
-        const text = parsedMessage['58'] || 'No reason provided'; // Text field
-        logger.info(`Logout received with reason: ${text}`);
-        this.handleLogout(parsedMessage);
-      } else if (FixMessageParser.isHeartbeat(parsedMessage)) {
-        // Heartbeat from server, reset activity timer
+      if (msgType === 'A') {
+        // Logon
+        logger.info('Logon response received');
+        this.loggedIn = true;
+        this.emit('logon', parsedMessage);
+      } else if (msgType === '5') {
+        // Logout
+        logger.info('Logout message received');
+        this.loggedIn = false;
+        this.emit('logout', parsedMessage);
+      } else if (msgType === '0') {
+        // Heartbeat
         logger.debug('Heartbeat received');
-        this.testRequestCount = 0; // Reset test request counter
-      } else if (FixMessageParser.isTestRequest(parsedMessage)) {
-        // Test request from server, respond with heartbeat
-        const testReqId = parsedMessage['112'] || ''; // TestReqID
-        logger.debug(`Test request received with ID: ${testReqId}`);
-        this.handleTestRequest(parsedMessage);
-      } else if (FixMessageParser.isReject(parsedMessage)) {
-        // Message rejected by server
-        const rejectText = parsedMessage['58'] || 'No reason provided'; // Text
-        const rejectReason = parsedMessage['373'] || 'Unknown'; // SessionRejectReason
-        logger.error(`Reject message received: ${rejectText}, reason: ${rejectReason}`);
-        this.handleReject(parsedMessage);
-      } else if (FixMessageParser.isMarketDataSnapshot(parsedMessage)) {
-        // Market data snapshot from server
-        // Check if this is a PSX-specific format
-        if (parsedMessage['1137'] === '9' && parsedMessage['1129'] === 'FIX5.00_PSX_1.00') {
-          logger.debug('Received PSX-specific market data snapshot');
+      } else if (msgType === '1') {
+        // Test request
+        logger.debug('Test request received');
+        // Send heartbeat in response
+        const testReqId = this.getField(message, '112');
+        if (testReqId) {
+          this.sendHeartbeat(testReqId);
         }
-        this.handleMarketDataSnapshot(parsedMessage);
-      } else if (FixMessageParser.isMarketDataIncremental(parsedMessage)) {
-        // Market data incremental update from server
-        // Check if this is a PSX-specific format
-        if (parsedMessage['1137'] === '9' && parsedMessage['1129'] === 'FIX5.00_PSX_1.00') {
-          logger.debug('Received PSX-specific market data update');
-        }
-        this.handleMarketDataIncremental(parsedMessage);
-      } else if (FixMessageParser.isSecurityList(parsedMessage)) {
-        // Security list from server
-        this.handleSecurityList(parsedMessage);
-      } else if (FixMessageParser.isTradingSessionStatus(parsedMessage)) {
-        // Trading session status from server
-        this.handleTradingSessionStatus(parsedMessage);
       } else {
-        // Unknown message type
-        logger.debug(`Unhandled message type: ${msgType}`);
-        logger.debug(`Message content: ${JSON.stringify(parsedMessage)}`);
+        // Other message types
+        logger.debug(`Received message type ${msgType}`);
+        this.emit('message', parsedMessage);
       }
     } catch (error) {
       logger.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
-      if (error instanceof Error && error.stack) {
-        logger.debug(`Error stack: ${error.stack}`);
+    }
+  }
+  
+  /**
+   * Basic parsing of FIX message into tag-value pairs
+   */
+  private parseFixMessage(message: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    
+    // Simple regex to extract fields
+    const regex = /(\d+)=([^,;\s]*)/g;
+    let match;
+    
+    while (match = regex.exec(message)) {
+      const [, tag, value] = match;
+      result[tag] = value;
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Extract message type from FIX message
+   */
+  private getMessageType(message: string): string {
+    const match = message.match(/35=([^,;\s]*)/);
+    return match ? match[1] : '';
+  }
+  
+  /**
+   * Extract field value from FIX message
+   */
+  private getField(message: string, tag: string): string | undefined {
+    const regex = new RegExp(tag + '=([^,;\s]*)');
+    const match = message.match(regex);
+    return match ? match[1] : undefined;
+  }
+  
+  /**
+   * Send a heartbeat message in response to test request
+   */
+  private sendHeartbeat(testReqId: string): void {
+    try {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0];
+      
+      const heartbeat = `8=FIXT.1.19=6535=034=249=${this.options.senderCompId}52=${timestamp}56=${this.options.targetCompId}112=${testReqId}10=000`;
+      
+      if (this.socket && this.connected) {
+        this.socket.write(heartbeat);
+        logger.debug(`Sent heartbeat in response to test request: ${testReqId}`);
       }
+    } catch (error) {
+      logger.error(`Failed to send heartbeat: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -608,318 +477,6 @@ export class FixClient extends EventEmitter {
   }
 
   /**
-   * Handle a test request
-   */
-  private handleTestRequest(message: ParsedFixMessage): void {
-    const testReqId = FixMessageParser.getTestReqID(message);
-    if (testReqId) {
-      const heartbeat = FixMessageBuilder.createHeartbeatMessage(
-        this.options.senderCompId,
-        this.options.targetCompId,
-        testReqId
-      );
-      this.sendMessage(heartbeat);
-    }
-  }
-
-  /**
-   * Handle a reject message
-   */
-  private handleReject(message: ParsedFixMessage): void {
-    const text = FixMessageParser.getRejectText(message);
-    logger.error(`Received reject: ${text}`);
-  }
-
-  /**
-   * Handle a market data snapshot
-   */
-  private handleMarketDataSnapshot(message: ParsedFixMessage): void {
-    try {
-      const mdReqId = FixMessageParser.getMDReqID(message);
-      const noMDEntries = parseInt(message['268'] || '0', 10); // NoMDEntries
-      const items: MarketDataItem[] = [];
-
-      for (let i = 1; i <= noMDEntries; i++) {
-        const entryType = message[`269.${i}`]; // MDEntryType
-        const symbol = message[`55.${i}`] || message['55']; // Symbol
-        if (!entryType || !symbol) continue;
-
-        const item: MarketDataItem = {
-          symbol,
-          entryType,
-          price: parseFloat(message[`270.${i}`] || '0'), // MDEntryPx
-          size: parseFloat(message[`271.${i}`] || '0'), // MDEntrySize
-          entryId: message[`278.${i}`], // MDEntryID
-          timestamp: message[`273.${i}`] // MDEntryTime
-        };
-
-        items.push(item);
-      }
-
-      if (items.length > 0) {
-        logger.info(`Received market data snapshot for request ${mdReqId} with ${items.length} entries`);
-        this.emit('marketData', items);
-      }
-    } catch (error) {
-      logger.error(`Error processing market data snapshot: ${error}`);
-    }
-  }
-
-  /**
-   * Handle market data incremental updates
-   */
-  private handleMarketDataIncremental(message: ParsedFixMessage): void {
-    try {
-      const mdReqId = FixMessageParser.getMDReqID(message);
-      const noMDEntries = parseInt(message['268'] || '0', 10); // NoMDEntries
-      const items: MarketDataItem[] = [];
-
-      for (let i = 1; i <= noMDEntries; i++) {
-        const entryType = message[`269.${i}`]; // MDEntryType
-        const symbol = message[`55.${i}`] || message['55']; // Symbol
-        if (!entryType || !symbol) continue;
-
-        const item: MarketDataItem = {
-          symbol,
-          entryType,
-          price: parseFloat(message[`270.${i}`] || '0'), // MDEntryPx
-          size: parseFloat(message[`271.${i}`] || '0'), // MDEntrySize
-          entryId: message[`278.${i}`], // MDEntryID
-          timestamp: message[`273.${i}`] // MDEntryTime
-        };
-
-        items.push(item);
-      }
-
-      if (items.length > 0) {
-        logger.info(`Received market data update for request ${mdReqId} with ${items.length} entries`);
-        this.emit('marketData', items);
-      }
-    } catch (error) {
-      logger.error(`Error processing market data incremental update: ${error}`);
-    }
-  }
-
-  /**
-   * Handle security list response
-   */
-  private handleSecurityList(message: ParsedFixMessage): void {
-    try {
-      const noRelatedSym = parseInt(message['146'] || '0', 10); // NoRelatedSym
-      const securities: SecurityInfo[] = [];
-
-      for (let i = 1; i <= noRelatedSym; i++) {
-        const symbol = message[`55.${i}`]; // Symbol
-        const securityType = message[`167.${i}`] || message['167']; // SecurityType
-        if (!symbol) continue;
-
-        const security: SecurityInfo = {
-          symbol,
-          securityType: securityType || '',
-          securityDesc: message[`107.${i}`], // SecurityDesc
-          isin: message[`48.${i}`], // SecurityID (ISIN)
-          currency: message[`15.${i}`] // Currency
-        };
-
-        securities.push(security);
-      }
-
-      if (securities.length > 0) {
-        logger.info(`Received security list with ${securities.length} securities`);
-        this.emit('securityList', securities);
-      }
-    } catch (error) {
-      logger.error(`Error processing security list: ${error}`);
-    }
-  }
-
-  /**
-   * Handle trading session status
-   */
-  private handleTradingSessionStatus(message: ParsedFixMessage): void {
-    try {
-      const sessionId = message['336']; // TradingSessionID
-      const status = message['340']; // TradSesStatus
-      if (!sessionId || !status) return;
-
-      const sessionInfo: TradingSessionInfo = {
-        sessionId,
-        status,
-        startTime: message['341'], // TradSesStartTime
-        endTime: message['342'] // TradSesEndTime
-      };
-
-      logger.info(`Received trading session status: ${status} for session ${sessionId}`);
-      this.emit('tradingSessionStatus', sessionInfo);
-    } catch (error) {
-      logger.error(`Error processing trading session status: ${error}`);
-    }
-  }
-
-  /**
-   * Check if server connection is available before sending logon message
-   * @returns A promise that resolves to true if server is reachable, false otherwise
-   */
-  private async checkServerConnection(): Promise<boolean> {
-    try {
-      logger.info("Checking server connectivity before sending logon message...");
-      
-      // Log network interfaces for debugging
-      try {
-        const { networkInterfaces } = require('os');
-        const interfaces = networkInterfaces();
-        
-        logger.info("Network interfaces available:");
-        Object.keys(interfaces).forEach((ifname) => {
-          const iface = interfaces[ifname];
-          if (iface) {
-            iface.forEach((info: any) => {
-              if (info.family === 'IPv4') {
-                logger.info(`  ${ifname}: ${info.address}`);
-                
-                // If the server IP is on a local interface, note that
-                if (info.address === this.options.host) {
-                  logger.info(`  Server IP ${this.options.host} is on local interface ${ifname}`);
-                }
-              }
-            });
-          }
-        });
-      } catch (error) {
-        logger.error(`Error checking network interfaces: ${error}`);
-      }
-      
-      // Try to ping the server to verify connectivity
-      const { exec } = require('child_process');
-      
-      return new Promise((resolve) => {
-        // PSX server address from options
-        const psx_host = this.options.host;
-        
-        // Use ping to check connectivity - ping only once with 3s timeout
-        const cmd = `ping -c 1 -W 3 ${psx_host}`;
-        
-        exec(cmd, (error: any) => {
-          if (error) {
-            logger.error(`Server connection check failed: Cannot reach ${psx_host}`);
-            logger.error('Please ensure your network configuration is correct');
-            resolve(false);
-          } else {
-            logger.info(`Server connectivity to ${psx_host} confirmed`);
-            resolve(true);
-          }
-        });
-      });
-    } catch (error) {
-      logger.error(`Error checking server connectivity: ${error instanceof Error ? error.message : String(error)}`);
-      return false;
-    }
-  }
-
-  /**
-   * Send a logon message
-   */
-  public async sendLogon(): Promise<void> {
-    logger.info("Preparing to send logon message...");
-    
-    // Check server connectivity before sending logon
-    const serverReachable = await this.checkServerConnection();
-    if (!serverReachable) {
-      logger.error("Aborting logon attempt: Server not reachable");
-      this.emit('error', new Error('Server not reachable. Please check your network configuration'));
-      return;
-    }
-    
-    // Format timestamp to match FIX standard: YYYYMMDD-HH:MM:SS.sss
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(now.getUTCDate()).padStart(2, '0');
-    const hours = String(now.getUTCHours()).padStart(2, '0');
-    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
-    const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
-    
-    try {
-      // Try sending a hard-coded logon message exactly as presented from fn-psx
-      // Replace only the timestamp which needs to be current
-      let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=TIMESTAMP56=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=153";
-      logonMessage = logonMessage.replace("TIMESTAMP", timestamp);
-      
-      logger.info("Sending logon message with format exactly matching fn-psx");
-      logger.info(`Complete message: ${logonMessage}`);
-      
-      if (!this.socket || !this.connected) {
-        logger.warn('Cannot send logon: not connected');
-        return;
-      }
-
-      logger.info("Converting message to raw bytes:");
-      // Manually log each byte for debugging
-      const bytes = [];
-      for (let i = 0; i < logonMessage.length; i++) {
-        const charCode = logonMessage.charCodeAt(i);
-        bytes.push(charCode);
-        logger.info(`Byte ${i}: Character '${logonMessage[i]}', ASCII value: ${charCode}`);
-      }
-      
-      // Convert to buffer
-      const messageBuffer = Buffer.from(logonMessage, 'ascii');
-      logger.info(`Message buffer length: ${messageBuffer.length} bytes`);
-      
-      // Send message
-      logger.info('Sending logon message...');
-      const writeSuccess = this.socket.write(messageBuffer);
-      
-      if (writeSuccess) {
-        logger.info('Message buffer written to socket successfully');
-      } else {
-        logger.warn('Socket write returned false, socket buffer may be full');
-      }
-      
-      this.lastActivityTime = Date.now();
-      
-      // Wait for response with a timeout for better error handling
-      await new Promise<void>((resolve, reject) => {
-        const responseTimeout = setTimeout(() => {
-          logger.error('No response received from server within 10 seconds');
-          logger.error('This likely indicates the server is not processing our logon request');
-          reject(new Error('No response from server within timeout period'));
-        }, 10000);
-        
-        // Set up a one-time handler for logon success
-        const logonHandler = () => {
-          clearTimeout(responseTimeout);
-          resolve();
-        };
-        
-        this.once('logon', logonHandler);
-        
-        // Clean up the handlers on timeout
-        responseTimeout.unref();
-      }).catch(error => {
-        logger.warn(`Logon response waiting: ${error.message}`);
-      });
-      
-    } catch (error) {
-      logger.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Send a logout message
-   */
-  public sendLogout(text?: string): void {
-    const logoutMessage = FixMessageBuilder.createLogoutMessage(
-      this.options.senderCompId,
-      this.options.targetCompId,
-      text
-    );
-    this.sendMessage(logoutMessage);
-  }
-
-  /**
    * Start heartbeat monitoring
    */
   private startHeartbeatMonitoring(): void {
@@ -1047,6 +604,67 @@ export class FixClient extends EventEmitter {
     );
     this.sendMessage(message);
     logger.info('Sent trading session status request');
+  }
+
+  /**
+   * Send a logon message - exactly as fn-psx does
+   */
+  public sendLogon(): void {
+    logger.info("Sending logon message...");
+    
+    // Format timestamp to match FIX standard: YYYYMMDD-HH:MM:SS.sss
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
+    const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
+    
+    try {
+      // Exactly match the fn-psx logon message format with no delimiters
+      const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
+        this.options.senderCompId + 
+        "52=" + timestamp + 
+        "56=" + this.options.targetCompId + 
+        "98=0108=" + this.options.heartbeatIntervalSecs + 
+        "141=Y554=" + this.options.password + 
+        "1137=91408=FIX5.00_PSX_1.0010=153";
+      
+      logger.info(`Logon message: ${logonMessage}`);
+      
+      if (!this.socket || !this.connected) {
+        logger.warn('Cannot send logon: not connected');
+        return;
+      }
+      
+      // Simple socket write - exactly as fn-psx does it
+      this.socket.write(logonMessage);
+      this.lastActivityTime = Date.now();
+    } catch (error) {
+      logger.error(`Failed to send logon: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Send a logout message
+   */
+  public sendLogout(text?: string): void {
+    try {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0];
+      
+      const logoutMessage = `8=FIXT.1.19=6535=534=349=${this.options.senderCompId}52=${timestamp}56=${this.options.targetCompId}10=000`;
+      
+      if (this.socket && this.connected) {
+        this.socket.write(logoutMessage);
+        logger.info('Sent logout message');
+      }
+    } catch (error) {
+      logger.error(`Failed to send logout: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   private formatMessageForLogging(message: string): string {
