@@ -817,19 +817,16 @@ export class FixClient extends EventEmitter {
     const timestamp = `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
     
     try {
-      // Create logon message without any delimiters at all, matching fn-psx format
+      // Create logon message with exact same tags as provided in the example
       const logonMessage = "8=FIXT.1.19=12735=A34=149=" + 
         this.options.senderCompId + 
         "52=" + timestamp + 
         "56=" + this.options.targetCompId + 
         "98=0108=" + this.options.heartbeatIntervalSecs + 
-        "141=Y553=" + this.options.username +
-        "554=" + this.options.password + 
-        // Add PSX specific fields for logon without delimiters
-        "115=60096=kse95=3" +
+        "141=Y554=" + this.options.password + 
         "1137=91408=FIX5.00_PSX_1.0010=153";
       
-      logger.info("Sending logon message with no delimiters, matching fn-psx format");
+      logger.info("Sending logon message with no delimiters, using exact tags from example");
       logger.info(`Logon message: ${logonMessage}`);
       
       if (!this.socket || !this.connected) {
