@@ -210,7 +210,45 @@ export const connectToVpn = async (): Promise<boolean> => {
     // Detect operating system
     const isMacOS = os.platform() === 'darwin';
     
-    // Connect directly using openconnect
+    // Try using the OpenConnect configuration file with VPN slicing first
+    try {
+      logger.info('Attempting to connect with OpenConnect config and VPN slicing...');
+      
+      // Path to the OpenConnect config file
+      const configPath = path.join(process.cwd(), 'etc', 'openconnect-systemd.conf');
+      
+      if (fs.existsSync(configPath)) {
+        // Make sure the vpns script is executable
+        const vpnsPath = path.join(process.cwd(), 'bin', 'vpns');
+        if (fs.existsSync(vpnsPath)) {
+          fs.chmodSync(vpnsPath, '755');
+        } else {
+          logger.warn(`VPN slice script not found at ${vpnsPath}`);
+        }
+        
+        const connectCmd = `echo "${password}" | sudo -S openconnect --config ${configPath}`;
+        
+        logger.info('Connecting with OpenConnect config file...');
+        await execAsync(connectCmd, { timeout: 30000 });
+        
+        // Wait for connection
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Check if connected
+        const vpnActive = await isVpnActive();
+        if (vpnActive) {
+          logger.info('Successfully connected to PSX VPN with VPN slicing');
+          return true;
+        }
+      } else {
+        logger.warn(`OpenConnect config file not found at ${configPath}`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to connect with config file: ${errorMessage}`);
+    }
+    
+    // Fallback to the direct method if the config file method failed
     try {
       // Need to specify the group as PSX-Staff (from the error message)
       const group = process.env.VPN_GROUP || 'PSX-Staff';

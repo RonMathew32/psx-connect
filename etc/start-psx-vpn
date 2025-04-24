@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# Kill any existing OpenConnect sessions
+/usr/bin/killall openconnect 2>/dev/null || true
+sleep 2
+
+# Apply network configuration if netplan is available
+if command -v netplan >/dev/null 2>&1; then
+  /usr/sbin/netplan apply
+  sleep 2
+fi
+
+# Get the password from the vpn file
+PASSWORD=$(grep "^pass " /home/fn/src/psx-connect/vpn | cut -d' ' -f2)
+
+# Start OpenConnect with the config file and password
+echo ${PASSWORD:-Yasir01} | /usr/sbin/openconnect --config /home/fn/src/psx-connect/etc/openconnect-systemd.conf 

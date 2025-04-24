@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Activate the Python virtual environment where vpn-slice is installed
+. /home/fn/vpn-slice/bin/activate
+
+# Execute vpn-slice for the PSX network subnet
+# Using the same subnet as in fn-psx: 172.16.64.0/19
+exec vpn-slice 172.16.64.0/19 
