@@ -90,7 +90,7 @@ async function main() {
             sendLogNotification('PSX connection established and subscriptions sent.');
         });
         fixClient.on('message', (message) => {
-            logger_1.default.info(`Received message: Type=${message['35']}`);
+            logger_1.default.info(`Received message: Type=${message}`);
         });
         fixClient.on('error', (error) => {
             logger_1.default.error(`FIX client error: ${error.message}`);

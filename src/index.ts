@@ -104,7 +104,7 @@ async function main() {
     });
     
     fixClient.on('message', (message) => {
-      logger.info(`Received message: Type=${message['35']}`);
+      logger.info(`Received message: Type=${message}`);
     });
     
     fixClient.on('error', (error) => {
