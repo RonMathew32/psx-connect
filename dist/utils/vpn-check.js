@@ -200,7 +200,7 @@ class VpnChecker {
             const vpnUsername = process.env.VPN_USERNAME || os.userInfo().username;
             // Connect directly using openconnect
             try {
-                await execAsync(`echo "${password}" | sudo -S openconnect --background --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}"`, {
+                await execAsync(`echo "${password}" | sudo -S openconnect --background --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --no-cert-check --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}"`, {
                     timeout: 30000
                 });
                 // Wait for connection
