@@ -42,6 +42,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = __importDefault(require("./utils/logger"));
 const vpnUtils = __importStar(require("./utils/vpn-check"));
 const fix_client_1 = require("./fix/fix-client");
+const constants_1 = require("./fix/constants");
 // Load environment variables from .env file if present
 dotenv_1.default.config();
 // Log startup information
@@ -126,8 +127,16 @@ async function main() {
         });
         fixClient.on('logon', () => {
             logger_1.default.info('Successfully logged in to PSX server.');
+            // Subscribe to trading session status (REG)
+            fixClient.sendTradingSessionStatusRequest('REG');
+            // Request security list
+            fixClient.sendSecurityListRequest();
+            // Subscribe to market data for configured symbols (replace with actual symbol list)
+            // You can load symbols from a config file or environment
+            const symbols = (process.env.MARKET_FEED_SYMBOLS || 'WAVE,OGDC').split(',');
+            fixClient.sendMarketDataRequest(symbols, [constants_1.MDEntryType.TRADE], constants_1.SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES);
             // Send notification about successful connection
-            sendLogNotification('PSX connection established successfully.');
+            sendLogNotification('PSX connection established and subscriptions sent.');
         });
         fixClient.on('message', (message) => {
             logger_1.default.info(`Received message: Type=${message['35']}`);

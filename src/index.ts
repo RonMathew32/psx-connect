@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import logger from './utils/logger';
 import * as vpnUtils from './utils/vpn-check';
 import { createFixClient, FixClientOptions } from './fix/fix-client';
+import { MDEntryType, SubscriptionRequestType } from './fix/constants';
 
 // Load environment variables from .env file if present
 dotenv.config();
@@ -104,8 +105,23 @@ async function main() {
     fixClient.on('logon', () => {
       logger.info('Successfully logged in to PSX server.');
       
+      // Subscribe to trading session status (REG)
+      fixClient.sendTradingSessionStatusRequest('REG');
+
+      // Request security list
+      fixClient.sendSecurityListRequest();
+
+      // Subscribe to market data for configured symbols (replace with actual symbol list)
+      // You can load symbols from a config file or environment
+      const symbols = (process.env.MARKET_FEED_SYMBOLS || 'WAVE,OGDC').split(',');
+      fixClient.sendMarketDataRequest(
+        symbols,
+        [MDEntryType.TRADE],
+        SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES
+      );
+      
       // Send notification about successful connection
-      sendLogNotification('PSX connection established successfully.');
+      sendLogNotification('PSX connection established and subscriptions sent.');
     });
     
     fixClient.on('message', (message) => {

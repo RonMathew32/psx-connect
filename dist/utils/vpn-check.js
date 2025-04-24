@@ -156,151 +156,36 @@ const ensureVpnPasswordFile = async () => {
 const connectToVpn = async () => {
     try {
         logger.info('Attempting to connect to PSX VPN using direct connection...');
-        // Get VPN password from vpn file
-        let password = '';
-        const vpnFilePath = process.env.VPN_FILE || path.join(process.cwd(), 'vpn');
-        if (fs.existsSync(vpnFilePath)) {
-            logger.info(`Reading VPN configuration from ${vpnFilePath}`);
-            const content = fs.readFileSync(vpnFilePath, 'utf8');
-            // Parse simple key-value pairs to find password
-            const lines = content.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('pass ')) {
-                    password = line.substring(5).trim();
-                    break;
-                }
-            }
+        // Run the direct VPN connection script
+        logger.info(`Executing VPN script: ${directVpnScriptPath}`);
+        try {
+            await execAsync(`bash "${directVpnScriptPath}"`, { timeout: 60000 });
         }
-        if (!password) {
-            logger.error('VPN password not found in vpn file');
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            logger.error(`VPN script execution failed: ${msg}`);
             return false;
         }
-        // VPN credentials
-        const vpnServer = process.env.VPN_SERVER || '172.16.73.18';
-        const group = process.env.VPN_GROUP || 'PSX-Staff';
-        // Try a command that's as simple and direct as possible
+        // Wait for interface to come up
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        const vpnActive = await (0, exports.isVpnActive)();
+        if (!vpnActive) {
+            logger.error('VPN interface tun0 not found after script execution');
+            return false;
+        }
+        logger.info('Successfully connected to PSX VPN via script');
+        // Add PSX route
         try {
-            logger.info('Attempting simplified VPN connection approach...');
-            // Create a temporary file for connection  
-            const tmpConnectionFile = path.join(os.tmpdir(), `vpn-creds-${Date.now()}.txt`);
-            fs.writeFileSync(tmpConnectionFile, password);
-            fs.chmodSync(tmpConnectionFile, 0o600); // Secure permissions
-            // Use a simple approach which is most likely to work
-            // This avoids all the complexities with stdin/stdout and just uses the password file
-            const connectCmd = `sudo openconnect --background --authgroup="${group}" --passwd-file="${tmpConnectionFile}" --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --interface="tun0" "${vpnServer}"`;
-            logger.info('Executing simplified VPN connection command...');
-            await execAsync(connectCmd, { timeout: 30000 });
-            // Clean up credentials file
-            try {
-                fs.unlinkSync(tmpConnectionFile);
-            }
-            catch (error) {
-                logger.warn(`Could not delete temporary credentials file: ${error instanceof Error ? error.message : String(error)}`);
-            }
-            // Wait for connection
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            // Check if connected
-            const vpnActive = await (0, exports.isVpnActive)();
-            if (vpnActive) {
-                logger.info('Successfully connected to PSX VPN');
-                // Add PSX route manually
-                try {
-                    logger.info('Adding route for PSX subnet...');
-                    await execAsync('sudo ip route add 172.16.64.0/19 dev tun0', { timeout: 5000 });
-                }
-                catch (error) {
-                    // Ignore route errors, connection might still work
-                    logger.warn(`Could not add route: ${error instanceof Error ? error.message : String(error)}`);
-                }
-                return true;
-            }
+            logger.info('Adding route for PSX subnet...');
+            await execAsync('sudo ip route add 172.16.64.0/19 dev tun0', { timeout: 5000 });
         }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.error(`Failed with simplified approach: ${errorMessage}`);
+        catch (err) {
+            logger.warn(`Could not add PSX route: ${err instanceof Error ? err.message : String(err)}`);
         }
-        // Last resort - try to use sudo directly with echo  
-        try {
-            logger.info('Trying last resort VPN connection method...');
-            // Using the most direct approach that works in a standard terminal
-            // This approach avoids all the complicated redirection issues
-            const connectCmd = `sudo sh -c 'echo ${password} | openconnect --background --authgroup=${group} --passwd-on-stdin --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --interface=tun0 ${vpnServer}'`;
-            logger.info('Executing last resort command...');
-            await execAsync(connectCmd, { timeout: 30000 });
-            // Wait for connection
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            // Check if connected
-            const vpnActive = await (0, exports.isVpnActive)();
-            if (vpnActive) {
-                logger.info('Successfully connected to PSX VPN with last resort method');
-                // Add PSX route manually
-                try {
-                    logger.info('Adding route for PSX subnet...');
-                    await execAsync('sudo ip route add 172.16.64.0/19 dev tun0', { timeout: 5000 });
-                }
-                catch (error) {
-                    // Ignore route errors, connection might still work
-                    logger.warn(`Could not add route: ${error instanceof Error ? error.message : String(error)}`);
-                }
-                return true;
-            }
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.error(`Failed with last resort method: ${errorMessage}`);
-        }
-        // Ultra-last resort - execute exact commands from fn-psx/src/fixpkf/etc/start-psx-vpn
-        try {
-            logger.info('Trying ultra-last resort VPN connection method (mimicking fn-psx exactly)...');
-            // Kill existing connections
-            try {
-                await execAsync('sudo killall openconnect', { timeout: 5000 });
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-            catch (error) {
-                // Ignore error if no openconnect processes found
-            }
-            // Try to apply netplan if available
-            try {
-                await execAsync('sudo netplan apply', { timeout: 5000 });
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-            catch (error) {
-                // Ignore error if netplan isn't available
-            }
-            // This is exactly what fn-psx uses based on src/fixpkf/etc/start-psx-vpn
-            // We're using authgroup even though the original script doesn't, to avoid the group selection issue
-            const connectCmd = `sudo sh -c 'echo ${password} | openconnect --authgroup=${group} --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= ${vpnServer}'`;
-            logger.info('Executing ultra-last resort command...');
-            // Using a higher timeout since we're not using background mode
-            await execAsync(connectCmd, { timeout: 60000 });
-            // Check if connected
-            const vpnActive = await (0, exports.isVpnActive)();
-            if (vpnActive) {
-                logger.info('Successfully connected to PSX VPN with ultra-last resort method');
-                // Add PSX route manually
-                try {
-                    logger.info('Adding route for PSX subnet...');
-                    await execAsync('sudo ip route add 172.16.64.0/19 dev tun0', { timeout: 5000 });
-                }
-                catch (error) {
-                    // Ignore route errors, connection might still work
-                    logger.warn(`Could not add route: ${error instanceof Error ? error.message : String(error)}`);
-                }
-                return true;
-            }
-        }
-        catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.error(`Failed with ultra-last resort method: ${errorMessage}`);
-        }
-        logger.error('All VPN connection attempts failed');
-        return false;
+        return true;
     }
     catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error(`Error connecting to VPN: ${errorMessage}`);
+        logger.error(`Error connecting to VPN: ${error instanceof Error ? error.message : String(error)}`);
         return false;
     }
 };
