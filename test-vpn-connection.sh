@@ -4,7 +4,7 @@
 # This helps debug connection issues
 
 # Configuration
-VPN_SERVER=${VPN_SERVER:-"172.21.101.36"}
+VPN_SERVER=${VPN_SERVER:-"172.16.73.18"}
 VPN_USERNAME=${VPN_USERNAME:-"$(whoami)"}
 VPN_PASSWORD_FILE=${VPN_PASSWORD_FILE:-"$HOME/.psx-vpn-password"}
 VPN_CERT_BYPASS="--servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY="

@@ -103,7 +103,7 @@ export class VpnChecker {
   public async testPsxConnectivity(): Promise<boolean> {
     try {
       // Try to ping the PSX server
-      const targetIp = process.env.PSX_IP || '172.21.101.36';
+      const targetIp = process.env.PSX_IP || '172.16.73.18';
       const { stdout } = await execAsync(`ping -c 1 -W 2 ${targetIp}`);
       return stdout.includes('1 received');
     } catch (error) {
@@ -186,7 +186,7 @@ export class VpnChecker {
       const password = fs.readFileSync(passwordFile, 'utf8').trim();
       
       // VPN credentials
-      const vpnServer = process.env.VPN_SERVER || '172.21.101.36';
+      const vpnServer = process.env.VPN_SERVER || '172.16.73.18';
       const vpnUsername = process.env.VPN_USERNAME || os.userInfo().username;
       
       // Connect directly using openconnect
