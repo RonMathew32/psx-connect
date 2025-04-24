@@ -212,15 +212,40 @@ export const connectToVpn = async (): Promise<boolean> => {
     
     // Connect directly using openconnect
     try {
-      const connectCmd = isMacOS ?
-        // macOS version (no background option, use & to background)
-        `echo "${password}" | sudo -S openconnect --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}" &` :
-        // Linux version
-        `echo "${password}" | sudo -S openconnect --background --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}"`;
+      // Need to specify the group as PSX-Staff (from the error message)
+      const group = process.env.VPN_GROUP || 'PSX-Staff';
       
+      // Create a temporary script that will handle the OpenConnect interaction
+      const tmpScriptPath = path.join(os.tmpdir(), `vpn-connect-${Date.now()}.sh`);
+      
+      // The script will echo both the username and password to avoid the "Resource temporarily unavailable" error
+      const scriptContent = `#!/bin/bash
+echo "${vpnUsername}" 
+echo "${group}"
+echo "${password}"
+`;
+      
+      // Write the script and make it executable
+      fs.writeFileSync(tmpScriptPath, scriptContent);
+      fs.chmodSync(tmpScriptPath, '700');
+      
+      const connectCmd = isMacOS ?
+        // macOS version with input from script
+        `cat ${tmpScriptPath} | sudo -S openconnect --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= "${vpnServer}" &` :
+        // Linux version with input from script
+        `cat ${tmpScriptPath} | sudo -S openconnect --background --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= "${vpnServer}"`;
+      
+      logger.info(`Connecting to VPN with user: ${vpnUsername}, group: ${group}`);
       await execAsync(connectCmd, {
         timeout: 30000
       });
+      
+      // Clean up the temporary script
+      try {
+        fs.unlinkSync(tmpScriptPath);
+      } catch (error) {
+        logger.warn(`Could not delete temporary script: ${error instanceof Error ? error.message : String(error)}`);
+      }
       
       // Wait for connection
       await new Promise(resolve => setTimeout(resolve, 3000));
