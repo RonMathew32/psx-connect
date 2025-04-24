@@ -416,6 +416,7 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9') // DefaultApplVerID (1137)
                 .addField('1408', 'FIX5.00_PSX_1.00'); // ApplVerID custom field
             const message = builder.buildMessage();
+            logger_1.default.info(`Sending Logon Message: ${message}`);
             sendMessage(message);
         }
         catch (error) {

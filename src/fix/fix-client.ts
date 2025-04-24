@@ -524,6 +524,7 @@ export function createFixClient(options: FixClientOptions) {
         .addField('1408', 'FIX5.00_PSX_1.00');               // ApplVerID custom field
       
       const message = builder.buildMessage();
+      logger.info(`Sending Logon Message: ${message}`);
       sendMessage(message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
