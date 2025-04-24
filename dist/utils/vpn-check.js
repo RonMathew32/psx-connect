@@ -88,9 +88,17 @@ ensureScriptExecutable();
  */
 const isVpnActive = async () => {
     try {
-        // Check for tun0 interface which indicates active VPN
-        const { stdout } = await execAsync('ip link show tun0 2>/dev/null || ifconfig tun0 2>/dev/null');
-        return stdout.trim().length > 0;
+        const isMacOS = os.platform() === 'darwin';
+        if (isMacOS) {
+            // On macOS, use ifconfig to check for tun/utun interfaces
+            const { stdout } = await execAsync('ifconfig | grep -E "tun|utun"');
+            return stdout.trim().length > 0;
+        }
+        else {
+            // On Linux, check for tun0 interface
+            const { stdout } = await execAsync('ip link show tun0 2>/dev/null || ifconfig tun0 2>/dev/null');
+            return stdout.trim().length > 0;
+        }
     }
     catch (error) {
         // Command failed, which means tun0 doesn't exist
@@ -113,8 +121,13 @@ const testPsxConnectivity = async () => {
     try {
         // Try to ping the PSX server
         const targetIp = process.env.PSX_IP || '172.16.73.18';
-        const { stdout } = await execAsync(`ping -c 1 -W 2 ${targetIp}`);
-        return stdout.includes('1 received');
+        // Mac and Linux use different ping syntax
+        const isMacOS = os.platform() === 'darwin';
+        const pingCmd = isMacOS ?
+            `ping -c 1 -t 2 ${targetIp}` : // macOS uses -t for timeout
+            `ping -c 1 -W 2 ${targetIp}`; // Linux uses -W for timeout
+        const { stdout } = await execAsync(pingCmd);
+        return stdout.includes('1 received') || stdout.includes('1 packets received');
     }
     catch (error) {
         return false;
@@ -182,15 +195,40 @@ const connectToVpn = async () => {
         }
         // Direct connection as fallback
         logger.info('Trying direct VPN connection without script...');
-        // Get VPN password
-        const passwordFile = process.env.VPN_PASSWORD_FILE || path.join(os.homedir(), '.psx-vpn-password');
-        const password = fs.readFileSync(passwordFile, 'utf8').trim();
+        // Get VPN password from vpn file
+        let password = '';
+        const vpnFilePath = process.env.VPN_FILE || path.join(process.cwd(), 'vpn');
+        if (fs.existsSync(vpnFilePath)) {
+            logger.info(`Reading VPN configuration from ${vpnFilePath}`);
+            const content = fs.readFileSync(vpnFilePath, 'utf8');
+            // Parse simple key-value pairs to find password
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('pass ')) {
+                    password = line.substring(5).trim();
+                    break;
+                }
+            }
+        }
+        if (!password) {
+            logger.error('VPN password not found in vpn file');
+            return false;
+        }
         // VPN credentials
         const vpnServer = process.env.VPN_SERVER || '172.16.73.18';
-        const vpnUsername = process.env.VPN_USERNAME || os.userInfo().username;
+        // Use 'fn' as the default username as specified in the error message
+        const vpnUsername = process.env.VPN_USERNAME || 'fn';
+        // Detect operating system
+        const isMacOS = os.platform() === 'darwin';
         // Connect directly using openconnect
         try {
-            await execAsync(`echo "${password}" | sudo -S openconnect --background --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --no-cert-check --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}"`, {
+            const connectCmd = isMacOS ?
+                // macOS version (no background option, use & to background)
+                `echo "${password}" | sudo -S openconnect --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}" &` :
+                // Linux version
+                `echo "${password}" | sudo -S openconnect --background --servercert pin-sha256:SPlqKwOKIcJ3ryyWBGSZ5gEuqgPK5dQdDfeIZIJR+EY= --user="${vpnUsername}" --passwd-on-stdin "${vpnServer}"`;
+            await execAsync(connectCmd, {
                 timeout: 30000
             });
             // Wait for connection
