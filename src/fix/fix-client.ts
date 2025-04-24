@@ -132,7 +132,6 @@ export function createFixClient(options: FixClientOptions) {
         handleData(data);
       });
       
-      // On connect, send logon immediately after VPN check
       socket.on('connect', () => {
         logger.info(`Connected to ${options.host}:${options.port}`);
         connected = true;
@@ -316,10 +315,9 @@ export function createFixClient(options: FixClientOptions) {
     }
     
     try {
-      // Format for logging
-      const logMessage = formatMessageForLogging(message);
-      logger.debug(`Sending: ${logMessage}`);
-      
+      // Log the raw message including SOH delimiters
+      logger.debug(`Sending: ${message}`);
+
       // Send the message
       socket.write(message);
       lastSentTime = new Date();
@@ -516,18 +514,17 @@ export function createFixClient(options: FixClientOptions) {
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(msgSeqNum++);
       
-      // PSX-specific authentication and session fields
+      // Standard FIX Logon fields
       builder
-        .addField(FieldTag.ON_BEHALF_OF_COMP_ID, options.onBehalfOfCompId || '')
-        .addField(FieldTag.RAW_DATA_LENGTH, String(options.rawDataLength || ''))
-        .addField(FieldTag.RAW_DATA, options.rawData || '')
-        .addField(FieldTag.ENCRYPT_METHOD, '0')
-        .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
-        .addField(FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N');
+        .addField(FieldTag.ENCRYPT_METHOD, '0')             // EncryptMethod
+        .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString()) // HeartBtInt
+        .addField(FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N')  // ResetSeqNumFlag
+        .addField(FieldTag.PASSWORD, options.password || '') // Password (554)
+        .addField(FieldTag.DEFAULT_APPL_VER_ID, '9')        // DefaultApplVerID (1137)
+        .addField('1408', 'FIX5.00_PSX_1.00');               // ApplVerID custom field
       
       const message = builder.buildMessage();
-      // sendMessage(message);
-      sendMessage("8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
+      sendMessage(message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -563,10 +560,10 @@ export function createFixClient(options: FixClientOptions) {
   };
 
   /**
-   * Format a FIX message for logging (replace SOH with |)
+   * Format a FIX message for logging (preserve SOH instead of using pipe)
    */
   const formatMessageForLogging = (message: string): string => {
-    return message.replace(new RegExp(SOH, 'g'), '|');
+    return message;
   };
 
   // Return the public API

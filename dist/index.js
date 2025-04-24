@@ -15,41 +15,6 @@ dotenv_1.default.config();
 logger_1.default.info('PSX-Connect starting...');
 logger_1.default.info(`Node.js version: ${process.version}`);
 logger_1.default.info(`Operating system: ${process.platform} ${process.arch}`);
-// VPN file path
-const vpnFilePath = process.env.VPN_FILE || path_1.default.join(process.cwd(), 'vpn');
-/**
- * Read VPN configuration from file
- */
-function readVpnConfig() {
-    const config = {};
-    try {
-        if (fs_1.default.existsSync(vpnFilePath)) {
-            logger_1.default.info(`Reading VPN configuration from ${vpnFilePath}`);
-            const content = fs_1.default.readFileSync(vpnFilePath, 'utf8');
-            // Parse simple key-value pairs
-            const lines = content.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line && !line.startsWith('#')) {
-                    const parts = line.split(' ');
-                    if (parts.length >= 2) {
-                        const key = parts[0].trim();
-                        const value = parts.slice(1).join(' ').trim();
-                        config[key] = value;
-                    }
-                }
-            }
-            logger_1.default.info('VPN configuration loaded successfully');
-        }
-        else {
-            logger_1.default.warn(`VPN configuration file not found at ${vpnFilePath}`);
-        }
-    }
-    catch (error) {
-        logger_1.default.error(`Error reading VPN configuration: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    return config;
-}
 /**
  * Main application function
  */
