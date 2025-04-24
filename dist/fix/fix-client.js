@@ -180,6 +180,8 @@ function createFixClient(options) {
                 logger_1.default.warn('Received non-FIX message');
                 return;
             }
+            // Log the raw message in FIX format (replacing SOH with pipe for readability)
+            logger_1.default.info(`Received FIX message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');
@@ -243,8 +245,8 @@ function createFixClient(options) {
             return;
         }
         try {
-            // Log the raw message including SOH delimiters
-            logger_1.default.debug(`Sending: ${message}`);
+            // Log the raw message with SOH delimiters replaced with pipes for readability
+            logger_1.default.debug(`Sending FIX message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             // Send the message
             socket.write(message);
             lastSentTime = new Date();
@@ -453,7 +455,8 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9') // DefaultApplVerID (1137)
                 .addField('1408', 'FIX5.00_PSX_1.00'); // ApplVerID custom field
             const message = builder.buildMessage();
-            logger_1.default.info(`Sending Logon Message: ${message}`);
+            // Log in a more readable format with pipes instead of SOH
+            logger_1.default.info(`Sending Logon Message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             sendMessage(message);
         }
         catch (error) {

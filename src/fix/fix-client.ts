@@ -246,6 +246,9 @@ export function createFixClient(options: FixClientOptions) {
         return;
       }
       
+      // Log the raw message in FIX format (replacing SOH with pipe for readability)
+      logger.info(`Received FIX message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
+      
       const parsedMessage = parseFixMessage(message);
       
       if (!parsedMessage) {
@@ -317,8 +320,8 @@ export function createFixClient(options: FixClientOptions) {
     }
     
     try {
-      // Log the raw message including SOH delimiters
-      logger.debug(`Sending: ${message}`);
+      // Log the raw message with SOH delimiters replaced with pipes for readability
+      logger.debug(`Sending FIX message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
 
       // Send the message
       socket.write(message);
@@ -558,7 +561,8 @@ export function createFixClient(options: FixClientOptions) {
         .addField('1408', 'FIX5.00_PSX_1.00');               // ApplVerID custom field
       
       const message = builder.buildMessage();
-      logger.info(`Sending Logon Message: ${message}`);
+      // Log in a more readable format with pipes instead of SOH
+      logger.info(`Sending Logon Message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
       sendMessage(message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
