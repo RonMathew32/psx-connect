@@ -2,7 +2,6 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import logger from './utils/logger';
-import * as vpnUtils from './utils/vpn-check';
 import { createFixClient, FixClientOptions } from './fix/fix-client';
 import { MDEntryType, SubscriptionRequestType } from './fix/constants';
 
@@ -58,26 +57,6 @@ function readVpnConfig(): Record<string, string> {
  */
 async function main() {
   try {
-    // Read VPN configuration
-    const vpnConfig = readVpnConfig();
-    
-    // Set VPN environment variables from config if available
-    if (vpnConfig.host) {
-      process.env.VPN_SERVER = vpnConfig.host;
-      logger.info(`Using VPN server: ${vpnConfig.host}`);
-    }
-    
-    // Check and establish VPN connection
-    logger.info('Checking VPN connection...');
-    
-    const isVpnActive = await vpnUtils.ensureVpnConnection();
-    if (!isVpnActive) {
-      logger.error('Failed to establish VPN connection. Exiting.');
-      process.exit(1);
-    }
-    
-    logger.info('VPN connection established successfully.');
-    
     // Configure FIX client with defaults (can be overridden with environment variables)
     const fixOptions: FixClientOptions = {
       host: process.env.PSX_HOST || '172.21.101.36',

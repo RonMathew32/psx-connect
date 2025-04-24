@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -43,7 +10,6 @@ const message_parser_1 = require("./message-parser");
 const constants_1 = require("./constants");
 const logger_1 = __importDefault(require("../utils/logger"));
 const net_1 = require("net");
-const vpnUtils = __importStar(require("../utils/vpn-check"));
 /**
  * Create a FIX client with the specified options
  */
@@ -81,15 +47,6 @@ function createFixClient(options) {
             logger_1.default.warn('Already connected');
             return;
         }
-        // Check VPN connection first
-        const isVpnActive = await vpnUtils.ensureVpnConnection();
-        if (!isVpnActive) {
-            logger_1.default.error("Cannot connect: VPN is not active");
-            emitter.emit('error', new Error('VPN connection required'));
-            return;
-        }
-        logger_1.default.info("VPN connection confirmed, connecting to PSX...");
-        logger_1.default.info(`Connecting to ${options.host}:${options.port}`);
         try {
             // Create socket with specific configuration - matching fn-psx
             socket = new net_1.Socket();
@@ -461,7 +418,8 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
                 .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N');
             const message = builder.buildMessage();
-            sendMessage(message);
+            // sendMessage(message);
+            sendMessage("8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
         }
         catch (error) {
             logger_1.default.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);

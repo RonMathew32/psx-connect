@@ -5,7 +5,6 @@ import { parseFixMessage, ParsedFixMessage } from './message-parser';
 import { SOH, MessageType, FieldTag } from './constants';
 import logger from '../utils/logger';
 import { Socket } from 'net';
-import * as vpnUtils from '../utils/vpn-check';
 
 export interface FixClientOptions {
   host: string;
@@ -97,18 +96,6 @@ export function createFixClient(options: FixClientOptions) {
       return;
     }
 
-    // Check VPN connection first
-    const isVpnActive = await vpnUtils.ensureVpnConnection();
-    
-    if (!isVpnActive) {
-      logger.error("Cannot connect: VPN is not active");
-      emitter.emit('error', new Error('VPN connection required'));
-      return;
-    }
-    
-    logger.info("VPN connection confirmed, connecting to PSX...");
-    logger.info(`Connecting to ${options.host}:${options.port}`);
-    
     try {
       // Create socket with specific configuration - matching fn-psx
       socket = new Socket();
@@ -539,7 +526,8 @@ export function createFixClient(options: FixClientOptions) {
         .addField(FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N');
       
       const message = builder.buildMessage();
-      sendMessage(message);
+      // sendMessage(message);
+      sendMessage("8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
