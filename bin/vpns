@@ -1,8 +1,16 @@
 #!/bin/sh
 
-# Activate the Python virtual environment where vpn-slice is installed
-. /home/fn/vpn-slice/bin/activate
+# This is a simplified vpn-slice script that doesn't require environment activation
+# It directly executes the vpn-slice command if available, or falls back to a simple route command
 
-# Execute vpn-slice for the PSX network subnet
-# Using the same subnet as in fn-psx: 172.16.64.0/19
-exec vpn-slice 172.16.64.0/19 
+# Try to use vpn-slice if available
+if command -v vpn-slice > /dev/null 2>&1; then
+  # Execute vpn-slice for the PSX network subnet (172.16.64.0/19)
+  vpn-slice 172.16.64.0/19
+else
+  # Fallback to simple route commands if vpn-slice is not available
+  echo "vpn-slice command not found, using simple route commands instead"
+  
+  # Add route for PSX subnet
+  /sbin/ip route add 172.16.64.0/19 dev tun0
+fi 
