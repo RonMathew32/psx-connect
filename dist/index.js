@@ -112,7 +112,11 @@ async function main() {
             username: process.env.FIX_USERNAME || 'realtime',
             password: process.env.FIX_PASSWORD || 'NMDUFISQ0001',
             heartbeatIntervalSecs: parseInt(process.env.HEARTBEAT_INTERVAL || '30', 10),
-            connectTimeoutMs: parseInt(process.env.CONNECT_TIMEOUT || '30000', 10)
+            connectTimeoutMs: parseInt(process.env.CONNECT_TIMEOUT || '30000', 10),
+            onBehalfOfCompId: process.env.ON_BEHALF_OF_COMP_ID || '600',
+            rawDataLength: parseInt(process.env.RAW_DATA_LENGTH || '3', 10),
+            rawData: process.env.RAW_DATA || 'kse',
+            resetOnLogon: true
         };
         // Create and connect FIX client
         const fixClient = (0, fix_client_1.createFixClient)(fixOptions);

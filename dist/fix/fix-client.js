@@ -452,20 +452,14 @@ function createFixClient(options) {
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
                 .setMsgSeqNum(msgSeqNum++);
-            // Set logon-specific fields
-            builder.addField(constants_1.FieldTag.ENCRYPT_METHOD, '0'); // No encryption
-            builder.addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-            // Set reset sequence number flag if requested
-            if (options.resetOnLogon) {
-                builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
-            }
-            // Add username/password if provided
-            if (options.username) {
-                builder.addField(constants_1.FieldTag.USERNAME, options.username);
-            }
-            if (options.password) {
-                builder.addField(constants_1.FieldTag.PASSWORD, options.password);
-            }
+            // PSX-specific authentication and session fields
+            builder
+                .addField(constants_1.FieldTag.ON_BEHALF_OF_COMP_ID, options.onBehalfOfCompId || '')
+                .addField(constants_1.FieldTag.RAW_DATA_LENGTH, String(options.rawDataLength || ''))
+                .addField(constants_1.FieldTag.RAW_DATA, options.rawData || '')
+                .addField(constants_1.FieldTag.ENCRYPT_METHOD, '0')
+                .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
+                .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N');
             const message = builder.buildMessage();
             sendMessage(message);
         }

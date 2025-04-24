@@ -27,6 +27,9 @@ export interface FixClientOptions {
   connectTimeoutMs?: number;
   reconnectIntervalMs?: number;
   maxReconnectAttempts?: number;
+  onBehalfOfCompId?: string;
+  rawDataLength?: number;
+  rawData?: string;
 }
 
 export interface MarketDataItem {
@@ -526,23 +529,14 @@ export function createFixClient(options: FixClientOptions) {
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(msgSeqNum++);
       
-      // Set logon-specific fields
-      builder.addField(FieldTag.ENCRYPT_METHOD, '0'); // No encryption
-      builder.addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-      
-      // Set reset sequence number flag if requested
-      if (options.resetOnLogon) {
-        builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
-      }
-      
-      // Add username/password if provided
-      if (options.username) {
-        builder.addField(FieldTag.USERNAME, options.username);
-      }
-      
-      if (options.password) {
-        builder.addField(FieldTag.PASSWORD, options.password);
-      }
+      // PSX-specific authentication and session fields
+      builder
+        .addField(FieldTag.ON_BEHALF_OF_COMP_ID, options.onBehalfOfCompId || '')
+        .addField(FieldTag.RAW_DATA_LENGTH, String(options.rawDataLength || ''))
+        .addField(FieldTag.RAW_DATA, options.rawData || '')
+        .addField(FieldTag.ENCRYPT_METHOD, '0')
+        .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
+        .addField(FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N');
       
       const message = builder.buildMessage();
       sendMessage(message);
