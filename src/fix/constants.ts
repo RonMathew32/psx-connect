@@ -1,4 +1,13 @@
-// FIX Message Types
+/**
+ * FIX protocol constants
+ */
+
+// Standard FIX delimiter - SOH (Start of Header) character (ASCII 1)
+export const SOH = String.fromCharCode(1);
+
+/**
+ * FIX message types
+ */
 export enum MessageType {
   HEARTBEAT = '0',
   TEST_REQUEST = '1',
@@ -7,6 +16,11 @@ export enum MessageType {
   SEQUENCE_RESET = '4',
   LOGOUT = '5',
   LOGON = 'A',
+  NEWS = 'B',
+  EMAIL = 'C',
+  NEW_ORDER_SINGLE = 'D',
+  EXECUTION_REPORT = '8',
+  ORDER_CANCEL_REJECT = '9',
   MARKET_DATA_REQUEST = 'V',
   MARKET_DATA_SNAPSHOT_FULL_REFRESH = 'W',
   MARKET_DATA_INCREMENTAL_REFRESH = 'X',
@@ -16,39 +30,45 @@ export enum MessageType {
   TRADING_SESSION_STATUS = 'h'
 }
 
-// FIX Field Tags
+/**
+ * FIX field tags
+ */
 export enum FieldTag {
-  BEGIN_STRING = 8,
-  BODY_LENGTH = 9,
-  MSG_TYPE = 35,
-  SENDER_COMP_ID = 49,
-  TARGET_COMP_ID = 56,
-  MSG_SEQ_NUM = 34,
-  SENDING_TIME = 52,
-  ENCRYPT_METHOD = 98,
-  HEART_BT_INT = 108,
-  RESET_SEQ_NUM_FLAG = 141,
-  USERNAME = 553,
-  PASSWORD = 554,
-  ON_BEHALF_OF_COMP_ID = 115,
-  RAW_DATA = 96,
-  RAW_DATA_LENGTH = 95,
-  DEFAULT_APPL_VER_ID = 1137,
-  DEFAULT_CSTM_APPL_VER_ID = 1129,
-  TEST_REQ_ID = 112,
-  CHECK_SUM = 10,
-  MD_REQ_ID = 262,
-  SUBSCRIPTION_REQUEST_TYPE = 263,
-  MARKET_DEPTH = 264,
-  MD_UPDATE_TYPE = 265,
-  NO_MD_ENTRY_TYPES = 267,
-  NO_RELATED_SYM = 146,
-  SECURITY_LIST_REQUEST_TYPE = 559,
-  SECURITY_TYPE = 167,
-  SYMBOL = 55,
-  MD_ENTRY_TYPE = 269,
-  TRADING_SESSION_ID = 336,
-  TEXT = 58
+  BEGIN_STRING = '8',
+  BODY_LENGTH = '9',
+  MSG_TYPE = '35',
+  SENDER_COMP_ID = '49',
+  TARGET_COMP_ID = '56',
+  MSG_SEQ_NUM = '34',
+  SENDING_TIME = '52',
+  CHECK_SUM = '10',
+  TEXT = '58',
+  TEST_REQ_ID = '112',
+  ENCRYPT_METHOD = '98',
+  HEART_BT_INT = '108',
+  RESET_SEQ_NUM_FLAG = '141',
+  USERNAME = '553',
+  PASSWORD = '554',
+  
+  // Additional field tags needed by the application
+  DEFAULT_APPL_VER_ID = '1137',
+  DEFAULT_CSTM_APPL_VER_ID = '1129',
+  MD_REQ_ID = '262',
+  SUBSCRIPTION_REQUEST_TYPE = '263',
+  MARKET_DEPTH = '264',
+  MD_UPDATE_TYPE = '265',
+  NO_MD_ENTRY_TYPES = '267',
+  MD_ENTRY_TYPE = '269',
+  NO_RELATED_SYM = '146',
+  SYMBOL = '55',
+  SECURITY_LIST_REQUEST_TYPE = '559',
+  SECURITY_REQ_ID = '320',
+  SECURITY_TYPE = '167',
+  TRADING_SESSION_ID = '336',
+  TRAD_SES_REQ_ID = '335',
+  ON_BEHALF_OF_COMP_ID = '115',
+  RAW_DATA = '96',
+  RAW_DATA_LENGTH = '95'
 }
 
 // Subscription Request Types
@@ -94,9 +114,6 @@ export enum SecurityType {
   OPTION = 'OPT',
   BOND = 'BOND'
 }
-
-// Delimiter
-export const SOH = String.fromCharCode(1); // ASCII code 1 (Start of Heading)
 
 // Default connection parameters
 export const DEFAULT_CONNECTION = {

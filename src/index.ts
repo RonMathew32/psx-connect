@@ -2,8 +2,8 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import logger from './utils/logger';
-import { VpnChecker } from './utils/vpn-check';
-import { FixClient, FixClientOptions } from './fix/fix-client';
+import * as vpnUtils from './utils/vpn-check';
+import { createFixClient, FixClientOptions } from './fix/fix-client';
 
 // Load environment variables from .env file if present
 dotenv.config();
@@ -67,10 +67,9 @@ async function main() {
     }
     
     // Check and establish VPN connection
-    const vpnChecker = VpnChecker.getInstance();
     logger.info('Checking VPN connection...');
     
-    const isVpnActive = await vpnChecker.ensureVpnConnection();
+    const isVpnActive = await vpnUtils.ensureVpnConnection();
     if (!isVpnActive) {
       logger.error('Failed to establish VPN connection. Exiting.');
       process.exit(1);
@@ -91,7 +90,7 @@ async function main() {
     };
     
     // Create and connect FIX client
-    const fixClient = new FixClient(fixOptions);
+    const fixClient = createFixClient(fixOptions);
     
     // Set up event handlers for FIX client
     fixClient.on('connected', () => {

@@ -1,7 +1,14 @@
 "use strict";
+/**
+ * FIX protocol constants
+ */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_CONNECTION = exports.SOH = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = void 0;
-// FIX Message Types
+exports.DEFAULT_CONNECTION = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
+// Standard FIX delimiter - SOH (Start of Header) character (ASCII 1)
+exports.SOH = String.fromCharCode(1);
+/**
+ * FIX message types
+ */
 var MessageType;
 (function (MessageType) {
     MessageType["HEARTBEAT"] = "0";
@@ -11,6 +18,11 @@ var MessageType;
     MessageType["SEQUENCE_RESET"] = "4";
     MessageType["LOGOUT"] = "5";
     MessageType["LOGON"] = "A";
+    MessageType["NEWS"] = "B";
+    MessageType["EMAIL"] = "C";
+    MessageType["NEW_ORDER_SINGLE"] = "D";
+    MessageType["EXECUTION_REPORT"] = "8";
+    MessageType["ORDER_CANCEL_REJECT"] = "9";
     MessageType["MARKET_DATA_REQUEST"] = "V";
     MessageType["MARKET_DATA_SNAPSHOT_FULL_REFRESH"] = "W";
     MessageType["MARKET_DATA_INCREMENTAL_REFRESH"] = "X";
@@ -19,40 +31,45 @@ var MessageType;
     MessageType["TRADING_SESSION_STATUS_REQUEST"] = "g";
     MessageType["TRADING_SESSION_STATUS"] = "h";
 })(MessageType || (exports.MessageType = MessageType = {}));
-// FIX Field Tags
+/**
+ * FIX field tags
+ */
 var FieldTag;
 (function (FieldTag) {
-    FieldTag[FieldTag["BEGIN_STRING"] = 8] = "BEGIN_STRING";
-    FieldTag[FieldTag["BODY_LENGTH"] = 9] = "BODY_LENGTH";
-    FieldTag[FieldTag["MSG_TYPE"] = 35] = "MSG_TYPE";
-    FieldTag[FieldTag["SENDER_COMP_ID"] = 49] = "SENDER_COMP_ID";
-    FieldTag[FieldTag["TARGET_COMP_ID"] = 56] = "TARGET_COMP_ID";
-    FieldTag[FieldTag["MSG_SEQ_NUM"] = 34] = "MSG_SEQ_NUM";
-    FieldTag[FieldTag["SENDING_TIME"] = 52] = "SENDING_TIME";
-    FieldTag[FieldTag["ENCRYPT_METHOD"] = 98] = "ENCRYPT_METHOD";
-    FieldTag[FieldTag["HEART_BT_INT"] = 108] = "HEART_BT_INT";
-    FieldTag[FieldTag["RESET_SEQ_NUM_FLAG"] = 141] = "RESET_SEQ_NUM_FLAG";
-    FieldTag[FieldTag["USERNAME"] = 553] = "USERNAME";
-    FieldTag[FieldTag["PASSWORD"] = 554] = "PASSWORD";
-    FieldTag[FieldTag["ON_BEHALF_OF_COMP_ID"] = 115] = "ON_BEHALF_OF_COMP_ID";
-    FieldTag[FieldTag["RAW_DATA"] = 96] = "RAW_DATA";
-    FieldTag[FieldTag["RAW_DATA_LENGTH"] = 95] = "RAW_DATA_LENGTH";
-    FieldTag[FieldTag["DEFAULT_APPL_VER_ID"] = 1137] = "DEFAULT_APPL_VER_ID";
-    FieldTag[FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = 1129] = "DEFAULT_CSTM_APPL_VER_ID";
-    FieldTag[FieldTag["TEST_REQ_ID"] = 112] = "TEST_REQ_ID";
-    FieldTag[FieldTag["CHECK_SUM"] = 10] = "CHECK_SUM";
-    FieldTag[FieldTag["MD_REQ_ID"] = 262] = "MD_REQ_ID";
-    FieldTag[FieldTag["SUBSCRIPTION_REQUEST_TYPE"] = 263] = "SUBSCRIPTION_REQUEST_TYPE";
-    FieldTag[FieldTag["MARKET_DEPTH"] = 264] = "MARKET_DEPTH";
-    FieldTag[FieldTag["MD_UPDATE_TYPE"] = 265] = "MD_UPDATE_TYPE";
-    FieldTag[FieldTag["NO_MD_ENTRY_TYPES"] = 267] = "NO_MD_ENTRY_TYPES";
-    FieldTag[FieldTag["NO_RELATED_SYM"] = 146] = "NO_RELATED_SYM";
-    FieldTag[FieldTag["SECURITY_LIST_REQUEST_TYPE"] = 559] = "SECURITY_LIST_REQUEST_TYPE";
-    FieldTag[FieldTag["SECURITY_TYPE"] = 167] = "SECURITY_TYPE";
-    FieldTag[FieldTag["SYMBOL"] = 55] = "SYMBOL";
-    FieldTag[FieldTag["MD_ENTRY_TYPE"] = 269] = "MD_ENTRY_TYPE";
-    FieldTag[FieldTag["TRADING_SESSION_ID"] = 336] = "TRADING_SESSION_ID";
-    FieldTag[FieldTag["TEXT"] = 58] = "TEXT";
+    FieldTag["BEGIN_STRING"] = "8";
+    FieldTag["BODY_LENGTH"] = "9";
+    FieldTag["MSG_TYPE"] = "35";
+    FieldTag["SENDER_COMP_ID"] = "49";
+    FieldTag["TARGET_COMP_ID"] = "56";
+    FieldTag["MSG_SEQ_NUM"] = "34";
+    FieldTag["SENDING_TIME"] = "52";
+    FieldTag["CHECK_SUM"] = "10";
+    FieldTag["TEXT"] = "58";
+    FieldTag["TEST_REQ_ID"] = "112";
+    FieldTag["ENCRYPT_METHOD"] = "98";
+    FieldTag["HEART_BT_INT"] = "108";
+    FieldTag["RESET_SEQ_NUM_FLAG"] = "141";
+    FieldTag["USERNAME"] = "553";
+    FieldTag["PASSWORD"] = "554";
+    // Additional field tags needed by the application
+    FieldTag["DEFAULT_APPL_VER_ID"] = "1137";
+    FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1129";
+    FieldTag["MD_REQ_ID"] = "262";
+    FieldTag["SUBSCRIPTION_REQUEST_TYPE"] = "263";
+    FieldTag["MARKET_DEPTH"] = "264";
+    FieldTag["MD_UPDATE_TYPE"] = "265";
+    FieldTag["NO_MD_ENTRY_TYPES"] = "267";
+    FieldTag["MD_ENTRY_TYPE"] = "269";
+    FieldTag["NO_RELATED_SYM"] = "146";
+    FieldTag["SYMBOL"] = "55";
+    FieldTag["SECURITY_LIST_REQUEST_TYPE"] = "559";
+    FieldTag["SECURITY_REQ_ID"] = "320";
+    FieldTag["SECURITY_TYPE"] = "167";
+    FieldTag["TRADING_SESSION_ID"] = "336";
+    FieldTag["TRAD_SES_REQ_ID"] = "335";
+    FieldTag["ON_BEHALF_OF_COMP_ID"] = "115";
+    FieldTag["RAW_DATA"] = "96";
+    FieldTag["RAW_DATA_LENGTH"] = "95";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;
@@ -98,8 +115,6 @@ var SecurityType;
     SecurityType["OPTION"] = "OPT";
     SecurityType["BOND"] = "BOND";
 })(SecurityType || (exports.SecurityType = SecurityType = {}));
-// Delimiter
-exports.SOH = String.fromCharCode(1); // ASCII code 1 (Start of Heading)
 // Default connection parameters
 exports.DEFAULT_CONNECTION = {
     VERSION: 'FIXT.1.1',

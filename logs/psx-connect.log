@@ -1,0 +1,16 @@
+2025-04-24T07:18:16.371Z [info]: PSX-Connect starting...
+2025-04-24T07:18:16.376Z [info]: Node.js version: v20.18.0
+2025-04-24T07:18:16.376Z [info]: Operating system: darwin x64
+2025-04-24T07:18:16.377Z [info]: Reading VPN configuration from /Users/mac/Downloads/psx/psx-connect/vpn
+2025-04-24T07:18:16.377Z [info]: VPN configuration loaded successfully
+2025-04-24T07:18:16.377Z [info]: Using VPN server: 172.16.73.18
+2025-04-24T07:18:16.377Z [info]: Checking VPN connection...
+2025-04-24T07:18:18.616Z [error]: Failed to establish VPN connection. Exiting.
+2025-04-24T07:30:20.887Z [info]: PSX-Connect starting...
+2025-04-24T07:30:20.890Z [info]: Node.js version: v20.18.0
+2025-04-24T07:30:20.890Z [info]: Operating system: darwin x64
+2025-04-24T07:30:20.891Z [info]: Reading VPN configuration from /Users/mac/Downloads/psx/psx-connect/vpn
+2025-04-24T07:30:20.891Z [info]: VPN configuration loaded successfully
+2025-04-24T07:30:20.891Z [info]: Using VPN server: 172.16.73.18
+2025-04-24T07:30:20.891Z [info]: Checking VPN connection...
+2025-04-24T07:30:23.002Z [error]: Failed to establish VPN connection. Exiting.
