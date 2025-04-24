@@ -64,7 +64,8 @@ async function main() {
     });
     
     fixClient.on('message', (message) => {
-      logger.info(`Received message: Type=${message}`);
+      // Log the full parsed FIX message
+      logger.info(`Received message: ${JSON.stringify(message)}`);
     });
     
     fixClient.on('error', (error) => {
