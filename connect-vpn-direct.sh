@@ -28,3 +28,7 @@ echo "${PASSWORD}" | sudo openconnect --background \
 sleep 2
 echo "Adding route for PSX subnet..."
 sudo ip route add 172.16.64.0/19 dev tun0 2>/dev/null || true 
+
+# (as root or via sudo)
+sudo setcap cap_net_admin+ep $(which openconnect)
+sudo setcap cap_net_admin+ep $(which ip) 
