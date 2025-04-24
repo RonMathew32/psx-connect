@@ -3,97 +3,150 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const fix_client_1 = require("./fix/fix-client");
-const constants_1 = require("./fix/constants");
 const logger_1 = __importDefault(require("./utils/logger"));
-// Load environment variables
+const vpn_check_1 = require("./utils/vpn-check");
+const fix_client_1 = require("./fix/fix-client");
+// Load environment variables from .env file if present
 dotenv_1.default.config();
-// Default connection parameters for PSX
-const config = {
-    host: process.env.FIX_HOST || '172.21.101.36',
-    port: parseInt(process.env.FIX_PORT || '8016'),
-    senderCompId: process.env.FIX_SENDER || 'realtime',
-    targetCompId: process.env.FIX_TARGET || 'NMDUFISQ0001',
-    username: process.env.FIX_USERNAME || 'realtime',
-    password: process.env.FIX_PASSWORD || 'NMDUFISQ0001',
-    heartbeatIntervalSecs: parseInt(process.env.FIX_HEARTBEAT_INTERVAL || '30'),
-    resetOnLogon: true,
-    resetOnLogout: true,
-    resetOnDisconnect: true,
-    validateFieldsOutOfOrder: false,
-    checkFieldsOutOfOrder: false,
-    rejectInvalidMessage: false,
-    forceResync: true,
-    fileLogPath: 'pkf-log',
-    fileStorePath: 'pkf-store'
-};
-// Create and start the FIX client
-const fixClient = new fix_client_1.FixClient(config);
-// Start the client
-logger_1.default.info('Starting PSX FIX client...');
-fixClient.start();
-// Set up event handlers
-fixClient.on('connected', () => {
-    logger_1.default.info('Connected to PSX FIX server');
-});
-fixClient.on('disconnected', () => {
-    logger_1.default.info('Disconnected from PSX FIX server');
-});
-fixClient.on('logon', () => {
-    logger_1.default.info('Successfully logged in to PSX FIX server');
-    // Example: Request trading session status
-    fixClient.sendTradingSessionStatusRequest();
-    // Example: Request security list
-    fixClient.sendSecurityListRequest();
-    // Example: Request market data for specific symbols
-    // Use after you've received security list if you don't know the symbols
-    /*
-    fixClient.sendMarketDataRequest(
-      ['OGDC', 'PPL', 'FFC'], // symbols
-      [MDEntryType.BID, MDEntryType.OFFER, MDEntryType.TRADE], // entry types
-      SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES, // subscription type
-      0 // market depth
-    );
-    */
-});
-fixClient.on('error', (error) => {
-    logger_1.default.error(`FIX client error: ${error.message}`);
-});
-fixClient.on('marketData', (data) => {
-    logger_1.default.info(`Received market data for ${data.length} entries`);
-    data.forEach(item => {
-        logger_1.default.info(`Symbol: ${item.symbol}, Type: ${item.entryType}, Price: ${item.price}, Size: ${item.size}`);
-    });
-});
-fixClient.on('securityList', (securities) => {
-    logger_1.default.info(`Received security list with ${securities.length} securities`);
-    securities.forEach(security => {
-        logger_1.default.info(`Symbol: ${security.symbol}, Type: ${security.securityType}, Description: ${security.securityDesc || 'N/A'}`);
-    });
-    // After receiving securities, request market data for some of them
-    if (securities.length > 0) {
-        const symbols = securities.slice(0, 5).map(s => s.symbol); // Take first 5 symbols
-        fixClient.sendMarketDataRequest(symbols, [constants_1.MDEntryType.BID, constants_1.MDEntryType.OFFER, constants_1.MDEntryType.TRADE], constants_1.SubscriptionRequestType.SNAPSHOT_PLUS_UPDATES, 0);
+// Log startup information
+logger_1.default.info('PSX-Connect starting...');
+logger_1.default.info(`Node.js version: ${process.version}`);
+logger_1.default.info(`Operating system: ${process.platform} ${process.arch}`);
+// VPN file path
+const vpnFilePath = process.env.VPN_FILE || path_1.default.join(process.cwd(), 'vpn');
+/**
+ * Read VPN configuration from file
+ */
+function readVpnConfig() {
+    const config = {};
+    try {
+        if (fs_1.default.existsSync(vpnFilePath)) {
+            logger_1.default.info(`Reading VPN configuration from ${vpnFilePath}`);
+            const content = fs_1.default.readFileSync(vpnFilePath, 'utf8');
+            // Parse simple key-value pairs
+            const lines = content.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line && !line.startsWith('#')) {
+                    const parts = line.split(' ');
+                    if (parts.length >= 2) {
+                        const key = parts[0].trim();
+                        const value = parts.slice(1).join(' ').trim();
+                        config[key] = value;
+                    }
+                }
+            }
+            logger_1.default.info('VPN configuration loaded successfully');
+        }
+        else {
+            logger_1.default.warn(`VPN configuration file not found at ${vpnFilePath}`);
+        }
     }
-});
-fixClient.on('tradingSessionStatus', (sessionInfo) => {
-    logger_1.default.info(`Trading session ${sessionInfo.sessionId} status: ${sessionInfo.status}`);
-    if (sessionInfo.startTime) {
-        logger_1.default.info(`Start time: ${sessionInfo.startTime}`);
+    catch (error) {
+        logger_1.default.error(`Error reading VPN configuration: ${error instanceof Error ? error.message : String(error)}`);
     }
-    if (sessionInfo.endTime) {
-        logger_1.default.info(`End time: ${sessionInfo.endTime}`);
+    return config;
+}
+/**
+ * Main application function
+ */
+async function main() {
+    try {
+        // Read VPN configuration
+        const vpnConfig = readVpnConfig();
+        // Set VPN environment variables from config if available
+        if (vpnConfig.host) {
+            process.env.VPN_SERVER = vpnConfig.host;
+            logger_1.default.info(`Using VPN server: ${vpnConfig.host}`);
+        }
+        // Check and establish VPN connection
+        const vpnChecker = vpn_check_1.VpnChecker.getInstance();
+        logger_1.default.info('Checking VPN connection...');
+        const isVpnActive = await vpnChecker.ensureVpnConnection();
+        if (!isVpnActive) {
+            logger_1.default.error('Failed to establish VPN connection. Exiting.');
+            process.exit(1);
+        }
+        logger_1.default.info('VPN connection established successfully.');
+        // Configure FIX client with defaults (can be overridden with environment variables)
+        const fixOptions = {
+            host: process.env.PSX_HOST || '172.21.101.36',
+            port: parseInt(process.env.PSX_PORT || '8016', 10),
+            senderCompId: process.env.SENDER_COMP_ID || 'realtime',
+            targetCompId: process.env.TARGET_COMP_ID || 'NMDUFISQ0001',
+            username: process.env.FIX_USERNAME || 'realtime',
+            password: process.env.FIX_PASSWORD || 'NMDUFISQ0001',
+            heartbeatIntervalSecs: parseInt(process.env.HEARTBEAT_INTERVAL || '30', 10),
+            connectTimeoutMs: parseInt(process.env.CONNECT_TIMEOUT || '30000', 10)
+        };
+        // Create and connect FIX client
+        const fixClient = new fix_client_1.FixClient(fixOptions);
+        // Set up event handlers for FIX client
+        fixClient.on('connected', () => {
+            logger_1.default.info('TCP connection established to PSX server.');
+        });
+        fixClient.on('logon', () => {
+            logger_1.default.info('Successfully logged in to PSX server.');
+            // Send notification about successful connection
+            sendLogNotification('PSX connection established successfully.');
+        });
+        fixClient.on('message', (message) => {
+            logger_1.default.info(`Received message: Type=${message['35']}`);
+        });
+        fixClient.on('error', (error) => {
+            logger_1.default.error(`FIX client error: ${error.message}`);
+            // Send notification about error
+            sendLogNotification(`PSX connection error: ${error.message}`);
+        });
+        fixClient.on('disconnected', () => {
+            logger_1.default.warn('Disconnected from PSX server.');
+            // Send notification about disconnection
+            sendLogNotification('PSX connection lost. Attempting to reconnect...');
+        });
+        // Connect to PSX
+        await fixClient.connect();
+        // Handle process termination
+        process.on('SIGINT', async () => {
+            logger_1.default.info('Received SIGINT. Shutting down...');
+            await fixClient.disconnect();
+            process.exit(0);
+        });
+        process.on('SIGTERM', async () => {
+            logger_1.default.info('Received SIGTERM. Shutting down...');
+            await fixClient.disconnect();
+            process.exit(0);
+        });
+        // Log successful startup
+        logger_1.default.info('PSX-Connect running. Press Ctrl+C to exit.');
     }
-});
-// Handle process termination
-process.on('SIGINT', () => {
-    logger_1.default.info('Received SIGINT. Shutting down gracefully...');
-    fixClient.disconnect();
-    process.exit(0);
-});
-process.on('SIGTERM', () => {
-    logger_1.default.info('Received SIGTERM. Shutting down gracefully...');
-    fixClient.disconnect();
-    process.exit(0);
+    catch (error) {
+        logger_1.default.error(`Application error: ${error instanceof Error ? error.message : String(error)}`);
+        process.exit(1);
+    }
+}
+/**
+ * Send a log notification message
+ * This could be modified to send via email, SMS, Slack, etc.
+ */
+function sendLogNotification(message) {
+    logger_1.default.info(`NOTIFICATION: ${message}`);
+    // Log to a separate notification log file
+    const notificationLogPath = path_1.default.join(process.cwd(), 'logs', 'notifications.log');
+    const timestamp = new Date().toISOString();
+    const logEntry = `${timestamp} - ${message}\n`;
+    try {
+        fs_1.default.appendFileSync(notificationLogPath, logEntry);
+    }
+    catch (error) {
+        logger_1.default.error(`Failed to write notification to log: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    // Additional notification methods could be added here (email, SMS, etc.)
+}
+// Start the application
+main().catch(error => {
+    logger_1.default.error(`Unhandled error in main: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
 });

@@ -5,6 +5,7 @@ import { FixMessageParser, ParsedFixMessage } from './message-parser';
 import { SOH, MessageType, FieldTag } from './constants';
 import logger from '../utils/logger';
 import { Socket } from 'net';
+import { VpnChecker } from '../utils/vpn-check';
 
 export interface FixClientOptions {
   host: string;
@@ -101,12 +102,23 @@ export class FixClient extends EventEmitter {
   /**
    * Connect to the FIX server
    */
-  public connect(): void {
+  public async connect(): Promise<void> {
     if (this.socket && this.connected) {
       logger.warn('Already connected');
       return;
     }
 
+    // Check VPN connection first
+    const vpnChecker = VpnChecker.getInstance();
+    const isVpnActive = await vpnChecker.ensureVpnConnection();
+    
+    if (!isVpnActive) {
+      logger.error("Cannot connect: VPN is not active");
+      this.emit('error', new Error('VPN connection required'));
+      return;
+    }
+    
+    logger.info("VPN connection confirmed, connecting to PSX...");
     logger.info(`Connecting to ${this.options.host}:${this.options.port}`);
     
     try {
@@ -145,8 +157,7 @@ export class FixClient extends EventEmitter {
         this.handleData(data);
       });
       
-      // The key difference - on connect, send logon immediately without VPN check
-      // This matches fn-psx behavior
+      // On connect, send logon immediately after VPN check
       this.socket.on('connect', () => {
         logger.info(`Connected to ${this.options.host}:${this.options.port}`);
         this.connected = true;
