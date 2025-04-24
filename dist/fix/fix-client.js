@@ -10,6 +10,7 @@ const message_parser_1 = require("./message-parser");
 const constants_1 = require("./constants");
 const logger_1 = __importDefault(require("../utils/logger"));
 const net_1 = require("net");
+const uuid_1 = require("uuid");
 /**
  * Create a FIX client with the specified options
  */
@@ -27,6 +28,7 @@ function createFixClient(options) {
     let lastSentTime = new Date();
     let msgSeqNum = 1;
     let logonTimer = null;
+    let messageBuilder = (0, message_builder_1.createMessageBuilder)();
     /**
      * Start the FIX client and connect to the server
      */
@@ -331,65 +333,100 @@ function createFixClient(options) {
     /**
      * Send a market data request
      */
-    const sendMarketDataRequest = (symbols, entryTypes, subscriptionType, marketDepth = 0) => {
-        if (!connected || !loggedIn) {
-            logger_1.default.warn('Cannot send market data request, not logged in');
-            return;
-        }
+    const sendMarketDataRequest = (symbols, entryTypes = ['0', '1'], // Default: 0 = Bid, 1 = Offer
+    subscriptionType = '1' // Default: 1 = Snapshot + Updates
+    ) => {
         try {
-            // Implement market data request logic here
-            // This would be similar to the original class implementation
-            // but using the functional style
-            // For example:
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            // Build market data request
-            const message = builder.buildMessage();
-            sendMessage(message);
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send market data request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType) // Subscription type
+                .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
+                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
+            // Add symbols
+            message.addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString());
+            for (const symbol of symbols) {
+                message.addField(constants_1.FieldTag.SYMBOL, symbol);
+            }
+            // Add entry types
+            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
+            for (const entryType of entryTypes) {
+                message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
+            }
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent market data request for symbols: ${symbols.join(', ')}`);
+            return requestId;
         }
         catch (error) {
-            logger_1.default.error(`Error sending market data request: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.default.error('Error sending market data request:', error);
+            return null;
         }
     };
     /**
      * Send a security list request
      */
-    const sendSecurityListRequest = (securityType) => {
-        if (!connected || !loggedIn) {
-            logger_1.default.warn('Cannot send security list request, not logged in');
-            return;
-        }
+    const sendSecurityListRequest = () => {
         try {
-            // Implement security list request logic here
-            // This would be similar to the original class implementation
-            // For example:
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            // Build security list request
-            const message = builder.buildMessage();
-            sendMessage(message);
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send security list request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info('Sent security list request');
+            return requestId;
         }
         catch (error) {
-            logger_1.default.error(`Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.default.error('Error sending security list request:', error);
+            return null;
         }
     };
     /**
      * Send a trading session status request
      */
-    const sendTradingSessionStatusRequest = (tradingSessionId) => {
-        if (!connected || !loggedIn) {
-            logger_1.default.warn('Cannot send trading session status request, not logged in');
-            return;
-        }
+    const sendTradingSessionStatusRequest = (tradingSessionID) => {
         try {
-            // Implement trading session status request logic here
-            // This would be similar to the original class implementation
-            // For example:
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            // Build trading session status request
-            const message = builder.buildMessage();
-            sendMessage(message);
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send trading session status request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1'); // 1 = Snapshot + Updates
+            // Add trading session ID if provided
+            if (tradingSessionID) {
+                message.addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
+            }
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent trading session status request${tradingSessionID ? ` for session ${tradingSessionID}` : ''}`);
+            return requestId;
         }
         catch (error) {
-            logger_1.default.error(`Error sending trading session status request: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.default.error('Error sending trading session status request:', error);
+            return null;
         }
     };
     /**
