@@ -293,6 +293,10 @@ export function createFixClient(options: FixClientOptions) {
         case MessageType.TRADING_SESSION_STATUS:
           handleTradingSessionStatus(parsedMessage);
           break;
+        case 'f': // Trading Status - specific PSX format
+          logger.info(`Received TRADING STATUS message: ${JSON.stringify(parsedMessage)}`);
+          handleTradingStatus(parsedMessage);
+          break;
         case MessageType.REJECT:
           logger.error(`Received REJECT message: ${JSON.stringify(parsedMessage)}`);
           if (parsedMessage[FieldTag.TEXT]) {
@@ -533,6 +537,11 @@ export function createFixClient(options: FixClientOptions) {
     setTimeout(() => {
       checkServerFeatures();
     }, 1000);
+    
+    // Request KSE trading status
+    setTimeout(() => {
+      sendKseTradingStatusRequest();
+    }, 1500);
     
     // Automatically request KSE data upon successful logon
     const kseRequestId = sendKseDataRequest();
@@ -1053,6 +1062,100 @@ export function createFixClient(options: FixClientOptions) {
     return message;
   };
 
+  /**
+   * Send a trading status request for KSE symbols
+   * This specifically requests trading status (MsgType=f) data for KSE-related symbols
+   */
+  const sendKseTradingStatusRequest = (): string | null => {
+    try {
+      if (!socket || !connected) {
+        logger.error('Cannot send KSE trading status request: not connected');
+        return null;
+      }
+
+      const requestId = uuidv4();
+      
+      // Define the KSE symbols to request - include the specific format shown in the example
+      const kseSymbols = ['KSE100', 'KSE30', 'KSE30-JUN', 'KMI30'];
+      
+      logger.info(`Requesting trading status for symbols: ${kseSymbols.join(', ')}`);
+
+      // Unlike market data requests, we'll send individual requests for each symbol
+      // to match the format of the example message
+      for (const symbol of kseSymbols) {
+        const message = createMessageBuilder()
+          .setMsgType('g') // Trading Session Status Request (to get 'f' responses)
+          .setSenderCompID(options.senderCompId)
+          .setTargetCompID(options.targetCompId)
+          .setMsgSeqNum(msgSeqNum++);
+          
+        // Add specific trading status request fields
+        message.addField(FieldTag.TRAD_SES_REQ_ID, `${requestId}-${symbol}`);
+        message.addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1'); // Snapshot + Updates
+        message.addField(FieldTag.SYMBOL, symbol);        
+        
+        // Add custom KSE identifier field if needed
+        if (options.rawData === 'kse') {
+          message.addField(FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
+          message.addField(FieldTag.RAW_DATA, 'kse');
+        }
+
+        const rawMessage = message.buildMessage();
+        logger.info(`KSE trading status request message for ${symbol}: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+        socket.write(rawMessage);
+        logger.info(`Sent trading status request for: ${symbol}`);
+      }
+      
+      return requestId;
+    } catch (error) {
+      logger.error('Error sending KSE trading status request:', error);
+      return null;
+    }
+  };
+
+  /**
+   * Handle trading status message - specific format for PSX
+   */
+  const handleTradingStatus = (message: ParsedFixMessage): void => {
+    try {
+      const symbol = message[FieldTag.SYMBOL];
+      const sendingTime = message[FieldTag.SENDING_TIME];
+      const origTime = message['42']; // OrigTime
+      const tradingStatus = message['102']; // Trading Status
+      
+      logger.info(`Received TRADING STATUS for ${symbol}:`);
+      logger.info(`  Status: ${tradingStatus}`);
+      logger.info(`  Time: ${sendingTime} (Orig: ${origTime})`);
+      
+      // Check if this is KSE data
+      const isKseData = symbol && (symbol.includes('KSE') || message[FieldTag.RAW_DATA] === 'kse');
+      
+      if (isKseData) {
+        // Emit a KSE trading status event
+        emitter.emit('kseTradingStatus', {
+          symbol,
+          status: tradingStatus,
+          timestamp: sendingTime,
+          origTime
+        });
+        
+        // Convert to a market data item format for compatibility
+        const marketDataItems: MarketDataItem[] = [{
+          symbol: symbol || '',
+          entryType: 'f', // Trading status as entry type
+          price: tradingStatus ? parseFloat(tradingStatus) : undefined,
+          timestamp: sendingTime
+        }];
+        
+        // Also emit as KSE data for backward compatibility
+        emitter.emit('kseData', marketDataItems);
+      }
+      
+    } catch (error) {
+      logger.error(`Error handling trading status: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
   // Return the public API
   return {
     on: (event: string, listener: (...args: any[]) => void) => emitter.on(event, listener),
@@ -1062,6 +1165,7 @@ export function createFixClient(options: FixClientOptions) {
     sendSecurityListRequest,
     sendTradingSessionStatusRequest,
     sendKseDataRequest,
+    sendKseTradingStatusRequest,
     sendSecurityStatusRequest,
     sendLogon,
     sendLogout,
@@ -1082,6 +1186,7 @@ export interface FixClient {
   on(event: 'securityList', listener: (securities: SecurityInfo[]) => void): this;
   on(event: 'tradingSessionStatus', listener: (sessionInfo: TradingSessionInfo) => void): this;
   on(event: 'kseData', listener: (data: MarketDataItem[]) => void): this;
+  on(event: 'kseTradingStatus', listener: (status: { symbol: string; status: string; timestamp: string; origTime?: string }) => void): this;
   on(event: 'marketDataReject', listener: (reject: { requestId: string; reason: string; text: string | undefined }) => void): this;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
@@ -1093,6 +1198,7 @@ export interface FixClient {
   sendSecurityListRequest(): string | null;
   sendTradingSessionStatusRequest(tradingSessionID?: string): string | null;
   sendKseDataRequest(): string | null;
+  sendKseTradingStatusRequest(): string | null;
   sendSecurityStatusRequest(symbol: string): string | null;
   sendLogon(): void;
   sendLogout(text?: string): void;

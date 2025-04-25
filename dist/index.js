@@ -60,7 +60,9 @@ async function main() {
             marketData.forEach((item) => {
                 const entryTypeDesc = item.entryType === '3' ? 'Index Value' :
                     item.entryType === '0' ? 'Bid' :
-                        item.entryType === '1' ? 'Offer' : item.entryType;
+                        item.entryType === '1' ? 'Offer' :
+                            item.entryType === 'f' ? 'Trading Status' :
+                                item.entryType;
                 logger_1.default.info(`Symbol: ${item.symbol}, Type: ${entryTypeDesc}, Value: ${item.price}`);
             });
             // Send notification with KSE index values
@@ -68,6 +70,15 @@ async function main() {
             if (kse100Item && kse100Item.price) {
                 sendLogNotification(`KSE-100 Index: ${kse100Item.price.toFixed(2)} points`);
             }
+        });
+        // Add handler for KSE trading status
+        fixClient.on('kseTradingStatus', (status) => {
+            logger_1.default.info('Received KSE trading status:');
+            logger_1.default.info(`Symbol: ${status.symbol}, Status: ${status.status}, Time: ${status.timestamp}`);
+            // Map status code to readable description
+            const statusDesc = mapTradingStatusCode(status.status);
+            // Send notification about trading status
+            sendLogNotification(`Trading Status for ${status.symbol}: ${statusDesc}`);
         });
         fixClient.on('message', (message) => {
             // Log the full parsed FIX message
@@ -121,6 +132,21 @@ function sendLogNotification(message) {
         logger_1.default.error(`Failed to write notification to log: ${error instanceof Error ? error.message : String(error)}`);
     }
     // Additional notification methods could be added here (email, SMS, etc.)
+}
+/**
+ * Map trading status code to readable description
+ */
+function mapTradingStatusCode(code) {
+    const statusCodes = {
+        '1': 'Trading Halt',
+        '2': 'Trading Resume',
+        '3': 'Trading Suspension',
+        '4': 'Pre-Open',
+        '5': 'Open',
+        '6': 'Close',
+        '7': 'No Change'
+    };
+    return statusCodes[code] || `Unknown Status (${code})`;
 }
 // Start the application
 main().catch(error => {
