@@ -982,7 +982,7 @@ export function createFixClient(options: FixClientOptions) {
       let logonMessage = "8=FIXT.1.19=12735=A34=249=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
 
       // Make sure sequence number is 1
-      logonMessage = logonMessage.replace(/34=\d+/, "34=1");
+      logonMessage = logonMessage.replace(/34=\d+/, "34=2");
 
       logger.info(`Sending Logon Message with sequence number 1: ${logonMessage}`);
       sendMessage(logonMessage);
