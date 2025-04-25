@@ -1069,47 +1069,51 @@ export function createFixClient(options: FixClientOptions) {
    * Send a trading status request for KSE symbols
    * This specifically requests trading status (MsgType=f) data for KSE-related symbols
    */
-  const sendKseTradingStatusRequest = (): string | null => {
+  const sendKseTradingStatusRequest = () => {
     try {
       if (!socket || !connected) {
         logger.error('Cannot send KSE trading status request: not connected');
         return null;
       }
 
-      const requestId = uuidv4();
+      // const requestId = uuidv4();
 
-      // Define the KSE symbols to request - include the specific format shown in the example
-      const kseSymbols = ['KSE100', 'KSE30', 'KSE30-JUN', 'KMI30'];
+      // // Define the KSE symbols to request - include the specific format shown in the example
+      // const kseSymbols = ['KSE100', 'KSE30', 'KSE30-JUN', 'KMI30'];
 
-      logger.info(`Requesting trading status for symbols: ${kseSymbols.join(', ')}`);
+      // logger.info(`Requesting trading status for symbols: ${kseSymbols.join(', ')}`);
 
       // Unlike market data requests, we'll send individual requests for each symbol
       // to match the format of the example message
-      for (const symbol of kseSymbols) {
-        const message = createMessageBuilder()
-          .setMsgType('g') // Trading Session Status Request (to get 'f' responses)
-          .setSenderCompID(options.senderCompId)
-          .setTargetCompID(options.targetCompId)
-          .setMsgSeqNum(msgSeqNum++);
+      // for (const symbol of kseSymbols) {
+      //   const message = createMessageBuilder()
+      //     .setMsgType('g') // Trading Session Status Request (to get 'f' responses)
+      //     .setSenderCompID(options.senderCompId)
+      //     .setTargetCompID(options.targetCompId)
+      //     .setMsgSeqNum(msgSeqNum++);
 
-        // Add specific trading status request fields
-        message.addField(FieldTag.TRAD_SES_REQ_ID, `${requestId}-${symbol}`);
-        message.addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1'); // Snapshot + Updates
-        message.addField(FieldTag.SYMBOL, symbol);
+      //   Add specific trading status request fields
+      //   message.addField(FieldTag.TRAD_SES_REQ_ID, `${requestId}-${symbol}`);
+      //   message.addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1'); // Snapshot + Updates
+      //   message.addField(FieldTag.SYMBOL, symbol);
 
-        // Add custom KSE identifier field if needed
-        if (options.rawData === 'kse') {
-          message.addField(FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
-          message.addField(FieldTag.RAW_DATA, 'kse');
-        }
+      //   Add custom KSE identifier field if needed
+      //   if (options.rawData === 'kse') {
+      //     message.addField(FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
+      //     message.addField(FieldTag.RAW_DATA, 'kse');
+      //   }
 
-        const rawMessage = message.buildMessage();
-        logger.info(`KSE trading status request message for ${symbol}: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-        socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
-        logger.info(`Sent trading status request for: ${symbol}`);
-      }
+      //   const rawMessage = message.buildMessage();
+      //   logger.info(`KSE trading status request message for: 8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237"`);
+      //   socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
+      //   logger.info(`Sent trading status request for: ${symbol}`);
+      // }
 
-      return requestId;
+      logger.info(`KSE trading status request message for: 8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237"`);
+      socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
+      logger.info(`Sent trading status request for: KSE100`);
+
+      // return requestId;
     } catch (error) {
       logger.error('Error sending KSE trading status request:', error);
       return null;
