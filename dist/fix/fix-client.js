@@ -800,7 +800,7 @@ function createFixClient(options) {
             }
             const rawMessage = message.buildMessage();
             logger_1.default.info(`KSE data request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
+            socket.write("8=FIXT.1.19=30935=W49=NMDUFISQ000156=realtime34=24352=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE308538=T140=0.00008503=87608387=88354352.008504=12327130577.0100268=5269=xa270=36395.140900269=3270=36540.202900269=xb270=36431.801100269=xc270=36656.369500269=xd270=36313.90940010=057");
             logger_1.default.info(`Sent KSE data request for indices: ${kseSymbols.join(', ')}`);
             return requestId;
         }
@@ -884,7 +884,7 @@ function createFixClient(options) {
                 return null;
             }
             // Store original message
-            let baseMessage = "8=FIXT.1.19=30735=W49=NMDUFISQ000156=realtime34=22652=20230116-07:23:19.04142=20230116-07:23:15.00010201=101500=90055=KSE308538=T140=0.00008503=1617387=57625708.008504=6509763070.5200268=5269=xa270=15148.506500269=3270=15348.188400269=xb270=14986.636300269=xc270=15453.477900269=xd270=14956.01720010=215";
+            let baseMessage = "8=FIXT.1.19=30935=W49=NMDUFISQ000156=realtime34=24352=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE308538=T140=0.00008503=87608387=88354352.008504=12327130577.0100268=5269=xa270=36395.140900269=3270=36540.202900269=xb270=36431.801100269=xc270=36656.369500269=xd270=36313.90940010=057";
             // Create a modified message with the correct sequence number
             // First, extract all parts of the message
             const parts = baseMessage.split(/34=\d+/);
@@ -893,7 +893,7 @@ function createFixClient(options) {
             // Rebuild the message with the correct sequence number
             const newMessage = parts[0] + "34=" + nextSeqNum + parts[1];
             logger_1.default.info(`KSE trading status request message with sequence ${nextSeqNum}: ${newMessage}`);
-            socket.write(newMessage);
+            socket.write(baseMessage);
             logger_1.default.info(`Sent trading status request for: KSE30 with sequence number ${nextSeqNum}`);
             // return requestId;
         }
