@@ -411,7 +411,8 @@ function createFixClient(options) {
         }
         try {
             // Log the raw message with SOH delimiters replaced with pipes for readability
-            logger_1.default.debug(`Sending FIX message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+            // logger.debug(`Sending FIX message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
+            logger_1.default.debug(`Sending FIX message: ${message}`);
             // Send the message
             socket.write(message);
             lastSentTime = new Date();
@@ -432,32 +433,33 @@ function createFixClient(options) {
         if (options.resetOnLogon) {
             msgSeqNum = 1;
         }
-        // Start heartbeat monitoring
-        startHeartbeatMonitoring();
-        // First check the server features to understand capabilities
-        setTimeout(() => {
-            checkServerFeatures();
-        }, 1000);
-        // Request KSE trading status
-        setTimeout(() => {
-            sendKseTradingStatusRequest();
-        }, 1500);
+        // // Start heartbeat monitoring
+        // startHeartbeatMonitoring();
+        // // First check the server features to understand capabilities
+        // setTimeout(() => {
+        //   checkServerFeatures();
+        // }, 1000);
+        // // Request KSE trading status
+        // setTimeout(() => {
+        //   sendKseTradingStatusRequest();
+        // }, 1500);
         // Automatically request KSE data upon successful logon
-        const kseRequestId = sendKseDataRequest();
-        // Set a timeout to check if we received KSE data
-        if (kseRequestId) {
-            setTimeout(() => {
-                logger_1.default.info('Checking if KSE data was received...');
-                // If we haven't received KSE data yet, try an alternative approach
-                logger_1.default.info('No KSE data response detected within timeout, trying again with modified request...');
-                // Try with different subscription type (snapshot only)
-                tryAlternativeKseRequest();
-            }, 5000); // Wait 5 seconds for response
-        }
+        // const kseRequestId = sendKseDataRequest();
+        // // Set a timeout to check if we received KSE data
+        // if (kseRequestId) {
+        //   setTimeout(() => {
+        //     logger.info('Checking if KSE data was received...');
+        //     // If we haven't received KSE data yet, try an alternative approach
+        //     logger.info('No KSE data response detected within timeout, trying again with modified request...');
+        //     // Try with different subscription type (snapshot only)
+        //     tryAlternativeKseRequest();
+        //   }, 5000); // Wait 5 seconds for response
+        // }
         // Emit logon event
         // emitter.emit('logon', message);
         emitter.emit('logon', "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
         logger_1.default.info('Successfully logged in to FIX server');
+        sendKseTradingStatusRequest();
     };
     /**
      * Check server features to understand its capabilities
@@ -840,23 +842,23 @@ function createFixClient(options) {
             return;
         }
         try {
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            builder
-                .setMsgType(constants_1.MessageType.LOGON)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(msgSeqNum++);
-            // Standard FIX Logon fields
-            builder
-                .addField(constants_1.FieldTag.ENCRYPT_METHOD, '0') // EncryptMethod
-                .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString()) // HeartBtInt
-                .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N') // ResetSeqNumFlag
-                .addField(constants_1.FieldTag.PASSWORD, options.password || '') // Password (554)
-                .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9') // DefaultApplVerID (1137)
-                .addField('1408', 'FIX5.00_PSX_1.00'); // ApplVerID custom field
-            const message = builder.buildMessage();
+            // const builder = createMessageBuilder();
+            // builder
+            //   .setMsgType(MessageType.LOGON)
+            //   .setSenderCompID(options.senderCompId)
+            //   .setTargetCompID(options.targetCompId)
+            //   .setMsgSeqNum(msgSeqNum++);
+            // // Standard FIX Logon fields
+            // builder
+            //   .addField(FieldTag.ENCRYPT_METHOD, '0')             // EncryptMethod
+            //   .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString()) // HeartBtInt
+            //   .addField(FieldTag.RESET_SEQ_NUM_FLAG, options.resetOnLogon ? 'Y' : 'N')  // ResetSeqNumFlag
+            //   .addField(FieldTag.PASSWORD, options.password || '') // Password (554)
+            //   .addField(FieldTag.DEFAULT_APPL_VER_ID, '9')        // DefaultApplVerID (1137)
+            //   .addField('1408', 'FIX5.00_PSX_1.00');               // ApplVerID custom field
+            // const message = builder.buildMessage();
             // Log in a more readable format with pipes instead of SOH
-            logger_1.default.info(`Sending Logon Message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+            logger_1.default.info(`Sending Logon Message: 8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159`);
             // sendMessage(message);
             sendMessage("8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
         }
