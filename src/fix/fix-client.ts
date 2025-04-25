@@ -238,37 +238,37 @@ export function createFixClient(options: FixClientOptions) {
   const processMessage = (message: string): void => {
     try {
       const segments = message.split(SOH);
-      
+
       // FIX message should start with "8=FIX"
       const fixVersion = segments.find(s => s.startsWith('8=FIX'));
       if (!fixVersion) {
         logger.warn('Received non-FIX message');
         return;
       }
-      
+
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
-      
+
       const parsedMessage = parseFixMessage(message);
-      
+
       if (!parsedMessage) {
         logger.warn('Could not parse FIX message');
         return;
       }
-      
+
       // Log message type for debugging
       const messageType = parsedMessage[FieldTag.MSG_TYPE];
       logger.info(`Message type: ${messageType} (${getMessageTypeName(messageType)})`);
-      
+
       // Track server's sequence number if available
       if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
         const serverSeq = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
         logger.info(`Server sequence number: ${serverSeq}`);
       }
-      
+
       // Emit the raw message
       emitter.emit('message', parsedMessage);
-      
+
       // Process specific message types
       switch (messageType) {
         case MessageType.LOGON:
@@ -531,11 +531,11 @@ export function createFixClient(options: FixClientOptions) {
    */
   const handleLogon = (message: ParsedFixMessage): void => {
     loggedIn = true;
-    
+
     // Reset our sequence number to ensure we start fresh
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-    
+
     // Send our KSE request with the correct sequence number
     sendKseTradingStatusRequest();
   };
@@ -973,20 +973,20 @@ export function createFixClient(options: FixClientOptions) {
       logger.warn('Cannot send logon, not connected');
       return;
     }
-    
+
     try {
       // Reset sequence number for new connection
       msgSeqNum = 1;
-      
+
       // Use the hardcoded logon message but ensure sequence is 1
-      let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
-      
+      let logonMessage = "8=FIXT.1.19=12735=A34=249=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
+
       // Make sure sequence number is 1
       logonMessage = logonMessage.replace(/34=\d+/, "34=1");
-      
+
       logger.info(`Sending Logon Message with sequence number 1: ${logonMessage}`);
       sendMessage(logonMessage);
-      
+
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -1041,13 +1041,13 @@ export function createFixClient(options: FixClientOptions) {
 
       // Store original message 
       let baseMessage = "8=FIXT.1.19=30935=W49=NMDUFISQ000156=realtime34=24352=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE308538=T140=0.00008503=87608387=88354352.008504=12327130577.0100268=5269=xa270=36395.140900269=3270=36540.202900269=xb270=36431.801100269=xc270=36656.369500269=xd270=36313.90940010=057";
-      
+
       // Ensure current sequence number is used
       const currentSeqNum = msgSeqNum++;
-      
+
       // Insert correct sequence number - use a more precise regex to avoid issues
       const newMessage = baseMessage.replace(/(?<=34=)\d+/, currentSeqNum.toString());
-      
+
       logger.info(`Current sequence number: ${currentSeqNum}`);
       logger.info(`KSE trading status request - sending with sequence ${currentSeqNum}: ${newMessage}`);
       socket.write(newMessage);
