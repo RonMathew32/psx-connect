@@ -181,7 +181,7 @@ function createFixClient(options) {
                 return;
             }
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
-            logger_1.default.info(`Received FIX message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+            logger_1.default.info(`Received FIX message: ${message}`);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');
@@ -189,7 +189,7 @@ function createFixClient(options) {
             }
             // Log message type for debugging
             const messageType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
-            logger_1.default.debug(`Message type: ${messageType} (${getMessageTypeName(messageType)})`);
+            logger_1.default.info(`Message type: ${messageType} (${getMessageTypeName(messageType)})`);
             // Emit the raw message
             emitter.emit('message', parsedMessage);
             // Process specific message types
