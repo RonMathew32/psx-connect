@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import logger from './utils/logger';
-import { createFixClient, FixClientOptions } from './fix/fix-client';
+import { createFixClient, FixClientOptions, MarketDataItem } from './fix/fix-client';
 import { MDEntryType, SubscriptionRequestType } from './fix/constants';
 
 // Load environment variables from .env file if present
@@ -61,6 +61,24 @@ async function main() {
       
       // Send notification about successful connection
       sendLogNotification('PSX connection established and subscriptions sent.');
+    });
+    
+    // Add handler for KSE data
+    fixClient.on('kseData', (marketData) => {
+      logger.info('Received KSE data:');
+      marketData.forEach((item: MarketDataItem) => {
+        const entryTypeDesc = item.entryType === '3' ? 'Index Value' : 
+                             item.entryType === '0' ? 'Bid' : 
+                             item.entryType === '1' ? 'Offer' : item.entryType;
+                             
+        logger.info(`Symbol: ${item.symbol}, Type: ${entryTypeDesc}, Value: ${item.price}`);
+      });
+      
+      // Send notification with KSE index values
+      const kse100Item = marketData.find((item: MarketDataItem) => item.symbol === 'KSE100' && item.entryType === '3');
+      if (kse100Item && kse100Item.price) {
+        sendLogNotification(`KSE-100 Index: ${kse100Item.price.toFixed(2)} points`);
+      }
     });
     
     fixClient.on('message', (message) => {

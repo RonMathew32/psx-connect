@@ -54,6 +54,21 @@ async function main() {
             // Send notification about successful connection
             sendLogNotification('PSX connection established and subscriptions sent.');
         });
+        // Add handler for KSE data
+        fixClient.on('kseData', (marketData) => {
+            logger_1.default.info('Received KSE data:');
+            marketData.forEach((item) => {
+                const entryTypeDesc = item.entryType === '3' ? 'Index Value' :
+                    item.entryType === '0' ? 'Bid' :
+                        item.entryType === '1' ? 'Offer' : item.entryType;
+                logger_1.default.info(`Symbol: ${item.symbol}, Type: ${entryTypeDesc}, Value: ${item.price}`);
+            });
+            // Send notification with KSE index values
+            const kse100Item = marketData.find((item) => item.symbol === 'KSE100' && item.entryType === '3');
+            if (kse100Item && kse100Item.price) {
+                sendLogNotification(`KSE-100 Index: ${kse100Item.price.toFixed(2)} points`);
+            }
+        });
         fixClient.on('message', (message) => {
             // Log the full parsed FIX message
             logger_1.default.info(`Received message: ${JSON.stringify(message)}`);

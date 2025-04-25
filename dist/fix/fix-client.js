@@ -206,11 +206,145 @@ function createFixClient(options) {
                     // Respond with heartbeat
                     sendHeartbeat(parsedMessage[constants_1.FieldTag.TEST_REQ_ID]);
                     break;
+                case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+                    handleMarketDataSnapshot(parsedMessage);
+                    break;
+                case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+                    handleMarketDataIncremental(parsedMessage);
+                    break;
+                case constants_1.MessageType.SECURITY_LIST:
+                    handleSecurityList(parsedMessage);
+                    break;
+                case constants_1.MessageType.TRADING_SESSION_STATUS:
+                    handleTradingSessionStatus(parsedMessage);
+                    break;
                 // Add more message type handlers as needed
             }
         }
         catch (error) {
             logger_1.default.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+    /**
+     * Handle a market data snapshot message
+     */
+    const handleMarketDataSnapshot = (message) => {
+        try {
+            // Extract the request ID to identify which request this is responding to
+            const mdReqId = message[constants_1.FieldTag.MD_REQ_ID];
+            const symbol = message[constants_1.FieldTag.SYMBOL];
+            logger_1.default.info(`Received market data snapshot for request: ${mdReqId}, symbol: ${symbol}`);
+            // Process market data entries
+            const marketDataItems = [];
+            // Check if we have entries
+            const noEntries = parseInt(message[constants_1.FieldTag.NO_MD_ENTRY_TYPES] || '0', 10);
+            if (noEntries > 0) {
+                // Extract entries - in a real implementation, this would be more robust
+                // and handle multiple entries properly by parsing groups
+                for (let i = 0; i < 100; i++) { // Safe upper limit
+                    const entryType = message[`${constants_1.FieldTag.MD_ENTRY_TYPE}.${i}`] || message[constants_1.FieldTag.MD_ENTRY_TYPE];
+                    const price = message[`${constants_1.FieldTag.MD_ENTRY_PX}.${i}`] || message[constants_1.FieldTag.MD_ENTRY_PX];
+                    const size = message[`${constants_1.FieldTag.MD_ENTRY_SIZE}.${i}`] || message[constants_1.FieldTag.MD_ENTRY_SIZE];
+                    if (!entryType)
+                        break; // No more entries
+                    marketDataItems.push({
+                        symbol: symbol || '',
+                        entryType,
+                        price: price ? parseFloat(price) : undefined,
+                        size: size ? parseFloat(size) : undefined,
+                        timestamp: message[constants_1.FieldTag.SENDING_TIME]
+                    });
+                }
+            }
+            if (marketDataItems.length > 0) {
+                logger_1.default.info(`Extracted ${marketDataItems.length} market data items for ${symbol}`);
+                // Check if this is KSE data
+                const isKseData = symbol && (symbol.includes('KSE') || message[constants_1.FieldTag.RAW_DATA] === 'kse');
+                if (isKseData) {
+                    logger_1.default.info(`Received KSE data for ${symbol}: ${JSON.stringify(marketDataItems)}`);
+                    emitter.emit('kseData', marketDataItems);
+                }
+                // Also emit general market data event
+                emitter.emit('marketData', marketDataItems);
+            }
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling market data snapshot: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+    /**
+     * Handle a market data incremental refresh message
+     */
+    const handleMarketDataIncremental = (message) => {
+        // Similar implementation to handleMarketDataSnapshot, but for incremental updates
+        try {
+            const mdReqId = message[constants_1.FieldTag.MD_REQ_ID];
+            logger_1.default.info(`Received market data incremental refresh for request: ${mdReqId}`);
+            // Process incremental updates - simplified version
+            const marketDataItems = [];
+            // Parse the incremental updates and emit an event
+            // Real implementation would be more robust
+            if (marketDataItems.length > 0) {
+                emitter.emit('marketData', marketDataItems);
+            }
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling market data incremental: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+    /**
+     * Handle a security list message
+     */
+    const handleSecurityList = (message) => {
+        try {
+            const reqId = message[constants_1.FieldTag.SECURITY_REQ_ID];
+            logger_1.default.info(`Received security list for request: ${reqId}`);
+            // Extract securities
+            const securities = [];
+            const noSecurities = parseInt(message[constants_1.FieldTag.NO_RELATED_SYM] || '0', 10);
+            if (noSecurities > 0) {
+                // Simplified parsing of security list - real implementation would handle groups properly
+                // This is just a skeleton
+                for (let i = 0; i < 100; i++) { // Safe upper limit
+                    const symbol = message[`${constants_1.FieldTag.SYMBOL}.${i}`] || message[constants_1.FieldTag.SYMBOL];
+                    const securityType = message[`${constants_1.FieldTag.SECURITY_TYPE}.${i}`] || message[constants_1.FieldTag.SECURITY_TYPE];
+                    if (!symbol)
+                        break; // No more securities
+                    securities.push({
+                        symbol,
+                        securityType: securityType || '',
+                        securityDesc: message[`${constants_1.FieldTag.SECURITY_DESC}.${i}`] || message[constants_1.FieldTag.SECURITY_DESC]
+                    });
+                }
+            }
+            if (securities.length > 0) {
+                logger_1.default.info(`Extracted ${securities.length} securities`);
+                emitter.emit('securityList', securities);
+            }
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+    /**
+     * Handle a trading session status message
+     */
+    const handleTradingSessionStatus = (message) => {
+        try {
+            const reqId = message[constants_1.FieldTag.TRAD_SES_REQ_ID];
+            const sessionId = message[constants_1.FieldTag.TRADING_SESSION_ID];
+            const status = message[constants_1.FieldTag.TRAD_SES_STATUS];
+            logger_1.default.info(`Received trading session status for request: ${reqId}, session: ${sessionId}, status: ${status}`);
+            const sessionInfo = {
+                sessionId: sessionId || '',
+                status: status || '',
+                startTime: message[constants_1.FieldTag.START_TIME],
+                endTime: message[constants_1.FieldTag.END_TIME]
+            };
+            emitter.emit('tradingSessionStatus', sessionInfo);
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
     /**
@@ -269,6 +403,8 @@ function createFixClient(options) {
         }
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
+        // Automatically request KSE data upon successful logon
+        sendKseDataRequest();
         // Emit logon event
         emitter.emit('logon', message);
         logger_1.default.info('Successfully logged in to FIX server');
@@ -432,6 +568,52 @@ function createFixClient(options) {
         }
     };
     /**
+     * Send a request specifically for KSE (Karachi Stock Exchange) data
+     */
+    const sendKseDataRequest = () => {
+        try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send KSE data request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
+                .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
+                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
+            // Add KSE index or key symbols
+            const kseSymbols = ['KSE100', 'KSE30', 'KMI30'];
+            message.addField(constants_1.FieldTag.NO_RELATED_SYM, kseSymbols.length.toString());
+            for (const symbol of kseSymbols) {
+                message.addField(constants_1.FieldTag.SYMBOL, symbol);
+            }
+            // Add entry types - for indices we typically want the index value
+            const entryTypes = ['3']; // 3 = Index Value
+            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
+            for (const entryType of entryTypes) {
+                message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
+            }
+            // Add custom KSE identifier field if needed
+            if (options.rawData === 'kse') {
+                message.addField(constants_1.FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
+                message.addField(constants_1.FieldTag.RAW_DATA, 'kse');
+            }
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent KSE data request for indices: ${kseSymbols.join(', ')}`);
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error('Error sending KSE data request:', error);
+            return null;
+        }
+    };
+    /**
      * Send a logon message to the server
      */
     const sendLogon = () => {
@@ -502,6 +684,7 @@ function createFixClient(options) {
         sendMarketDataRequest,
         sendSecurityListRequest,
         sendTradingSessionStatusRequest,
+        sendKseDataRequest,
         sendLogon,
         sendLogout,
         start,
