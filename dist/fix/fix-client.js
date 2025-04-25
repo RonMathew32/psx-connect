@@ -928,7 +928,7 @@ function createFixClient(options) {
                 }
                 const rawMessage = message.buildMessage();
                 logger_1.default.info(`KSE trading status request message for ${symbol}: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-                socket.write(rawMessage);
+                socket.write(",8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
                 logger_1.default.info(`Sent trading status request for: ${symbol}`);
             }
             return requestId;
