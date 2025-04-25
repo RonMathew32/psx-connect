@@ -530,12 +530,14 @@ export function createFixClient(options: FixClientOptions) {
     emitter.emit('logon', message);
     
     logger.info('Successfully logged in to FIX server');
+    sendKseTradingStatusRequest();
+
     
     // Wait a brief moment before sending the next message to ensure
     // the server has fully processed the logon
-    setTimeout(() => {
-      sendKseTradingStatusRequest();
-    }, 1000);
+    // setTimeout(() => {
+    //   sendKseTradingStatusRequest();
+    // }, 1000);
   };
 
   /**
