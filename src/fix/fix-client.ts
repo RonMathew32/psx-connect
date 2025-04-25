@@ -1061,7 +1061,7 @@ export function createFixClient(options: FixClientOptions) {
       const newMessage = parts[0] + "34=" + nextSeqNum + parts[1];
       
       logger.info(`KSE trading status request message with sequence ${nextSeqNum}: ${newMessage}`);
-      socket.write(baseMessage);
+      socket.write(newMessage);
       logger.info(`Sent trading status request for: KSE30 with sequence number ${nextSeqNum}`);
 
       // return requestId;
