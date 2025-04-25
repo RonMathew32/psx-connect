@@ -187,10 +187,12 @@ function createFixClient(options) {
                 logger_1.default.warn('Could not parse FIX message');
                 return;
             }
+            // Log message type for debugging
+            const messageType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
+            logger_1.default.debug(`Message type: ${messageType} (${getMessageTypeName(messageType)})`);
             // Emit the raw message
             emitter.emit('message', parsedMessage);
             // Process specific message types
-            const messageType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
             switch (messageType) {
                 case constants_1.MessageType.LOGON:
                     handleLogon(parsedMessage);
@@ -207,9 +209,11 @@ function createFixClient(options) {
                     sendHeartbeat(parsedMessage[constants_1.FieldTag.TEST_REQ_ID]);
                     break;
                 case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+                    logger_1.default.info(`Received market data snapshot: ${JSON.stringify(parsedMessage)}`);
                     handleMarketDataSnapshot(parsedMessage);
                     break;
                 case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+                    logger_1.default.info(`Received market data incremental refresh: ${JSON.stringify(parsedMessage)}`);
                     handleMarketDataIncremental(parsedMessage);
                     break;
                 case constants_1.MessageType.SECURITY_LIST:
@@ -218,12 +222,35 @@ function createFixClient(options) {
                 case constants_1.MessageType.TRADING_SESSION_STATUS:
                     handleTradingSessionStatus(parsedMessage);
                     break;
-                // Add more message type handlers as needed
+                case constants_1.MessageType.REJECT:
+                    logger_1.default.error(`Received REJECT message: ${JSON.stringify(parsedMessage)}`);
+                    if (parsedMessage[constants_1.FieldTag.TEXT]) {
+                        logger_1.default.error(`Reject reason: ${parsedMessage[constants_1.FieldTag.TEXT]}`);
+                    }
+                    break;
+                case 'Y': // Market Data Request Reject
+                    logger_1.default.error(`Received MARKET DATA REQUEST REJECT message: ${JSON.stringify(parsedMessage)}`);
+                    handleMarketDataRequestReject(parsedMessage);
+                    break;
+                default:
+                    logger_1.default.info(`Received unhandled message type: ${messageType} (${getMessageTypeName(messageType)})`);
             }
         }
         catch (error) {
             logger_1.default.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
         }
+    };
+    /**
+     * Get human-readable name for a message type
+     */
+    const getMessageTypeName = (msgType) => {
+        // Find the message type name by its value
+        for (const [name, value] of Object.entries(constants_1.MessageType)) {
+            if (value === msgType) {
+                return name;
+            }
+        }
+        return 'UNKNOWN';
     };
     /**
      * Handle a market data snapshot message
@@ -403,11 +430,187 @@ function createFixClient(options) {
         }
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
+        // First check the server features to understand capabilities
+        setTimeout(() => {
+            checkServerFeatures();
+        }, 1000);
         // Automatically request KSE data upon successful logon
-        sendKseDataRequest();
+        const kseRequestId = sendKseDataRequest();
+        // Set a timeout to check if we received KSE data
+        if (kseRequestId) {
+            setTimeout(() => {
+                logger_1.default.info('Checking if KSE data was received...');
+                // If we haven't received KSE data yet, try an alternative approach
+                logger_1.default.info('No KSE data response detected within timeout, trying again with modified request...');
+                // Try with different subscription type (snapshot only)
+                tryAlternativeKseRequest();
+            }, 5000); // Wait 5 seconds for response
+        }
         // Emit logon event
         emitter.emit('logon', message);
         logger_1.default.info('Successfully logged in to FIX server');
+    };
+    /**
+     * Check server features to understand its capabilities
+     */
+    const checkServerFeatures = () => {
+        try {
+            if (!socket || !connected) {
+                return;
+            }
+            logger_1.default.info('Checking server features and capabilities...');
+            // Try to determine what message types and fields are supported
+            // 1. First try a simple test request to see if basic message flow works
+            const testReqId = `TEST${Date.now()}`;
+            const testMessage = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.TEST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.TEST_REQ_ID, testReqId)
+                .buildMessage();
+            socket.write(testMessage);
+            logger_1.default.info(`Sent test request with ID: ${testReqId}`);
+            // 2. Check if the server supports security status request
+            // This can help identify what endpoint types are available
+            setTimeout(() => {
+                sendSecurityStatusRequest('KSE100');
+            }, 2000);
+        }
+        catch (error) {
+            logger_1.default.error('Error checking server features:', error);
+        }
+    };
+    /**
+     * Send a security status request to check if a symbol is valid
+     */
+    const sendSecurityStatusRequest = (symbol) => {
+        try {
+            if (!socket || !connected) {
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            // Security status request is type 'e' in FIX 4.4+
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType('e') // Security Status Request
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.SECURITY_STATUS_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SYMBOL, symbol)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
+                .buildMessage();
+            socket.write(message);
+            logger_1.default.info(`Sent security status request for: ${symbol}`);
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error(`Error sending security status request for ${symbol}:`, error);
+            return null;
+        }
+    };
+    /**
+     * Handle market data request reject
+     */
+    const handleMarketDataRequestReject = (message) => {
+        try {
+            const mdReqId = message[constants_1.FieldTag.MD_REQ_ID];
+            const rejectReason = message[constants_1.FieldTag.MD_REJECT_REASON];
+            const text = message[constants_1.FieldTag.TEXT];
+            logger_1.default.error(`Market data request rejected for ID: ${mdReqId}`);
+            logger_1.default.error(`Reject reason: ${rejectReason}`);
+            if (text) {
+                logger_1.default.error(`Text: ${text}`);
+            }
+            // Emit an event so client can handle this
+            emitter.emit('marketDataReject', {
+                requestId: mdReqId,
+                reason: rejectReason,
+                text: text
+            });
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling market data reject: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+    /**
+     * Try alternative approaches to request KSE data
+     */
+    const tryAlternativeKseRequest = () => {
+        try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send alternative KSE request: not connected');
+                return;
+            }
+            logger_1.default.info('Sending alternative KSE data request...');
+            // Try with snapshot only instead of snapshot+updates
+            const requestId = (0, uuid_1.v4)();
+            const kseSymbols = ['KSE100', 'KSE30', 'KMI30'];
+            // Try different entry types in case index value is not supported
+            const entryTypes = ['3', '0', '1']; // Index value, Bid, Offer
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot only
+                .addField(constants_1.FieldTag.MARKET_DEPTH, '0'); // 0 = Full Book
+            // Skip MD_UPDATE_TYPE to see if that helps
+            // Add symbols one by one with separate requests
+            message.addField(constants_1.FieldTag.NO_RELATED_SYM, '1'); // Just one symbol at a time
+            message.addField(constants_1.FieldTag.SYMBOL, 'KSE100'); // Try just KSE100
+            // Add entry types
+            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
+            for (const entryType of entryTypes) {
+                message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
+            }
+            // Try without the raw data fields
+            const rawMessage = message.buildMessage();
+            logger_1.default.info(`Alternative KSE request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+            socket.write(rawMessage);
+            // Also try individual symbol requests
+            setTimeout(() => {
+                for (const symbol of kseSymbols) {
+                    logger_1.default.info(`Sending individual request for symbol: ${symbol}`);
+                    sendIndividualSymbolRequest(symbol);
+                }
+            }, 2000);
+        }
+        catch (error) {
+            logger_1.default.error('Error sending alternative KSE request:', error);
+        }
+    };
+    /**
+     * Send a request for an individual symbol
+     */
+    const sendIndividualSymbolRequest = (symbol) => {
+        try {
+            if (!socket || !connected) {
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot only
+                .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
+                .addField(constants_1.FieldTag.NO_RELATED_SYM, '1')
+                .addField(constants_1.FieldTag.SYMBOL, symbol)
+                .addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, '1')
+                .addField(constants_1.FieldTag.MD_ENTRY_TYPE, '3'); // 3 = Index value
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent individual symbol request for: ${symbol}`);
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error(`Error sending individual symbol request for ${symbol}:`, error);
+            return null;
+        }
     };
     /**
      * Handle a logout message from the server
@@ -577,6 +780,12 @@ function createFixClient(options) {
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
+            logger_1.default.info(`Creating KSE data request with ID: ${requestId}`);
+            // Add KSE index or key symbols
+            const kseSymbols = ['KSE100', 'KSE30', 'KMI30'];
+            // Add entry types - for indices we typically want the index value
+            const entryTypes = ['3']; // 3 = Index Value
+            logger_1.default.info(`Requesting symbols: ${kseSymbols.join(', ')} with entry types: ${entryTypes.join(', ')}`);
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
                 .setSenderCompID(options.senderCompId)
@@ -586,24 +795,24 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
                 .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
                 .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
-            // Add KSE index or key symbols
-            const kseSymbols = ['KSE100', 'KSE30', 'KMI30'];
+            // Add symbols
             message.addField(constants_1.FieldTag.NO_RELATED_SYM, kseSymbols.length.toString());
             for (const symbol of kseSymbols) {
                 message.addField(constants_1.FieldTag.SYMBOL, symbol);
             }
-            // Add entry types - for indices we typically want the index value
-            const entryTypes = ['3']; // 3 = Index Value
+            // Add entry types
             message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
             for (const entryType of entryTypes) {
                 message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
             }
             // Add custom KSE identifier field if needed
             if (options.rawData === 'kse') {
+                logger_1.default.info(`Adding raw data field: ${options.rawData} with length: ${options.rawDataLength}`);
                 message.addField(constants_1.FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
                 message.addField(constants_1.FieldTag.RAW_DATA, 'kse');
             }
             const rawMessage = message.buildMessage();
+            logger_1.default.info(`KSE data request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             socket.write(rawMessage);
             logger_1.default.info(`Sent KSE data request for indices: ${kseSymbols.join(', ')}`);
             return requestId;
@@ -685,6 +894,7 @@ function createFixClient(options) {
         sendSecurityListRequest,
         sendTradingSessionStatusRequest,
         sendKseDataRequest,
+        sendSecurityStatusRequest,
         sendLogon,
         sendLogout,
         start,

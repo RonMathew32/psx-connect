@@ -61,10 +61,12 @@ export enum FieldTag {
   MD_ENTRY_TYPE = '269',
   MD_ENTRY_PX = '270',           // Market Data Entry Price
   MD_ENTRY_SIZE = '271',         // Market Data Entry Size
+  MD_REJECT_REASON = '281',      // Market Data Reject Reason
   NO_RELATED_SYM = '146',
   SYMBOL = '55',
   SECURITY_LIST_REQUEST_TYPE = '559',
   SECURITY_REQ_ID = '320',
+  SECURITY_STATUS_REQ_ID = '324', // Security Status Request ID
   SECURITY_TYPE = '167',
   SECURITY_DESC = '107',        // Security Description
   TRADING_SESSION_ID = '336',
