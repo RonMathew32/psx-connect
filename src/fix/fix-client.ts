@@ -1047,43 +1047,22 @@ export function createFixClient(options: FixClientOptions) {
         return null;
       }
 
-      // const requestId = uuidv4();
-
-      // // Define the KSE symbols to request - include the specific format shown in the example
-      // const kseSymbols = ['KSE100', 'KSE30', 'KSE30-JUN', 'KMI30'];
-
-      // logger.info(`Requesting trading status for symbols: ${kseSymbols.join(', ')}`);
-
-      // Unlike market data requests, we'll send individual requests for each symbol
-      // to match the format of the example message
-      // for (const symbol of kseSymbols) {
-      //   const message = createMessageBuilder()
-      //     .setMsgType('g') // Trading Session Status Request (to get 'f' responses)
-      //     .setSenderCompID(options.senderCompId)
-      //     .setTargetCompID(options.targetCompId)
-      //     .setMsgSeqNum(msgSeqNum++);
-
-      //   Add specific trading status request fields
-      //   message.addField(FieldTag.TRAD_SES_REQ_ID, `${requestId}-${symbol}`);
-      //   message.addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1'); // Snapshot + Updates
-      //   message.addField(FieldTag.SYMBOL, symbol);
-
-      //   Add custom KSE identifier field if needed
-      //   if (options.rawData === 'kse') {
-      //     message.addField(FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
-      //     message.addField(FieldTag.RAW_DATA, 'kse');
-      //   }
-
-      //   const rawMessage = message.buildMessage();
-      //   logger.info(`KSE trading status request message for: 8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237"`);
-      //   socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
-      //   logger.info(`Sent trading status request for: ${symbol}`);
-      // }
-
-      logger.info(`KSE trading status request message for: 8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237"`);
-      // socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
-      socket.write("8=FIXT.1.19=30735=W49=NMDUFISQ000156=realtime34=22652=20230116-07:23:19.04142=20230116-07:23:15.00010201=101500=90055=KSE308538=T140=0.00008503=1617387=57625708.008504=6509763070.5200268=5269=xa270=15148.506500269=3270=15348.188400269=xb270=14986.636300269=xc270=15453.477900269=xd270=14956.01720010=215")
-      logger.info(`Sent trading status request for: KSE30`);
+      // Store original message
+      let baseMessage = "8=FIXT.1.19=30735=W49=NMDUFISQ000156=realtime34=22652=20230116-07:23:19.04142=20230116-07:23:15.00010201=101500=90055=KSE308538=T140=0.00008503=1617387=57625708.008504=6509763070.5200268=5269=xa270=15148.506500269=3270=15348.188400269=xb270=14986.636300269=xc270=15453.477900269=xd270=14956.01720010=215";
+      
+      // Create a modified message with the correct sequence number
+      // First, extract all parts of the message
+      const parts = baseMessage.split(/34=\d+/);
+      
+      // Get current sequence number and use it
+      const nextSeqNum = msgSeqNum++; // Gets current sequence num and increments for next use
+      
+      // Rebuild the message with the correct sequence number
+      const newMessage = parts[0] + "34=" + nextSeqNum + parts[1];
+      
+      logger.info(`KSE trading status request message with sequence ${nextSeqNum}: ${newMessage}`);
+      socket.write(newMessage);
+      logger.info(`Sent trading status request for: KSE30 with sequence number ${nextSeqNum}`);
 
       // return requestId;
     } catch (error) {
