@@ -455,7 +455,8 @@ function createFixClient(options) {
             }, 5000); // Wait 5 seconds for response
         }
         // Emit logon event
-        emitter.emit('logon', message);
+        // emitter.emit('logon', message);
+        emitter.emit('logon', "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
         logger_1.default.info('Successfully logged in to FIX server');
     };
     /**
