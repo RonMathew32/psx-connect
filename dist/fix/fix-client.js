@@ -823,10 +823,9 @@ function createFixClient(options) {
             // Reset sequence number for new connection
             msgSeqNum = 1;
             // Use the hardcoded logon message but ensure sequence is 1
-            let logonMessage = "8=FIXT.1.19=12735=A34=249=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
+            let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
             // Make sure sequence number is 1
-            logonMessage = logonMessage.replace(/34=\d+/, "34=2");
-            logger_1.default.info(`Sending Logon Message with sequence number 1: ${logonMessage}`);
+            logger_1.default.info(`Sending Logon Message: ${logonMessage}`);
             sendMessage(logonMessage);
         }
         catch (error) {
