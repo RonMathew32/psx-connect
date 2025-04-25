@@ -429,37 +429,14 @@ function createFixClient(options) {
      */
     const handleLogon = (message) => {
         loggedIn = true;
-        // Reset sequence numbers if requested
-        if (options.resetOnLogon) {
-            msgSeqNum = 1;
-        }
-        // // Start heartbeat monitoring
-        // startHeartbeatMonitoring();
-        // // First check the server features to understand capabilities
-        // setTimeout(() => {
-        //   checkServerFeatures();
-        // }, 1000);
-        // // Request KSE trading status
-        // setTimeout(() => {
-        //   sendKseTradingStatusRequest();
-        // }, 1500);
-        // Automatically request KSE data upon successful logon
-        // const kseRequestId = sendKseDataRequest();
-        // // Set a timeout to check if we received KSE data
-        // if (kseRequestId) {
-        //   setTimeout(() => {
-        //     logger.info('Checking if KSE data was received...');
-        //     // If we haven't received KSE data yet, try an alternative approach
-        //     logger.info('No KSE data response detected within timeout, trying again with modified request...');
-        //     // Try with different subscription type (snapshot only)
-        //     tryAlternativeKseRequest();
-        //   }, 5000); // Wait 5 seconds for response
-        // }
-        // Emit logon event
-        // emitter.emit('logon', message);
-        emitter.emit('logon', "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
+        // Emit logon event with the properly parsed message
+        emitter.emit('logon', message);
         logger_1.default.info('Successfully logged in to FIX server');
-        sendKseTradingStatusRequest();
+        // Wait a brief moment before sending the next message to ensure
+        // the server has fully processed the logon
+        setTimeout(() => {
+            sendKseTradingStatusRequest();
+        }, 1000);
     };
     /**
      * Check server features to understand its capabilities
@@ -715,7 +692,6 @@ function createFixClient(options) {
             }
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info(`Sent market data request for symbols: ${symbols.join(', ')}`);
             return requestId;
         }
         catch (error) {
@@ -934,8 +910,9 @@ function createFixClient(options) {
             //   logger.info(`Sent trading status request for: ${symbol}`);
             // }
             logger_1.default.info(`KSE trading status request message for: 8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237"`);
-            socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
-            logger_1.default.info(`Sent trading status request for: KSE100`);
+            // socket.write("8=FIXT.1.19=31735=W49=NMDUFISQ000156=realtime34=24252=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE1008538=T140=0.00008503=136921387=228729489.008504=16148931007.5900268=5269=xa270=118383.381500269=3270=118896.511400269=xb270=118546.166900269=xc270=119217.192900269=xd270=118161.67780010=237");
+            socket.write("8=FIXT.1.19=30735=W49=NMDUFISQ000156=realtime34=22652=20230116-07:23:19.04142=20230116-07:23:15.00010201=101500=90055=KSE308538=T140=0.00008503=1617387=57625708.008504=6509763070.5200268=5269=xa270=15148.506500269=3270=15348.188400269=xb270=14986.636300269=xc270=15453.477900269=xd270=14956.01720010=215");
+            logger_1.default.info(`Sent trading status request for: KSE30`);
             // return requestId;
         }
         catch (error) {
