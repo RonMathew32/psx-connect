@@ -968,27 +968,49 @@ export function createFixClient(options: FixClientOptions) {
   /**
    * Send a logon message to the server
    */
-  const sendLogon = (): void => {
-    if (!connected) {
-      logger.warn('Cannot send logon, not connected');
-      return;
-    }
+ const sendLogon = (): void => {
+  if (!connected) {
+    logger.warn('Cannot send logon, not connected');
+    return;
+  }
 
-    try {
-      // Reset sequence number for new connection
+  try {
+    // Reset sequence number only if resetOnLogon is enabled
+    if (options.resetOnLogon) {
       msgSeqNum = 1;
-
-      // Use the hardcoded logon message but ensure sequence is 1
-      let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
-
-      // Make sure sequence number is 1
-      logger.info(`Sending Logon Message: ${logonMessage}`);
-      sendMessage(logonMessage);
-
-    } catch (error) {
-      logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
+      logger.info('Resetting sequence numbers for new logon');
     }
-  };
+
+    // Generate current timestamp for SendingTime
+    const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
+
+    // Build logon message dynamically
+    const builder = createMessageBuilder();
+    builder
+      .setMsgType(MessageType.LOGON)
+      .setSenderCompID(options.senderCompId)
+      .setTargetCompID(options.targetCompId)
+      .setMsgSeqNum(msgSeqNum++)
+      // .setSendingTime(sendingTime)
+      .addField(FieldTag.ENCRYPT_METHOD, '0') // 98=0
+      .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString()) // 108=30
+      .addField(FieldTag.DEFAULT_APPL_VER_ID, '9') // 1137=9
+      .addField("1408", 'FIX5.00_PSX_1.00') // 1408=FIX5.00_PSX_1.00
+      .addField(FieldTag.USERNAME, options.username) // 554=NMDUFISQ0001
+      .addField(FieldTag.PASSWORD, options.password); // Password from options
+
+    // Add ResetSeqNumFlag if resetOnLogon is enabled
+    if (options.resetOnLogon) {
+      builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // 141=Y
+    }
+
+    const message = builder.buildMessage();
+    logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
+    sendMessage(message);
+  } catch (error) {
+    logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
 
   /**
    * Send a logout message to the server
