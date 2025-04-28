@@ -1071,6 +1071,10 @@ export function createFixClient(options: FixClientOptions) {
  * Send a KSE trading status request
  * @returns The request ID if sent successfully, null otherwise
  */
+/**
+ * Send a KSE trading status request
+ * @returns The request ID if sent successfully, null otherwise
+ */
 const sendKseTradingStatusRequest = (): string | null => {
   let requestId: string | undefined;
   try {
@@ -1134,7 +1138,9 @@ const sendKseTradingStatusRequest = (): string | null => {
       throw new Error(`SenderCompID (49=${options.senderCompId}) missing in constructed message`);
     }
     logger.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-    socket.write(message);
+    socket.write(message, () => {
+      logger.debug(`Sent raw bytes: ${Buffer.from(message).toString('hex')}`);
+    });
     logger.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
     return requestId;
   } catch (error) {
@@ -1142,7 +1148,6 @@ const sendKseTradingStatusRequest = (): string | null => {
     return null;
   }
 };
-
   /**
    * Handle trading status message - specific format for PSX
    */
