@@ -899,6 +899,10 @@ function createFixClient(options) {
      * Send a KSE trading status request
      * @returns The request ID if sent successfully, null otherwise
      */
+    /**
+     * Send a KSE trading status request
+     * @returns The request ID if sent successfully, null otherwise
+     */
     const sendKseTradingStatusRequest = () => {
         let requestId;
         try {
@@ -949,7 +953,11 @@ function createFixClient(options) {
                     .addField(constants_1.FieldTag.MD_ENTRY_PX, entryPrices[index]); // 270
             });
             const message = builder.buildMessage();
+            logger_1.default.debug(`Raw message before sending: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             logger_1.default.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+            if (!message.includes(`49=${options.senderCompId}`)) {
+                logger_1.default.error(`SenderCompID (49=${options.senderCompId}) missing in message`);
+            }
             socket.write(message);
             logger_1.default.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
             return requestId;
