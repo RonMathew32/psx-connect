@@ -826,31 +826,27 @@ function createFixClient(options) {
             return;
         }
         try {
-            // Reset sequence number only if resetOnLogon is enabled
             if (options.resetOnLogon) {
                 msgSeqNum = 1;
                 logger_1.default.info('Resetting sequence numbers for new logon');
             }
-            // Generate current timestamp for SendingTime
             const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
             logger_1.default.debug(`Generated SendingTime: ${sendingTime}`);
-            // Build logon message dynamically
             const builder = (0, message_builder_1.createMessageBuilder)();
             builder
                 .setMsgType(constants_1.MessageType.LOGON)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
                 .setMsgSeqNum(msgSeqNum++)
-                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime) // Explicitly set SendingTime
-                .addField(constants_1.FieldTag.ENCRYPT_METHOD, '0') // 98=0
-                .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString()) // 108=30
-                .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9') // 1137=9
-                .addField('1408', 'FIX5.00_PSX_1.00') // 1408=FIX5.00_PSX_1.00
-                .addField(constants_1.FieldTag.USERNAME, options.username) // 554=NMDUFISQ0001
-                .addField(constants_1.FieldTag.PASSWORD, options.password); // Password from options
-            // Add ResetSeqNumFlag if resetOnLogon is enabled
+                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
+                .addField(constants_1.FieldTag.ENCRYPT_METHOD, '0')
+                .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
+                .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9')
+                .addField('1408', 'FIX5.00_PSX_1.00')
+                .addField(constants_1.FieldTag.USERNAME, options.username)
+                .addField(constants_1.FieldTag.PASSWORD, options.password);
             if (options.resetOnLogon) {
-                builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // 141=Y
+                builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
             }
             const message = builder.buildMessage();
             logger_1.default.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
@@ -895,25 +891,65 @@ function createFixClient(options) {
      * Send a trading status request for KSE symbols
      * This specifically requests trading status (MsgType=f) data for KSE-related symbols
      */
+    /**
+     * Send a KSE trading status request
+     * @returns The request ID if sent successfully, null otherwise
+     */
     const sendKseTradingStatusRequest = () => {
+        const requestId = (0, uuid_1.v4)();
         try {
             if (!socket || !connected) {
                 logger_1.default.error('Cannot send KSE trading status request: not connected');
                 return null;
             }
-            // Store original message 
-            let baseMessage = "8=FIXT.1.19=30935=W49=NMDUFISQ000156=realtime34=24352=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE308538=T140=0.00008503=87608387=88354352.008504=12327130577.0100268=5269=xa270=36395.140900269=3270=36540.202900269=xb270=36431.801100269=xc270=36656.369500269=xd270=36313.90940010=057";
-            // Ensure current sequence number is used
-            const currentSeqNum = msgSeqNum++;
-            // Insert correct sequence number - use a more precise regex to avoid issues
-            const newMessage = baseMessage.replace(/(?<=34=)\d+/, currentSeqNum.toString());
-            logger_1.default.info(`Current sequence number: ${currentSeqNum}`);
-            logger_1.default.info(`KSE trading status request - sending with sequence ${currentSeqNum}: ${newMessage}`);
-            socket.write(newMessage);
-            logger_1.default.info(`Sent KSE request with sequence number ${currentSeqNum}`);
+            logger_1.default.info(`Creating KSE trading status request with ID: ${requestId}`);
+            // Generate timestamps
+            const now = new Date();
+            const sendingTime = now.toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
+            const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier, matching original
+            logger_1.default.debug(`Generated SendingTime: ${sendingTime}, OrigTime: ${origTime}`);
+            // Define symbol and entry types
+            const symbol = 'KSE30';
+            const entryTypes = ['xa', '3', 'xb', 'xc', 'xd'];
+            const entryPrices = [
+                '36395.140900', // xa
+                '36540.202900', // 3 (Index Value)
+                '36431.801100', // xb
+                '36656.369500', // xc
+                '36313.909400', // xd
+            ];
+            // Build message
+            const builder = (0, message_builder_1.createMessageBuilder)();
+            builder
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
+                .addField(constants_1.FieldTag.ORIG_TIME, origTime) // 42
+                .addField('10201', '10') // Custom field
+                .addField(constants_1.FieldTag.MD_REPORT_ID, '900') // 1500
+                .addField(constants_1.FieldTag.SYMBOL, symbol)
+                .addField('8538', 'T') // Custom field
+                .addField(constants_1.FieldTag.PREV_CLOSE_PX, '0.0000') // 140
+                .addField('8503', '87608') // Custom field
+                .addField(constants_1.FieldTag.TOTAL_VOLUME_TRADED, '88354352.00') // 387
+                .addField('8504', '12327130577.0100') // Custom field
+                .addField(constants_1.FieldTag.NO_MD_ENTRIES, entryTypes.length.toString()); // 268
+            // Add market data entries
+            entryTypes.forEach((entryType, index) => {
+                builder
+                    .addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType) // 269
+                    .addField(constants_1.FieldTag.MD_ENTRY_PX, entryPrices[index]); // 270
+            });
+            const message = builder.buildMessage();
+            logger_1.default.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
+            socket.write(message);
+            logger_1.default.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
+            return requestId;
         }
         catch (error) {
-            logger_1.default.error('Error sending KSE trading status request:', error);
+            logger_1.default.error(`Error sending KSE trading status request (requestId=${requestId || 'none'}): ${error instanceof Error ? error.message : String(error)}`);
             return null;
         }
     };

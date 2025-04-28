@@ -49,6 +49,13 @@ export enum FieldTag {
   RESET_SEQ_NUM_FLAG = '141',
   USERNAME = '553',
   PASSWORD = '554',
+
+  //Real-time Market Data
+  ORIG_TIME = '42',
+  MD_REPORT_ID = '1500',
+  PREV_CLOSE_PX = '140',
+  TOTAL_VOLUME_TRADED = '387',
+  NO_MD_ENTRIES = '268',
   
   // Additional field tags needed by the application
   DEFAULT_APPL_VER_ID = '1137',

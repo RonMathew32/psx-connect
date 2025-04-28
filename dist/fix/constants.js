@@ -51,6 +51,12 @@ var FieldTag;
     FieldTag["RESET_SEQ_NUM_FLAG"] = "141";
     FieldTag["USERNAME"] = "553";
     FieldTag["PASSWORD"] = "554";
+    //Real-time Market Data
+    FieldTag["ORIG_TIME"] = "42";
+    FieldTag["MD_REPORT_ID"] = "1500";
+    FieldTag["PREV_CLOSE_PX"] = "140";
+    FieldTag["TOTAL_VOLUME_TRADED"] = "387";
+    FieldTag["NO_MD_ENTRIES"] = "268";
     // Additional field tags needed by the application
     FieldTag["DEFAULT_APPL_VER_ID"] = "1137";
     FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1129";
