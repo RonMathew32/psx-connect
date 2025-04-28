@@ -973,22 +973,35 @@ export function createFixClient(options: FixClientOptions) {
       logger.warn('Cannot send logon, not connected');
       return;
     }
-
+  
     try {
       // Reset sequence number for new connection
       msgSeqNum = 1;
-
-      // Use the hardcoded logon message but ensure sequence is 1
-      let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=20250428-05:46:37.00356=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
-
-      // Make sure sequence number is 1
+  
+      // Get current UTC time in the format yyyyMMdd-HH:mm:ss.SSS
+      const now = new Date();
+      const formatTwoDigits = (n: number) => n.toString().padStart(2, '0');
+      const formatThreeDigits = (n: number) => n.toString().padStart(3, '0');
+      const sendingTime = 
+        now.getUTCFullYear().toString() +
+        formatTwoDigits(now.getUTCMonth() + 1) +
+        formatTwoDigits(now.getUTCDate()) + "-" +
+        formatTwoDigits(now.getUTCHours()) + ":" +
+        formatTwoDigits(now.getUTCMinutes()) + ":" +
+        formatTwoDigits(now.getUTCSeconds()) + "." +
+        formatThreeDigits(now.getUTCMilliseconds());
+  
+      // Build logon message dynamically
+      let logonMessage = `8=FIXT.1.19=12735=A34=149=realtime52=${sendingTime}56=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159`;
+  
       logger.info(`Sending Logon Message: ${logonMessage}`);
       sendMessage(logonMessage);
-
+  
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
+  
 
   /**
    * Send a logout message to the server
