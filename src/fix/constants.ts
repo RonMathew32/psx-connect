@@ -56,6 +56,9 @@ export enum FieldTag {
   PREV_CLOSE_PX = '140',
   TOTAL_VOLUME_TRADED = '387',
   NO_MD_ENTRIES = '268',
+  NO_ORDERS =  '73',
+  ORDER_QTY = '38',
+  ORDER_ID = '37',
   
   // Additional field tags needed by the application
   DEFAULT_APPL_VER_ID = '1137',

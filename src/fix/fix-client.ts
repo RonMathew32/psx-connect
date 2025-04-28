@@ -6,6 +6,7 @@ import { SOH, MessageType, FieldTag, SubscriptionRequestType, SecurityListReques
 import logger from '../utils/logger';
 import { Socket } from 'net';
 import { v4 as uuidv4 } from 'uuid';
+import { parseMarketDataSnapshotToJson } from './fix-parser';
 
 export interface FixClientOptions {
   host: string;
@@ -226,6 +227,7 @@ export function createFixClient(options: FixClientOptions) {
       // Handle complete messages
       receivedData += dataStr;
       processMessage(receivedData);
+      parseMarketDataSnapshotToJson(receivedData);
       receivedData = '';
     } catch (error) {
       logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);

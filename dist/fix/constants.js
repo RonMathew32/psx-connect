@@ -57,6 +57,9 @@ var FieldTag;
     FieldTag["PREV_CLOSE_PX"] = "140";
     FieldTag["TOTAL_VOLUME_TRADED"] = "387";
     FieldTag["NO_MD_ENTRIES"] = "268";
+    FieldTag["NO_ORDERS"] = "73";
+    FieldTag["ORDER_QTY"] = "38";
+    FieldTag["ORDER_ID"] = "37";
     // Additional field tags needed by the application
     FieldTag["DEFAULT_APPL_VER_ID"] = "1137";
     FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1129";
