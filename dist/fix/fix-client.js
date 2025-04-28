@@ -972,7 +972,7 @@ function createFixClient(options) {
                 throw new Error(`SenderCompID (49=${options.senderCompId}) missing in constructed message`);
             }
             logger_1.default.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            socket.write(message, () => {
+            socket.write("8=FIXT.1.19=31035=W49=NMDUFISQ000156=realtime34=10452=20230104-09:40:39.05342=20230104-09:40:35.00010201=101500=90055=KSE308538=T140=0.00008503=14249387=587967882.008504=47347068811.4900268=5269=xa270=15026.320000269=3270=15361.303500269=xb270=15918.077300269=xc270=15918.077300269=xd270=15107.45220010=084", () => {
                 logger_1.default.debug(`Sent raw bytes: ${Buffer.from(message).toString('hex')}`);
             });
             logger_1.default.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
