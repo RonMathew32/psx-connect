@@ -978,23 +978,28 @@ export function createFixClient(options: FixClientOptions) {
       // Reset sequence number for new connection
       msgSeqNum = 1;
   
-      // Get current UTC time and adjust for Pakistan timezone (UTC+5)
+      const SOH = '\u0001';
+      
+      // Get current Pakistan time (UTC+5)
       const now = new Date();
-      now.setUTCHours(now.getUTCHours() + 5); // Add 5 hours
+      const pakistanTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+      const sendingTime = pakistanTime.toISOString().replace('T', '-').substring(0, 23);
   
-      const formatTwoDigits = (n: number) => n.toString().padStart(2, '0');
-      const formatThreeDigits = (n: number) => n.toString().padStart(3, '0');
-      const sendingTime = 
-        now.getUTCFullYear().toString() +
-        formatTwoDigits(now.getUTCMonth() + 1) +
-        formatTwoDigits(now.getUTCDate()) + "-" +
-        formatTwoDigits(now.getUTCHours()) + ":" +
-        formatTwoDigits(now.getUTCMinutes()) + ":" +
-        formatTwoDigits(now.getUTCSeconds()) + "." +
-        formatThreeDigits(now.getUTCMilliseconds());
-  
-      // Build logon message dynamically
-      let logonMessage = `8=FIXT.1.19=12735=A34=149=realtime52=${sendingTime}56=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159`;
+      let logonMessage =
+        "8=FIXT.1.1" + SOH +
+        "9=127" + SOH +
+        "35=A" + SOH +
+        "34=1" + SOH +
+        "49=realtime" + SOH +
+        `52=${sendingTime}` + SOH +
+        "56=NMDUFISQ0001" + SOH +
+        "98=0" + SOH +
+        "108=30" + SOH +
+        "141=Y" + SOH +
+        "554=NMDUFISQ0001" + SOH +
+        "1137=9" + SOH +
+        "1408=FIX5.00_PSX_1.00" + SOH +
+        "10=159" + SOH;
   
       logger.info(`Sending Logon Message: ${logonMessage}`);
       sendMessage(logonMessage);
