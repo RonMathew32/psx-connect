@@ -537,7 +537,7 @@ export function createFixClient(options: FixClientOptions) {
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
 
     // Send our KSE request with the correct sequence number
-    // sendKseTradingStatusRequest();
+    sendKseTradingStatusRequest();
   };
 
   /**
@@ -1055,103 +1055,33 @@ export function createFixClient(options: FixClientOptions) {
    * Send a trading status request for KSE symbols
    * This specifically requests trading status (MsgType=f) data for KSE-related symbols
    */
-/**
- * Send a KSE trading status request
- * @returns The request ID if sent successfully, null otherwise
- */
-/**
- * Send a KSE trading status request
- * @returns The request ID if sent successfully, null otherwise
- */
-/**
- * Send a KSE trading status request
- * @returns The request ID if sent successfully, null otherwise
- */
-/**
- * Send a KSE trading status request
- * @returns The request ID if sent successfully, null otherwise
- */
-/**
- * Send a KSE trading status request
- * @returns The request ID if sent successfully, null otherwise
- */
-/**
- * Send a KSE trading status request
- * @returns The request ID if sent successfully, null otherwise
- */
-const sendKseTradingStatusRequest = (): string | null => {
-  let requestId: string | undefined;
-  try {
-    if (!socket || !connected) {
-      logger.error('Cannot send KSE trading status request: not connected');
+  const sendKseTradingStatusRequest = () => {
+    try {
+      if (!socket || !connected) {
+        logger.error('Cannot send KSE trading status request: not connected');
+        return null;
+      }
+
+      // Store original message 
+      let baseMessage = "8=FIXT.1.19=30935=W49=NMDUFISQ000156=realtime34=24352=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE308538=T140=0.00008503=87608387=88354352.008504=12327130577.0100268=5269=xa270=36395.140900269=3270=36540.202900269=xb270=36431.801100269=xc270=36656.369500269=xd270=36313.90940010=057";
+
+      // Ensure current sequence number is used
+      const currentSeqNum = msgSeqNum++;
+
+      // Insert correct sequence number - use a more precise regex to avoid issues
+      const newMessage = baseMessage.replace(/(?<=34=)\d+/, currentSeqNum.toString());
+
+      logger.info(`Current sequence number: ${currentSeqNum}`);
+      logger.info(`KSE trading status request - sending with sequence ${currentSeqNum}: ${newMessage}`);
+      socket.write(newMessage);
+      logger.info(`Sent KSE request with sequence number ${currentSeqNum}`);
+
+    } catch (error) {
+      logger.error('Error sending KSE trading status request:', error);
       return null;
     }
+  };
 
-    requestId = uuidv4();
-    logger.info(`Creating KSE trading status request with ID: ${requestId}`);
-    logger.debug(`Configuration: senderCompId=${options.senderCompId}, targetCompId=${options.targetCompId}`);
-
-    // Generate timestamps
-    const now = new Date();
-    const sendingTime = now.toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
-    const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
-    logger.debug(`Generated SendingTime: ${sendingTime}, OrigTime: ${origTime}`);
-
-    // Define symbol and entry types
-    const symbol = 'KSE30';
-    const entryTypes = ['xa', '3', 'xb', 'xc', 'xd'];
-    const entryPrices = [
-      '36395.140900', // xa
-      '36540.202900', // 3 (Index Value)
-      '36431.801100', // xb
-      '36656.369500', // xc
-      '36313.909400', // xd
-    ];
-
-    // Build message
-    const builder = createMessageBuilder();
-    builder
-      .setMsgType(MessageType.MARKET_DATA_REQUEST) // 35=V
-      .setSenderCompID(options.senderCompId) // 49=realtime
-      .setTargetCompID(options.targetCompId) // 56=NMDUFISQ0001
-      .setMsgSeqNum(msgSeqNum++)
-      .addField(FieldTag.SENDING_TIME, sendingTime) // 52
-      .addField(FieldTag.ORIG_TIME, origTime) // 42
-      .addField(FieldTag.MD_REQ_ID, requestId) // 262
-      .addField('10201', '10') // Custom field
-      .addField(FieldTag.MD_REPORT_ID, '900') // 1500
-      .addField(FieldTag.SYMBOL, symbol) // 55
-      .addField('8538', 'T') // Custom field
-      .addField(FieldTag.PREV_CLOSE_PX, '0.0000') // 140
-      .addField('8503', '87608') // Custom field
-      .addField(FieldTag.TOTAL_VOLUME_TRADED, '88354352.00') // 387
-      .addField('8504', '12327130577.0100') // Custom field
-      .addField(FieldTag.NO_MD_ENTRIES, entryTypes.length.toString()); // 268
-
-    // Add market data entries
-    entryTypes.forEach((entryType, index) => {
-      builder
-        .addField(FieldTag.MD_ENTRY_TYPE, entryType) // 269
-        .addField(FieldTag.MD_ENTRY_PX, entryPrices[index]); // 270
-    });
-
-    const message = builder.buildMessage();
-    logger.debug(`Raw message before sending: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-    if (!message.includes(`49=${options.senderCompId}`)) {
-      logger.error(`SenderCompID (49=${options.senderCompId}) missing in message`);
-      throw new Error(`SenderCompID (49=${options.senderCompId}) missing in constructed message`);
-    }
-    logger.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-    socket.write(message, () => {
-      logger.debug(`Sent raw bytes: ${Buffer.from(message).toString('hex')}`);
-    });
-    logger.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
-    return requestId;
-  } catch (error) {
-    logger.error(`Error sending KSE trading status request (requestId=${requestId || 'none'}): ${error instanceof Error ? error.message : String(error)}`);
-    return null;
-  }
-};
   /**
    * Handle trading status message - specific format for PSX
    */
