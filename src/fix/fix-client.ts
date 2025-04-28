@@ -1059,20 +1059,25 @@ export function createFixClient(options: FixClientOptions) {
  * Send a KSE trading status request
  * @returns The request ID if sent successfully, null otherwise
  */
+/**
+ * Send a KSE trading status request
+ * @returns The request ID if sent successfully, null otherwise
+ */
 const sendKseTradingStatusRequest = (): string | null => {
-  const requestId = uuidv4();
+  let requestId: string | undefined;
   try {
     if (!socket || !connected) {
       logger.error('Cannot send KSE trading status request: not connected');
       return null;
     }
 
+    requestId = uuidv4();
     logger.info(`Creating KSE trading status request with ID: ${requestId}`);
 
     // Generate timestamps
     const now = new Date();
     const sendingTime = now.toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
-    const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier, matching original
+    const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier
     logger.debug(`Generated SendingTime: ${sendingTime}, OrigTime: ${origTime}`);
 
     // Define symbol and entry types
@@ -1089,15 +1094,16 @@ const sendKseTradingStatusRequest = (): string | null => {
     // Build message
     const builder = createMessageBuilder();
     builder
-      .setMsgType(MessageType.MARKET_DATA_REQUEST)
-      .setSenderCompID(options.senderCompId)
-      .setTargetCompID(options.targetCompId)
+      .setMsgType(MessageType.MARKET_DATA_REQUEST) // 35=V
+      .setSenderCompID(options.senderCompId) // 49=realtime
+      .setTargetCompID(options.targetCompId) // 56=NMDUFISQ0001
       .setMsgSeqNum(msgSeqNum++)
-      .addField(FieldTag.SENDING_TIME, sendingTime)
+      .addField(FieldTag.SENDING_TIME, sendingTime) // 52
       .addField(FieldTag.ORIG_TIME, origTime) // 42
+      .addField(FieldTag.MD_REQ_ID, requestId) // 262
       .addField('10201', '10') // Custom field
       .addField(FieldTag.MD_REPORT_ID, '900') // 1500
-      .addField(FieldTag.SYMBOL, symbol)
+      .addField(FieldTag.SYMBOL, symbol) // 55
       .addField('8538', 'T') // Custom field
       .addField(FieldTag.PREV_CLOSE_PX, '0.0000') // 140
       .addField('8503', '87608') // Custom field

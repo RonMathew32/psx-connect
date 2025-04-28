@@ -895,18 +895,23 @@ function createFixClient(options) {
      * Send a KSE trading status request
      * @returns The request ID if sent successfully, null otherwise
      */
+    /**
+     * Send a KSE trading status request
+     * @returns The request ID if sent successfully, null otherwise
+     */
     const sendKseTradingStatusRequest = () => {
-        const requestId = (0, uuid_1.v4)();
+        let requestId;
         try {
             if (!socket || !connected) {
                 logger_1.default.error('Cannot send KSE trading status request: not connected');
                 return null;
             }
+            requestId = (0, uuid_1.v4)();
             logger_1.default.info(`Creating KSE trading status request with ID: ${requestId}`);
             // Generate timestamps
             const now = new Date();
             const sendingTime = now.toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
-            const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier, matching original
+            const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier
             logger_1.default.debug(`Generated SendingTime: ${sendingTime}, OrigTime: ${origTime}`);
             // Define symbol and entry types
             const symbol = 'KSE30';
@@ -921,15 +926,16 @@ function createFixClient(options) {
             // Build message
             const builder = (0, message_builder_1.createMessageBuilder)();
             builder
-                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST) // 35=V
+                .setSenderCompID(options.senderCompId) // 49=realtime
+                .setTargetCompID(options.targetCompId) // 56=NMDUFISQ0001
                 .setMsgSeqNum(msgSeqNum++)
-                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
+                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime) // 52
                 .addField(constants_1.FieldTag.ORIG_TIME, origTime) // 42
+                .addField(constants_1.FieldTag.MD_REQ_ID, requestId) // 262
                 .addField('10201', '10') // Custom field
                 .addField(constants_1.FieldTag.MD_REPORT_ID, '900') // 1500
-                .addField(constants_1.FieldTag.SYMBOL, symbol)
+                .addField(constants_1.FieldTag.SYMBOL, symbol) // 55
                 .addField('8538', 'T') // Custom field
                 .addField(constants_1.FieldTag.PREV_CLOSE_PX, '0.0000') // 140
                 .addField('8503', '87608') // Custom field
