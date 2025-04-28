@@ -968,7 +968,13 @@ export function createFixClient(options: FixClientOptions) {
   /**
    * Send a logon message to the server
    */
- const sendLogon = (): void => {
+/**
+ * Send a logon message to the server
+ */
+/**
+ * Send a logon message to the server
+ */
+const sendLogon = (): void => {
   if (!connected) {
     logger.warn('Cannot send logon, not connected');
     return;
@@ -983,6 +989,7 @@ export function createFixClient(options: FixClientOptions) {
 
     // Generate current timestamp for SendingTime
     const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
+    logger.debug(`Generated SendingTime: ${sendingTime}`);
 
     // Build logon message dynamically
     const builder = createMessageBuilder();
@@ -991,11 +998,11 @@ export function createFixClient(options: FixClientOptions) {
       .setSenderCompID(options.senderCompId)
       .setTargetCompID(options.targetCompId)
       .setMsgSeqNum(msgSeqNum++)
-      // .setSendingTime(sendingTime)
+      .addField(FieldTag.SENDING_TIME, sendingTime) // Explicitly set SendingTime
       .addField(FieldTag.ENCRYPT_METHOD, '0') // 98=0
       .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString()) // 108=30
       .addField(FieldTag.DEFAULT_APPL_VER_ID, '9') // 1137=9
-      .addField("1408", 'FIX5.00_PSX_1.00') // 1408=FIX5.00_PSX_1.00
+      .addField('1408', 'FIX5.00_PSX_1.00') // 1408=FIX5.00_PSX_1.00
       .addField(FieldTag.USERNAME, options.username) // 554=NMDUFISQ0001
       .addField(FieldTag.PASSWORD, options.password); // Password from options
 
