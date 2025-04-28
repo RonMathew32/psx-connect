@@ -125,7 +125,7 @@ const parseMarketDataSnapshotToJson = (fixMessage) => {
             entries.push(currentEntry);
         }
         jsonOutput.market_data_entries = entries;
-        logger_1.default.debug(`Parsed market data snapshot: ${JSON.stringify(jsonOutput, null, 2)}`);
+        logger_1.default.info(`Parsed market data snapshot: ${JSON.stringify(jsonOutput, null, 2)}`);
         return jsonOutput;
     }
     catch (error) {

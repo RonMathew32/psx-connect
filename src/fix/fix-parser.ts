@@ -139,7 +139,7 @@ export const parseMarketDataSnapshotToJson = (fixMessage: string): any | null =>
 
     jsonOutput.market_data_entries = entries;
 
-    logger.debug(
+    logger.info(
       `Parsed market data snapshot: ${JSON.stringify(jsonOutput, null, 2)}`
     );
 
