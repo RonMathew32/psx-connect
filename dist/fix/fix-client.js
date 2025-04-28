@@ -822,7 +822,7 @@ function createFixClient(options) {
         try {
             // Reset sequence number for new connection
             msgSeqNum = 1;
-            const SOH = '\u0001';
+            const SOH = '0x01';
             // Get current Pakistan time (UTC+5)
             const now = new Date();
             const pakistanTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);

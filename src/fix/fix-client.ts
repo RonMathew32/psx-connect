@@ -978,7 +978,7 @@ export function createFixClient(options: FixClientOptions) {
       // Reset sequence number for new connection
       msgSeqNum = 1;
   
-      const SOH = '\u0001';
+      const SOH = '0x01';
       
       // Get current Pakistan time (UTC+5)
       const now = new Date();
