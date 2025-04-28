@@ -11,7 +11,6 @@ const constants_1 = require("./constants");
 const logger_1 = __importDefault(require("../utils/logger"));
 const net_1 = require("net");
 const uuid_1 = require("uuid");
-const fix_parser_1 = require("./fix-parser");
 /**
  * Create a FIX client with the specified options
  */
@@ -163,7 +162,7 @@ function createFixClient(options) {
             // Handle complete messages
             receivedData += dataStr;
             processMessage(receivedData);
-            (0, fix_parser_1.parseMarketDataSnapshotToJson)(receivedData);
+            // parseMarketDataSnapshotToJson(receivedData);
             receivedData = '';
         }
         catch (error) {
@@ -184,7 +183,7 @@ function createFixClient(options) {
             }
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
             logger_1.default.info(`Received FIX message: ${message}`);
-            (0, fix_parser_1.parseMarketDataSnapshotToJson)(message);
+            // parseMarketDataSnapshotToJson(message);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');

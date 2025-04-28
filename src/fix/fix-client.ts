@@ -227,7 +227,7 @@ export function createFixClient(options: FixClientOptions) {
       // Handle complete messages
       receivedData += dataStr;
       processMessage(receivedData);
-      parseMarketDataSnapshotToJson(receivedData);
+      // parseMarketDataSnapshotToJson(receivedData);
       receivedData = '';
     } catch (error) {
       logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
@@ -250,7 +250,7 @@ export function createFixClient(options: FixClientOptions) {
 
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
-      parseMarketDataSnapshotToJson(message);
+      // parseMarketDataSnapshotToJson(message);
 
       const parsedMessage = parseFixMessage(message);
 
