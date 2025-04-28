@@ -822,8 +822,9 @@ function createFixClient(options) {
         try {
             // Reset sequence number for new connection
             msgSeqNum = 1;
-            // Get current UTC time in the format yyyyMMdd-HH:mm:ss.SSS
+            // Get current UTC time and adjust for Pakistan timezone (UTC+5)
             const now = new Date();
+            now.setUTCHours(now.getUTCHours() + 5); // Add 5 hours
             const formatTwoDigits = (n) => n.toString().padStart(2, '0');
             const formatThreeDigits = (n) => n.toString().padStart(3, '0');
             const sendingTime = now.getUTCFullYear().toString() +

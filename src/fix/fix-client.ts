@@ -978,8 +978,10 @@ export function createFixClient(options: FixClientOptions) {
       // Reset sequence number for new connection
       msgSeqNum = 1;
   
-      // Get current UTC time in the format yyyyMMdd-HH:mm:ss.SSS
+      // Get current UTC time and adjust for Pakistan timezone (UTC+5)
       const now = new Date();
+      now.setUTCHours(now.getUTCHours() + 5); // Add 5 hours
+  
       const formatTwoDigits = (n: number) => n.toString().padStart(2, '0');
       const formatThreeDigits = (n: number) => n.toString().padStart(3, '0');
       const sendingTime = 
@@ -1001,6 +1003,7 @@ export function createFixClient(options: FixClientOptions) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
+  
   
 
   /**
