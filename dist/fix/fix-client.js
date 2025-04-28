@@ -903,6 +903,10 @@ function createFixClient(options) {
      * Send a KSE trading status request
      * @returns The request ID if sent successfully, null otherwise
      */
+    /**
+     * Send a KSE trading status request
+     * @returns The request ID if sent successfully, null otherwise
+     */
     const sendKseTradingStatusRequest = () => {
         let requestId;
         try {
@@ -912,10 +916,11 @@ function createFixClient(options) {
             }
             requestId = (0, uuid_1.v4)();
             logger_1.default.info(`Creating KSE trading status request with ID: ${requestId}`);
+            logger_1.default.debug(`Configuration: senderCompId=${options.senderCompId}, targetCompId=${options.targetCompId}`);
             // Generate timestamps
             const now = new Date();
             const sendingTime = now.toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
-            const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier
+            const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
             logger_1.default.debug(`Generated SendingTime: ${sendingTime}, OrigTime: ${origTime}`);
             // Define symbol and entry types
             const symbol = 'KSE30';
@@ -954,10 +959,11 @@ function createFixClient(options) {
             });
             const message = builder.buildMessage();
             logger_1.default.debug(`Raw message before sending: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            logger_1.default.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             if (!message.includes(`49=${options.senderCompId}`)) {
                 logger_1.default.error(`SenderCompID (49=${options.senderCompId}) missing in message`);
+                throw new Error(`SenderCompID (49=${options.senderCompId}) missing in constructed message`);
             }
+            logger_1.default.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             socket.write(message);
             logger_1.default.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
             return requestId;

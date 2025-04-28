@@ -1067,6 +1067,10 @@ export function createFixClient(options: FixClientOptions) {
  * Send a KSE trading status request
  * @returns The request ID if sent successfully, null otherwise
  */
+/**
+ * Send a KSE trading status request
+ * @returns The request ID if sent successfully, null otherwise
+ */
 const sendKseTradingStatusRequest = (): string | null => {
   let requestId: string | undefined;
   try {
@@ -1077,11 +1081,12 @@ const sendKseTradingStatusRequest = (): string | null => {
 
     requestId = uuidv4();
     logger.info(`Creating KSE trading status request with ID: ${requestId}`);
+    logger.debug(`Configuration: senderCompId=${options.senderCompId}, targetCompId=${options.targetCompId}`);
 
     // Generate timestamps
     const now = new Date();
     const sendingTime = now.toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
-    const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23); // 4 seconds earlier
+    const origTime = new Date(now.getTime() - 4000).toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
     logger.debug(`Generated SendingTime: ${sendingTime}, OrigTime: ${origTime}`);
 
     // Define symbol and entry types
@@ -1124,10 +1129,11 @@ const sendKseTradingStatusRequest = (): string | null => {
 
     const message = builder.buildMessage();
     logger.debug(`Raw message before sending: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-    logger.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
     if (!message.includes(`49=${options.senderCompId}`)) {
       logger.error(`SenderCompID (49=${options.senderCompId}) missing in message`);
+      throw new Error(`SenderCompID (49=${options.senderCompId}) missing in constructed message`);
     }
+    logger.info(`Sending KSE trading status request with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
     socket.write(message);
     logger.info(`Sent KSE trading status request with sequence number ${msgSeqNum - 1} for symbol: ${symbol}`);
     return requestId;
