@@ -250,6 +250,7 @@ export function createFixClient(options: FixClientOptions) {
 
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
+      parseMarketDataSnapshotToJson(message);
 
       const parsedMessage = parseFixMessage(message);
 
