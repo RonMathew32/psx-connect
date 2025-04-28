@@ -1013,6 +1013,7 @@ export function createFixClient(options: FixClientOptions) {
       const message = builder.buildMessage();
       logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
       sendMessage(message);
+      emitter.emit('logout', message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }

@@ -853,6 +853,7 @@ function createFixClient(options) {
             const message = builder.buildMessage();
             logger_1.default.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             sendMessage(message);
+            emitter.emit('logout', message);
         }
         catch (error) {
             logger_1.default.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
