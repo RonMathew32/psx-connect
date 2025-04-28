@@ -1075,6 +1075,10 @@ export function createFixClient(options: FixClientOptions) {
  * Send a KSE trading status request
  * @returns The request ID if sent successfully, null otherwise
  */
+/**
+ * Send a KSE trading status request
+ * @returns The request ID if sent successfully, null otherwise
+ */
 const sendKseTradingStatusRequest = (): string | null => {
   let requestId: string | undefined;
   try {

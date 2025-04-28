@@ -911,6 +911,10 @@ function createFixClient(options) {
      * Send a KSE trading status request
      * @returns The request ID if sent successfully, null otherwise
      */
+    /**
+     * Send a KSE trading status request
+     * @returns The request ID if sent successfully, null otherwise
+     */
     const sendKseTradingStatusRequest = () => {
         let requestId;
         try {
