@@ -973,43 +973,22 @@ export function createFixClient(options: FixClientOptions) {
       logger.warn('Cannot send logon, not connected');
       return;
     }
-  
+
     try {
       // Reset sequence number for new connection
       msgSeqNum = 1;
-  
-      const SOH = '0x01';
-      
-      // Get current Pakistan time (UTC+5)
-      const now = new Date();
-      const pakistanTime = new Date(now.getTime() + 5 * 60 * 60 * 1000);
-      const sendingTime = pakistanTime.toISOString().replace('T', '-').substring(0, 23);
-  
-      let logonMessage =
-        "8=FIXT.1.1" + SOH +
-        "9=127" + SOH +
-        "35=A" + SOH +
-        "34=1" + SOH +
-        "49=realtime" + SOH +
-        `52=${sendingTime}` + SOH +
-        "56=NMDUFISQ0001" + SOH +
-        "98=0" + SOH +
-        "108=30" + SOH +
-        "141=Y" + SOH +
-        "554=NMDUFISQ0001" + SOH +
-        "1137=9" + SOH +
-        "1408=FIX5.00_PSX_1.00" + SOH +
-        "10=159" + SOH;
-  
+
+      // Use the hardcoded logon message but ensure sequence is 1
+      let logonMessage = "8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159";
+
+      // Make sure sequence number is 1
       logger.info(`Sending Logon Message: ${logonMessage}`);
       sendMessage(logonMessage);
-  
+
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
-  
-  
 
   /**
    * Send a logout message to the server
