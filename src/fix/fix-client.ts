@@ -978,6 +978,7 @@ export function createFixClient(options: FixClientOptions) {
    * Send a logon message to the server
    */
   const sendLogon = (): void => {
+    sendLogout();
     if (!connected) {
       logger.warn('Cannot send logon, not connected');
       return;
@@ -1013,7 +1014,6 @@ export function createFixClient(options: FixClientOptions) {
       const message = builder.buildMessage();
       logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
       sendMessage(message);
-      emitter.emit('logout', message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
