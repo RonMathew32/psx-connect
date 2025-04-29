@@ -89,34 +89,47 @@ export function createMessageBuilder() {
     // Convert to string without checksum and body length
     let message = '';
     const sortedTags = Object.keys(allFields).sort((a, b) => {
-      // Ensure BEGIN_STRING comes first, then BODY_LENGTH, then MSG_TYPE
-      if (a === FieldTag.BEGIN_STRING) return -1;
-      if (b === FieldTag.BEGIN_STRING) return 1;
-      if (a === FieldTag.BODY_LENGTH) return -1;
-      if (b === FieldTag.BODY_LENGTH) return 1;
-      if (a === FieldTag.MSG_TYPE) return -1;
-      if (b === FieldTag.MSG_TYPE) return 1;
+      // Standard FIX header field order:
+      // 8 (BeginString), 9 (BodyLength), 35 (MsgType), 49 (SenderCompID), 
+      // 56 (TargetCompID), 34 (MsgSeqNum), 52 (SendingTime)
+      const headerOrder: { [key: string]: number } = {
+        [FieldTag.BEGIN_STRING]: 1,
+        [FieldTag.BODY_LENGTH]: 2,
+        [FieldTag.MSG_TYPE]: 3,
+        [FieldTag.SENDER_COMP_ID]: 4,
+        [FieldTag.TARGET_COMP_ID]: 5,
+        [FieldTag.MSG_SEQ_NUM]: 6,
+        [FieldTag.SENDING_TIME]: 7
+      };
+
+      // If both are header fields, use header order
+      if (headerOrder[a] && headerOrder[b]) {
+        return headerOrder[a] - headerOrder[b];
+      }
+      // If only a is header field, it comes first
+      if (headerOrder[a]) return -1;
+      // If only b is header field, it comes first
+      if (headerOrder[b]) return 1;
+      // For non-header fields, sort by tag number
       return parseInt(a) - parseInt(b);
     });
-    
-    // First add BEGIN_STRING field
-    message += `${FieldTag.BEGIN_STRING}=${allFields[FieldTag.BEGIN_STRING]}${SOH}`;
-    
-    // Calculate body content (excluding BEGIN_STRING, BODY_LENGTH, and CHECKSUM)
+
+    // First build the message without BEGIN_STRING and BODY_LENGTH
     let bodyContent = '';
     for (const tag of sortedTags) {
-      if (tag !== FieldTag.BEGIN_STRING && tag !== FieldTag.BODY_LENGTH && tag !== FieldTag.CHECK_SUM) {
+      if (tag !== FieldTag.BEGIN_STRING && tag !== FieldTag.BODY_LENGTH) {
         bodyContent += `${tag}=${allFields[tag]}${SOH}`;
       }
     }
-    
-    // Add body length
+
+    // Calculate body length (excluding BEGIN_STRING and BODY_LENGTH fields)
     const bodyLength = bodyContent.length;
+
+    // Build the final message
+    message = `${FieldTag.BEGIN_STRING}=${allFields[FieldTag.BEGIN_STRING]}${SOH}`;
     message += `${FieldTag.BODY_LENGTH}=${bodyLength}${SOH}`;
-    
-    // Add body content
     message += bodyContent;
-    
+
     // Calculate checksum
     let checksum = 0;
     for (let i = 0; i < message.length; i++) {

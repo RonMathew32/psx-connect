@@ -84,34 +84,43 @@ function createMessageBuilder() {
         // Convert to string without checksum and body length
         let message = '';
         const sortedTags = Object.keys(allFields).sort((a, b) => {
-            // Ensure BEGIN_STRING comes first, then BODY_LENGTH, then MSG_TYPE
-            if (a === constants_1.FieldTag.BEGIN_STRING)
+            // Standard FIX header field order:
+            // 8 (BeginString), 9 (BodyLength), 35 (MsgType), 49 (SenderCompID), 
+            // 56 (TargetCompID), 34 (MsgSeqNum), 52 (SendingTime)
+            const headerOrder = {
+                [constants_1.FieldTag.BEGIN_STRING]: 1,
+                [constants_1.FieldTag.BODY_LENGTH]: 2,
+                [constants_1.FieldTag.MSG_TYPE]: 3,
+                [constants_1.FieldTag.SENDER_COMP_ID]: 4,
+                [constants_1.FieldTag.TARGET_COMP_ID]: 5,
+                [constants_1.FieldTag.MSG_SEQ_NUM]: 6,
+                [constants_1.FieldTag.SENDING_TIME]: 7
+            };
+            // If both are header fields, use header order
+            if (headerOrder[a] && headerOrder[b]) {
+                return headerOrder[a] - headerOrder[b];
+            }
+            // If only a is header field, it comes first
+            if (headerOrder[a])
                 return -1;
-            if (b === constants_1.FieldTag.BEGIN_STRING)
+            // If only b is header field, it comes first
+            if (headerOrder[b])
                 return 1;
-            if (a === constants_1.FieldTag.BODY_LENGTH)
-                return -1;
-            if (b === constants_1.FieldTag.BODY_LENGTH)
-                return 1;
-            if (a === constants_1.FieldTag.MSG_TYPE)
-                return -1;
-            if (b === constants_1.FieldTag.MSG_TYPE)
-                return 1;
+            // For non-header fields, sort by tag number
             return parseInt(a) - parseInt(b);
         });
-        // First add BEGIN_STRING field
-        message += `${constants_1.FieldTag.BEGIN_STRING}=${allFields[constants_1.FieldTag.BEGIN_STRING]}${constants_1.SOH}`;
-        // Calculate body content (excluding BEGIN_STRING, BODY_LENGTH, and CHECKSUM)
+        // First build the message without BEGIN_STRING and BODY_LENGTH
         let bodyContent = '';
         for (const tag of sortedTags) {
-            if (tag !== constants_1.FieldTag.BEGIN_STRING && tag !== constants_1.FieldTag.BODY_LENGTH && tag !== constants_1.FieldTag.CHECK_SUM) {
+            if (tag !== constants_1.FieldTag.BEGIN_STRING && tag !== constants_1.FieldTag.BODY_LENGTH) {
                 bodyContent += `${tag}=${allFields[tag]}${constants_1.SOH}`;
             }
         }
-        // Add body length
+        // Calculate body length (excluding BEGIN_STRING and BODY_LENGTH fields)
         const bodyLength = bodyContent.length;
+        // Build the final message
+        message = `${constants_1.FieldTag.BEGIN_STRING}=${allFields[constants_1.FieldTag.BEGIN_STRING]}${constants_1.SOH}`;
         message += `${constants_1.FieldTag.BODY_LENGTH}=${bodyLength}${constants_1.SOH}`;
-        // Add body content
         message += bodyContent;
         // Calculate checksum
         let checksum = 0;
