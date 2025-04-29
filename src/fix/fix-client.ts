@@ -1063,21 +1063,18 @@ export function createFixClient(options: FixClientOptions) {
 
       const builder = createMessageBuilder();
       const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
-      const origTime = sendingTime;
       const currentSeqNum = msgSeqNum++;
   
-      // Build a proper trading status request
+      // Build a trading session status request
       builder
-        .setMsgType('f') // Trading Status
+        .setMsgType('g') // Trading Session Status Request
         .setSenderCompID('realtime') // Server expects this as sender
         .setTargetCompID('NMDUFISQ0001') // Server expects this as target
         .setMsgSeqNum(currentSeqNum)
         .addField(FieldTag.SENDING_TIME, sendingTime)
-        .addField('42', origTime) // OrigTime
-        .addField(FieldTag.SYMBOL, "KSE30")
-        .addField('10201', '10') // Trading Status
-        .addField('1500', '900') // Trading Session ID
-        .addField('8538', 'T'); // Trading Status Indicator
+        .addField(FieldTag.TRAD_SES_REQ_ID, 'KSE30') // Use symbol as request ID
+        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
+        .addField(FieldTag.TRADING_SESSION_ID, '900'); // Trading session ID
   
       const message = builder.buildMessage();
       logger.info(`Generated KSE trading status message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
