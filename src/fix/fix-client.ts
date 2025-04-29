@@ -1066,9 +1066,12 @@ export function createFixClient(options: FixClientOptions) {
       const origTime = sendingTime;
       const currentSeqNum = msgSeqNum++;
   
+      // Ensure we're using the correct sender ID from options
+      const senderId = options.senderCompId || 'NMDUFISQ0001'; // Fallback to default if not set
+  
       builder
         .setMsgType('W') // Market Data Snapshot/Full Refresh
-        .setSenderCompID(options.senderCompId)
+        .setSenderCompID(senderId) // Use configured sender ID
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(currentSeqNum)
         .addField(FieldTag.SENDING_TIME, sendingTime)
