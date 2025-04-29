@@ -183,7 +183,6 @@ function createFixClient(options) {
             }
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
             logger_1.default.info(`Received FIX message: ${message}`);
-            // parseMarketDataSnapshotToJson(message);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');
@@ -196,6 +195,19 @@ function createFixClient(options) {
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
                 const serverSeq = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
                 logger_1.default.info(`Server sequence number: ${serverSeq}`);
+            }
+            // Log symbol information if present
+            if (parsedMessage[constants_1.FieldTag.SYMBOL]) {
+                logger_1.default.info(`Symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                // Log additional symbol-related fields
+                if (parsedMessage['140'])
+                    logger_1.default.info(`  Last Price: ${parsedMessage['140']}`);
+                if (parsedMessage['8503'])
+                    logger_1.default.info(`  Volume: ${parsedMessage['8503']}`);
+                if (parsedMessage['387'])
+                    logger_1.default.info(`  Total Value: ${parsedMessage['387']}`);
+                if (parsedMessage['8504'])
+                    logger_1.default.info(`  Market Cap: ${parsedMessage['8504']}`);
             }
             // Emit the raw message
             emitter.emit('message', parsedMessage);
@@ -216,11 +228,11 @@ function createFixClient(options) {
                     sendHeartbeat(parsedMessage[constants_1.FieldTag.TEST_REQ_ID]);
                     break;
                 case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-                    logger_1.default.info(`Received market data snapshot: ${JSON.stringify(parsedMessage)}`);
+                    logger_1.default.info(`Received market data snapshot for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
                     handleMarketDataSnapshot(parsedMessage);
                     break;
                 case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-                    logger_1.default.info(`Received market data incremental refresh: ${JSON.stringify(parsedMessage)}`);
+                    logger_1.default.info(`Received market data incremental refresh for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
                     handleMarketDataIncremental(parsedMessage);
                     break;
                 case constants_1.MessageType.SECURITY_LIST:
@@ -230,7 +242,7 @@ function createFixClient(options) {
                     handleTradingSessionStatus(parsedMessage);
                     break;
                 case 'f': // Trading Status - specific PSX format
-                    logger_1.default.info(`Received TRADING STATUS message: ${JSON.stringify(parsedMessage)}`);
+                    logger_1.default.info(`Received TRADING STATUS for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
                     handleTradingStatus(parsedMessage);
                     break;
                 case constants_1.MessageType.REJECT:
@@ -245,6 +257,9 @@ function createFixClient(options) {
                     break;
                 default:
                     logger_1.default.info(`Received unhandled message type: ${messageType} (${getMessageTypeName(messageType)})`);
+                    if (parsedMessage[constants_1.FieldTag.SYMBOL]) {
+                        logger_1.default.info(`  Symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    }
             }
         }
         catch (error) {
