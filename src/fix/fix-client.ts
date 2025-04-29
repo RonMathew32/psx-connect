@@ -1066,9 +1066,9 @@ export function createFixClient(options: FixClientOptions) {
       const origTime = sendingTime;
       const currentSeqNum = msgSeqNum++;
   
-      // Swap sender and target IDs to match what the server expects
+      // Use message type 'f' for Trading Status
       builder
-        .setMsgType('W') // Market Data Snapshot/Full Refresh
+        .setMsgType('f') // Trading Status
         .setSenderCompID('realtime') // Server expects this as sender
         .setTargetCompID('NMDUFISQ0001') // Server expects this as target
         .setMsgSeqNum(currentSeqNum)
