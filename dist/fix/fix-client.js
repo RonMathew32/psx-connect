@@ -899,7 +899,7 @@ function createFixClient(options) {
             const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
             const origTime = sendingTime;
             const currentSeqNum = msgSeqNum++;
-            // Use message type 'f' for Trading Status
+            // Build a proper trading status request
             builder
                 .setMsgType('f') // Trading Status
                 .setSenderCompID('realtime') // Server expects this as sender
@@ -907,28 +907,10 @@ function createFixClient(options) {
                 .setMsgSeqNum(currentSeqNum)
                 .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
                 .addField('42', origTime) // OrigTime
-                .addField('10201', '10') // Custom field (possibly TradingStatus)
-                .addField('1500', '900') // Custom field
                 .addField(constants_1.FieldTag.SYMBOL, "KSE30")
-                .addField('8538', 'T') // Custom field
-                .addField('140', '0.0000') // Custom price field
-                .addField('8503', '87608') // Custom field
-                .addField('387', '88354352.00') // NoMDEntries or related
-                .addField('8504', '12327130577.0100') // Custom field
-                .addField(constants_1.FieldTag.NO_MD_ENTRIES, '5'); // Number of market data entries
-            // Add market data entries
-            const entries = [
-                { type: 'xa', price: '36395.140900' },
-                { type: '3', price: '36540.202900' }, // Index Value
-                { type: 'xb', price: '36431.801100' },
-                { type: 'xc', price: '36656.369500' },
-                { type: 'xd', price: '36313.909400' }
-            ];
-            entries.forEach((entry) => {
-                builder
-                    .addField(constants_1.FieldTag.MD_ENTRY_TYPE, entry.type)
-                    .addField(constants_1.FieldTag.MD_ENTRY_PX, entry.price);
-            });
+                .addField('10201', '10') // Trading Status
+                .addField('1500', '900') // Trading Session ID
+                .addField('8538', 'T'); // Trading Status Indicator
             const message = builder.buildMessage();
             logger_1.default.info(`Generated KSE trading status message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             sendMessage(message);
