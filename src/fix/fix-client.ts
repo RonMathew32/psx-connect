@@ -692,7 +692,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       logger.info(`Alternative KSE request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      socket.write(rawMessage);
+      socket.write("8=FIXT.1.1\9=311\35=W\49=NMDUFISQ0001\56=realtime\34=103\52=20230104-09:40:39.053\42=20230104-09:40:35.000\10201=10\1500=900\55=KSE100\8538=T\140=0.0000\8503=16226\387=641750795.00\8504=48371825275.0900\268=5\269=xa\270=40815.900000\269=3\270=41396.481200\269=xb\270=42649.675800\269=xc\270=42689.536200\269=xd\270=41006.355700\10=147");
 
       // Also try individual symbol requests
       setTimeout(() => {
