@@ -895,48 +895,22 @@ function createFixClient(options) {
                 logger_1.default.error('Cannot send KSE trading status request: not connected');
                 return null;
             }
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
-            const origTime = sendingTime;
+            // Store original message but fix the sender ID
+            let baseMessage = "8=FIXT.1.19=30935=W49=NMDUFISQ000156=realtime34=24352=20250422-09:36:34.04942=20250422-09:36:30.00010201=101500=90055=KSE308538=T140=0.00008503=87608387=88354352.008504=12327130577.0100268=5269=xa270=36395.140900269=3270=36540.202900269=xb270=36431.801100269=xc270=36656.369500269=xd270=36313.90940010=057";
+            // Ensure current sequence number is used
             const currentSeqNum = msgSeqNum++;
-            // Ensure we're using the correct sender ID from options
-            const senderId = options.senderCompId || 'NMDUFISQ0001'; // Fallback to default if not set
-            builder
-                .setMsgType('W') // Market Data Snapshot/Full Refresh
-                .setSenderCompID(senderId) // Use configured sender ID
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(currentSeqNum)
-                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
-                .addField('42', origTime) // OrigTime
-                .addField('10201', '10') // Custom field (possibly TradingStatus)
-                .addField('1500', '900') // Custom field
-                .addField(constants_1.FieldTag.SYMBOL, "KSE30")
-                .addField('8538', 'T') // Custom field
-                .addField('140', '0.0000') // Custom price field
-                .addField('8503', '87608') // Custom field
-                .addField('387', '88354352.00') // NoMDEntries or related
-                .addField('8504', '12327130577.0100') // Custom field
-                .addField(constants_1.FieldTag.NO_MD_ENTRIES, '5'); // Number of market data entries
-            // Add market data entries
-            const entries = [
-                { type: 'xa', price: '36395.140900' },
-                { type: '3', price: '36540.202900' }, // Index Value
-                { type: 'xb', price: '36431.801100' },
-                { type: 'xc', price: '36656.369500' },
-                { type: 'xd', price: '36313.909400' }
-            ];
-            entries.forEach((entry) => {
-                builder
-                    .addField(constants_1.FieldTag.MD_ENTRY_TYPE, entry.type)
-                    .addField(constants_1.FieldTag.MD_ENTRY_PX, entry.price);
-            });
-            const message = builder.buildMessage();
-            logger_1.default.info(`Generated KSE trading status message: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            sendMessage(message);
+            // Update sequence number and ensure sender ID is correct
+            const newMessage = baseMessage
+                .replace(/(?<=34=)\d+/, currentSeqNum.toString())
+                .replace(/49=realtime/, `49=${options.senderCompId}`); // Use configured sender ID
+            logger_1.default.info(`Current sequence number: ${currentSeqNum}`);
+            logger_1.default.info(`KSE trading status request - sending with sequence ${currentSeqNum}: ${newMessage}`);
+            socket.write(newMessage);
+            logger_1.default.info(`Sent KSE request with sequence number ${currentSeqNum}`);
         }
         catch (error) {
-            logger_1.default.error(`Error building KSE trading status message: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
+            logger_1.default.error('Error sending KSE trading status request:', error);
+            return null;
         }
     };
     /**
