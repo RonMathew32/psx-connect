@@ -557,22 +557,38 @@ export function createFixClient(options: FixClientOptions) {
       const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
       const currentSeqNum = msgSeqNum++;
   
-      // Build a market data request for KSE30
+      // Build a market data request for KSE30 based on successful messages
       builder
-        .setMsgType('V') // Market Data Request
+        .setMsgType('W') // Market Data Snapshot/Full Refresh
         .setSenderCompID('realtime') // Server expects this as sender
         .setTargetCompID('NMDUFISQ0001') // Server expects this as target
         .setMsgSeqNum(currentSeqNum)
         .addField(FieldTag.SENDING_TIME, sendingTime)
-        .addField(FieldTag.MD_REQ_ID, 'KSE30') // Use symbol as request ID
-        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
-        .addField(FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
-        .addField(FieldTag.NO_RELATED_SYM, '1') // Number of symbols
-        .addField(FieldTag.SYMBOL, 'KSE30') // Symbol
-        .addField(FieldTag.NO_MD_ENTRY_TYPES, '3') // Number of entry types
-        .addField(FieldTag.MD_ENTRY_TYPE, '0') // 0 = Bid
-        .addField(FieldTag.MD_ENTRY_TYPE, '1') // 1 = Offer
-        .addField(FieldTag.MD_ENTRY_TYPE, '3'); // 3 = Index Value
+        .addField('42', sendingTime) // OrigTime
+        .addField('10201', '10') // Trading Status
+        .addField('1500', '900') // Trading Session ID
+        .addField(FieldTag.SYMBOL, 'KSE30')
+        .addField('8538', 'T') // Trading Status Indicator
+        .addField('140', '0.0000') // Last Price
+        .addField('8503', '0') // Volume
+        .addField('387', '0.00') // Total Value
+        .addField('8504', '0.0000') // Market Cap
+        .addField(FieldTag.NO_MD_ENTRIES, '5'); // Number of entries
+  
+      // Add market data entries
+      const entries = [
+        { type: 'xa', price: '0.0000' }, // Open
+        { type: '3', price: '0.0000' }, // Index Value
+        { type: 'xb', price: '0.0000' }, // High
+        { type: 'xc', price: '0.0000' }, // Low
+        { type: 'xd', price: '0.0000' }  // Close
+      ];
+  
+      entries.forEach((entry) => {
+        builder
+          .addField(FieldTag.MD_ENTRY_TYPE, entry.type)
+          .addField(FieldTag.MD_ENTRY_PX, entry.price);
+      });
   
       const message = builder.buildMessage();
       logger.info(`Generated KSE30 market data request: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
