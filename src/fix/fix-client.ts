@@ -972,7 +972,6 @@ export function createFixClient(options: FixClientOptions) {
    * Send a logon message to the server
    */
   const sendLogon = (): void => {
-    sendLogout();
     logger.info('logout first');
     if (!connected) {
       logger.warn('Cannot send logon, not connected');

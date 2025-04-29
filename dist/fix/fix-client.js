@@ -817,7 +817,6 @@ function createFixClient(options) {
      * Send a logon message to the server
      */
     const sendLogon = () => {
-        sendLogout();
         logger_1.default.info('logout first');
         if (!connected) {
             logger_1.default.warn('Cannot send logon, not connected');
