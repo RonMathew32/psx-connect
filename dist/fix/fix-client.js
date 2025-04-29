@@ -891,13 +891,19 @@ function createFixClient(options) {
      */
     const sendKseTradingStatusRequest = () => {
         try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send KSE trading status request: not connected');
+                return null;
+            }
             const builder = (0, message_builder_1.createMessageBuilder)();
             const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
             const origTime = sendingTime;
             const currentSeqNum = msgSeqNum++;
+            // Ensure we're using the correct sender ID from options
+            const senderId = options.senderCompId || 'NMDUFISQ0001'; // Fallback to default if not set
             builder
                 .setMsgType('W') // Market Data Snapshot/Full Refresh
-                .setSenderCompID(options.senderCompId)
+                .setSenderCompID(senderId) // Use configured sender ID
                 .setTargetCompID(options.targetCompId)
                 .setMsgSeqNum(currentSeqNum)
                 .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)

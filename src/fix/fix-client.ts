@@ -1056,14 +1056,22 @@ export function createFixClient(options: FixClientOptions) {
    */
   const sendKseTradingStatusRequest = () => {
     try {
+      if (!socket || !connected) {
+        logger.error('Cannot send KSE trading status request: not connected');
+        return null;
+      }
+
       const builder = createMessageBuilder();  
       const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
       const origTime = sendingTime;
       const currentSeqNum = msgSeqNum++;
   
+      // Ensure we're using the correct sender ID from options
+      const senderId = options.senderCompId || 'NMDUFISQ0001'; // Fallback to default if not set
+  
       builder
         .setMsgType('W') // Market Data Snapshot/Full Refresh
-        .setSenderCompID(options.senderCompId)
+        .setSenderCompID(senderId) // Use configured sender ID
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(currentSeqNum)
         .addField(FieldTag.SENDING_TIME, sendingTime)
@@ -1100,7 +1108,6 @@ export function createFixClient(options: FixClientOptions) {
       logger.error(`Error building KSE trading status message: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
-
   };
 
   /**
