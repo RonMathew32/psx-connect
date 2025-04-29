@@ -534,13 +534,53 @@ export function createFixClient(options: FixClientOptions) {
    */
   const handleLogon = (message: ParsedFixMessage): void => {
     loggedIn = true;
-
+    
     // Reset our sequence number to ensure we start fresh
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
 
-    // Send our KSE request with the correct sequence number
-    // sendKseTradingStatusRequest();
+    // Send KSE30 market data request
+    sendKse30MarketDataRequest();
+  };
+
+  /**
+   * Send a market data request for KSE30
+   */
+  const sendKse30MarketDataRequest = () => {
+    try {
+      if (!socket || !connected) {
+        logger.error('Cannot send KSE30 market data request: not connected');
+        return null;
+      }
+
+      const builder = createMessageBuilder();
+      const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
+      const currentSeqNum = msgSeqNum++;
+  
+      // Build a market data request for KSE30
+      builder
+        .setMsgType('V') // Market Data Request
+        .setSenderCompID('realtime') // Server expects this as sender
+        .setTargetCompID('NMDUFISQ0001') // Server expects this as target
+        .setMsgSeqNum(currentSeqNum)
+        .addField(FieldTag.SENDING_TIME, sendingTime)
+        .addField(FieldTag.MD_REQ_ID, 'KSE30') // Use symbol as request ID
+        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
+        .addField(FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
+        .addField(FieldTag.NO_RELATED_SYM, '1') // Number of symbols
+        .addField(FieldTag.SYMBOL, 'KSE30') // Symbol
+        .addField(FieldTag.NO_MD_ENTRY_TYPES, '3') // Number of entry types
+        .addField(FieldTag.MD_ENTRY_TYPE, '0') // 0 = Bid
+        .addField(FieldTag.MD_ENTRY_TYPE, '1') // 1 = Offer
+        .addField(FieldTag.MD_ENTRY_TYPE, '3'); // 3 = Index Value
+  
+      const message = builder.buildMessage();
+      logger.info(`Generated KSE30 market data request: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
+      sendMessage(message);
+    } catch (error) {
+      logger.error(`Error building KSE30 market data request: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   };
 
   /**
@@ -1051,41 +1091,6 @@ export function createFixClient(options: FixClientOptions) {
   };
 
   /**
-   * Send a trading status request for KSE symbols
-   * This specifically requests trading status (MsgType=f) data for KSE-related symbols
-   */
-  const sendKseTradingStatusRequest = () => {
-    try {
-      if (!socket || !connected) {
-        logger.error('Cannot send KSE trading status request: not connected');
-        return null;
-      }
-
-      const builder = createMessageBuilder();
-      const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
-      const currentSeqNum = msgSeqNum++;
-  
-      // Build a security status request
-      builder
-        .setMsgType('e') // Security Status Request
-        .setSenderCompID('realtime') // Server expects this as sender
-        .setTargetCompID('NMDUFISQ0001') // Server expects this as target
-        .setMsgSeqNum(currentSeqNum)
-        .addField(FieldTag.SENDING_TIME, sendingTime)
-        .addField(FieldTag.SECURITY_STATUS_REQ_ID, 'KSE30') // Use symbol as request ID
-        .addField(FieldTag.SYMBOL, 'KSE30') // Symbol
-        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0'); // 0 = Snapshot
-  
-      const message = builder.buildMessage();
-      logger.info(`Generated KSE trading status message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-      sendMessage(message);
-    } catch (error) {
-      logger.error(`Error building KSE trading status message: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  };
-
-  /**
    * Handle trading status message - specific format for PSX
    */
   const handleTradingStatus = (message: ParsedFixMessage): void => {
@@ -1137,7 +1142,7 @@ export function createFixClient(options: FixClientOptions) {
     sendSecurityListRequest,
     sendTradingSessionStatusRequest,
     sendKseDataRequest,
-    sendKseTradingStatusRequest,
+    // sendKseTradingStatusRequest,
     sendSecurityStatusRequest,
     sendLogon,
     sendLogout,
