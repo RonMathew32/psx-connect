@@ -592,7 +592,7 @@ export function createFixClient(options: FixClientOptions) {
   
       const message = builder.buildMessage();
       logger.info(`Generated KSE30 market data request: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-      sendMessage(message);
+      sendMessage("8=FIXT.1.19=31035=W49=NMDUFISQ000156=realtime34=10452=20230104-09:40:39.05342=20230104-09:40:35.00010201=101500=90055=KSE308538=T140=0.00008503=14249387=587967882.008504=47347068811.4900268=5269=xa270=15026.320000269=3270=15361.303500269=xb270=15918.077300269=xc270=15918.077300269=xd270=15107.45220010=084");
     } catch (error) {
       logger.error(`Error building KSE30 market data request: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
