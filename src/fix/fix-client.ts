@@ -551,7 +551,7 @@ export function createFixClient(options: FixClientOptions) {
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
 
-    // Send KSE30 market data request
+    tryAlternativeKseRequest();
   };
 
   /**
