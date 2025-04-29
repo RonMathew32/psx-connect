@@ -540,7 +540,7 @@ export function createFixClient(options: FixClientOptions) {
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
 
     // Send our KSE request with the correct sequence number
-    sendKseTradingStatusRequest();
+    // sendKseTradingStatusRequest();
   };
 
   /**

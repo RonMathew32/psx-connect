@@ -440,7 +440,7 @@ function createFixClient(options) {
         msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
         logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
         // Send our KSE request with the correct sequence number
-        sendKseTradingStatusRequest();
+        // sendKseTradingStatusRequest();
     };
     /**
      * Check server features to understand its capabilities
