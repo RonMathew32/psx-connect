@@ -1065,20 +1065,16 @@ export function createFixClient(options: FixClientOptions) {
       const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
       const currentSeqNum = msgSeqNum++;
   
-      // Build a market data request
+      // Build a security status request
       builder
-        .setMsgType('V') // Market Data Request
+        .setMsgType('e') // Security Status Request
         .setSenderCompID('realtime') // Server expects this as sender
         .setTargetCompID('NMDUFISQ0001') // Server expects this as target
         .setMsgSeqNum(currentSeqNum)
         .addField(FieldTag.SENDING_TIME, sendingTime)
-        .addField(FieldTag.MD_REQ_ID, 'KSE30') // Use symbol as request ID
-        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
-        .addField(FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
-        .addField(FieldTag.NO_RELATED_SYM, '1') // Number of symbols
+        .addField(FieldTag.SECURITY_STATUS_REQ_ID, 'KSE30') // Use symbol as request ID
         .addField(FieldTag.SYMBOL, 'KSE30') // Symbol
-        .addField(FieldTag.NO_MD_ENTRY_TYPES, '1') // Number of entry types
-        .addField(FieldTag.MD_ENTRY_TYPE, '3'); // 3 = Index Value
+        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0'); // 0 = Snapshot
   
       const message = builder.buildMessage();
       logger.info(`Generated KSE trading status message: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
