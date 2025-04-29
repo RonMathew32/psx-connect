@@ -1006,9 +1006,9 @@ export function createFixClient(options: FixClientOptions) {
       }
 
       const message = builder.buildMessage();
-      // logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
-      logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: 8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159`);
-      sendMessage("8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159");
+      logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
+      // logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: 8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159`);
+      sendMessage(message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
