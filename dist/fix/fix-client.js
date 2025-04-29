@@ -455,58 +455,6 @@ function createFixClient(options) {
         msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
         logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
         // Send KSE30 market data request
-        sendKse30MarketDataRequest();
-    };
-    /**
-     * Send a market data request for KSE30
-     */
-    const sendKse30MarketDataRequest = () => {
-        try {
-            if (!socket || !connected) {
-                logger_1.default.error('Cannot send KSE30 market data request: not connected');
-                return null;
-            }
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 17);
-            const currentSeqNum = msgSeqNum++;
-            // Build a market data request for KSE30 based on successful messages
-            builder
-                .setMsgType('W') // Market Data Snapshot/Full Refresh
-                .setSenderCompID('realtime') // Server expects this as sender
-                .setTargetCompID('NMDUFISQ0001') // Server expects this as target
-                .setMsgSeqNum(currentSeqNum)
-                .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
-                .addField('42', sendingTime) // OrigTime
-                .addField('10201', '10') // Trading Status
-                .addField('1500', '900') // Trading Session ID
-                .addField(constants_1.FieldTag.SYMBOL, 'KSE30')
-                .addField('8538', 'T') // Trading Status Indicator
-                .addField('140', '0.0000') // Last Price
-                .addField('8503', '0') // Volume
-                .addField('387', '0.00') // Total Value
-                .addField('8504', '0.0000') // Market Cap
-                .addField(constants_1.FieldTag.NO_MD_ENTRIES, '5'); // Number of entries
-            // Add market data entries
-            const entries = [
-                { type: 'xa', price: '0.0000' }, // Open
-                { type: '3', price: '0.0000' }, // Index Value
-                { type: 'xb', price: '0.0000' }, // High
-                { type: 'xc', price: '0.0000' }, // Low
-                { type: 'xd', price: '0.0000' } // Close
-            ];
-            entries.forEach((entry) => {
-                builder
-                    .addField(constants_1.FieldTag.MD_ENTRY_TYPE, entry.type)
-                    .addField(constants_1.FieldTag.MD_ENTRY_PX, entry.price);
-            });
-            const message = builder.buildMessage();
-            logger_1.default.info(`Generated KSE30 market data request: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            sendMessage("8=FIXT.1.19=31035=W49=NMDUFISQ000156=realtime34=10452=20230104-09:40:39.05342=20230104-09:40:35.00010201=101500=90055=KSE308538=T140=0.00008503=14249387=587967882.008504=47347068811.4900268=5269=xa270=15026.320000269=3270=15361.303500269=xb270=15918.077300269=xc270=15918.077300269=xd270=15107.45220010=084");
-        }
-        catch (error) {
-            logger_1.default.error(`Error building KSE30 market data request: ${error instanceof Error ? error.message : String(error)}`);
-            throw error;
-        }
     };
     /**
      * Check server features to understand its capabilities
@@ -946,12 +894,6 @@ function createFixClient(options) {
         }
     };
     /**
-     * Format a FIX message for logging (preserve SOH instead of using pipe)
-     */
-    const formatMessageForLogging = (message) => {
-        return message;
-    };
-    /**
      * Handle trading status message - specific format for PSX
      */
     const handleTradingStatus = (message) => {
@@ -997,7 +939,6 @@ function createFixClient(options) {
         sendSecurityListRequest,
         sendTradingSessionStatusRequest,
         sendKseDataRequest,
-        // sendKseTradingStatusRequest,
         sendSecurityStatusRequest,
         sendLogon,
         sendLogout,
