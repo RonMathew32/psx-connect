@@ -1067,12 +1067,12 @@ export function createFixClient(options: FixClientOptions) {
       const currentSeqNum = msgSeqNum++;
   
       // Ensure we're using the correct sender ID from options
-      const senderId = options.senderCompId || 'NMDUFISQ0001'; // Fallback to default if not set
+      const senderId = 'NMDUFISQ0001'; // Use the exact sender ID required
   
       builder
         .setMsgType('W') // Market Data Snapshot/Full Refresh
-        .setSenderCompID(senderId) // Use configured sender ID
-        .setTargetCompID(options.targetCompId)
+        .setSenderCompID(senderId) // Use the exact sender ID
+        .setTargetCompID('realtime') // Use the exact target ID
         .setMsgSeqNum(currentSeqNum)
         .addField(FieldTag.SENDING_TIME, sendingTime)
         .addField('42', origTime) // OrigTime
