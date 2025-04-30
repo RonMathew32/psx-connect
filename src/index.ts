@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import logger from './utils/logger';
 import { createFixClient, FixClientOptions, MarketDataItem } from './fix/fix-client';
 import { MDEntryType, SubscriptionRequestType } from './fix/constants';
+import { createWebSocketServer } from './websocket-server';
 
 // Load environment variables from .env file if present
 dotenv.config();
@@ -17,6 +18,9 @@ logger.info(`Operating system: ${process.platform} ${process.arch}`);
  */
 async function main() {
   try {
+    // Start WebSocket server
+    const wss = createWebSocketServer(8080);
+
     // Configure FIX client with defaults (can be overridden with environment variables)
     const fixOptions: FixClientOptions = {
       host: process.env.PSX_HOST || '172.21.101.36',
@@ -121,12 +125,14 @@ async function main() {
     process.on('SIGINT', async () => {
       logger.info('Received SIGINT. Shutting down...');
       await fixClient.disconnect();
+      wss.close();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
       logger.info('Received SIGTERM. Shutting down...');
       await fixClient.disconnect();
+      wss.close();
       process.exit(0);
     });
 

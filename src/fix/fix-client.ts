@@ -550,8 +550,6 @@ export function createFixClient(options: FixClientOptions) {
     // Reset our sequence number to ensure we start fresh
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-
-    tryAlternativeKseRequest();
   };
 
   /**
@@ -1099,20 +1097,25 @@ export function createFixClient(options: FixClientOptions) {
   };
 
   // Return the public API
-  return {
-    on: (event: string, listener: (...args: any[]) => void) => emitter.on(event, listener),
+  const client = {
+    on: (event: string, listener: (...args: any[]) => void) => {
+      emitter.on(event, listener);
+      return client;
+    },
     connect,
     disconnect,
     sendMarketDataRequest,
     sendSecurityListRequest,
     sendTradingSessionStatusRequest,
     sendKseDataRequest,
+    sendKseTradingStatusRequest: () => null,
     sendSecurityStatusRequest,
     sendLogon,
     sendLogout,
     start,
     stop
   };
+  return client;
 }
 
 // Type definition for the returned FixClient API

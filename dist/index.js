@@ -8,6 +8,7 @@ const fs_1 = __importDefault(require("fs"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = __importDefault(require("./utils/logger"));
 const fix_client_1 = require("./fix/fix-client");
+const websocket_server_1 = require("./websocket-server");
 // Load environment variables from .env file if present
 dotenv_1.default.config();
 // Log startup information
@@ -19,6 +20,8 @@ logger_1.default.info(`Operating system: ${process.platform} ${process.arch}`);
  */
 async function main() {
     try {
+        // Start WebSocket server
+        const wss = (0, websocket_server_1.createWebSocketServer)(8080);
         // Configure FIX client with defaults (can be overridden with environment variables)
         const fixOptions = {
             host: process.env.PSX_HOST || '172.21.101.36',
@@ -103,11 +106,13 @@ async function main() {
         process.on('SIGINT', async () => {
             logger_1.default.info('Received SIGINT. Shutting down...');
             await fixClient.disconnect();
+            wss.close();
             process.exit(0);
         });
         process.on('SIGTERM', async () => {
             logger_1.default.info('Received SIGTERM. Shutting down...');
             await fixClient.disconnect();
+            wss.close();
             process.exit(0);
         });
         // Log successful startup
