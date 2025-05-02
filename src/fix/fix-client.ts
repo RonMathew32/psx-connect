@@ -250,7 +250,7 @@ export function createFixClient(options: FixClientOptions) {
 
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
-      emitter.emit('rawMessage', message);
+      emitter.emit('rawMessage', parseFixMessage(message));
       const parsedMessage = parseFixMessage(message);
       
       if (!parsedMessage) {
