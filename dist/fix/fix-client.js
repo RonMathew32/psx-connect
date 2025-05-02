@@ -183,6 +183,7 @@ function createFixClient(options) {
             }
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
             logger_1.default.info(`Received FIX message: ${message}`);
+            emitter.emit('rawMessage', message);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');
@@ -309,6 +310,7 @@ function createFixClient(options) {
                     });
                 }
             }
+            emitter.emit('marketData', marketDataItems);
             if (marketDataItems.length > 0) {
                 logger_1.default.info(`Extracted ${marketDataItems.length} market data items for ${symbol}`);
                 // Check if this is KSE data
@@ -318,7 +320,6 @@ function createFixClient(options) {
                     emitter.emit('kseData', marketDataItems);
                 }
                 // Also emit general market data event
-                emitter.emit('marketData', marketDataItems);
             }
         }
         catch (error) {
@@ -873,6 +874,10 @@ function createFixClient(options) {
     const sendLogout = (text) => {
         if (!connected) {
             logger_1.default.warn('Cannot send logout, not connected');
+            emitter.emit('logout', {
+                message: 'Logged out in to FIX server',
+                timestamp: new Date().toISOString(),
+            });
             return;
         }
         try {

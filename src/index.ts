@@ -3,7 +3,6 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import logger from './utils/logger';
 import { createFixClient, FixClientOptions, MarketDataItem } from './fix/fix-client';
-import { MDEntryType, SubscriptionRequestType } from './fix/constants';
 import { createWebSocketServer } from './websocket-server';
 
 // Load environment variables from .env file if present

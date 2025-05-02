@@ -250,7 +250,7 @@ export function createFixClient(options: FixClientOptions) {
 
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
-      
+      emitter.emit('rawMessage', message);
       const parsedMessage = parseFixMessage(message);
       
       if (!parsedMessage) {
@@ -385,6 +385,7 @@ export function createFixClient(options: FixClientOptions) {
           });
         }
       }
+      emitter.emit('marketData', marketDataItems);
 
       if (marketDataItems.length > 0) {
         logger.info(`Extracted ${marketDataItems.length} market data items for ${symbol}`);
@@ -398,7 +399,6 @@ export function createFixClient(options: FixClientOptions) {
         }
 
         // Also emit general market data event
-        emitter.emit('marketData', marketDataItems);
       }
     } catch (error) {
       logger.error(`Error handling market data snapshot: ${error instanceof Error ? error.message : String(error)}`);
@@ -1029,6 +1029,10 @@ export function createFixClient(options: FixClientOptions) {
   const sendLogout = (text?: string): void => {
     if (!connected) {
       logger.warn('Cannot send logout, not connected');
+      emitter.emit('logout', {
+        message: 'Logged out in to FIX server',
+        timestamp: new Date().toISOString(),
+      });
       return;
     }
 
@@ -1126,7 +1130,8 @@ export interface FixClient {
   on(event: 'logout', listener: (message: ParsedFixMessage) => void): this;
   on(event: 'error', listener: (error: Error) => void): this;
   on(event: 'message', listener: (message: ParsedFixMessage) => void): this;
-  on(event: 'marketData', listener: (data: MarketDataItem[]) => void): this;
+  on(event: 'marketData', listener: (data: any) => void): this;
+  on(event: 'rawMessage', listener: (data: any) => void): this;
   on(event: 'securityList', listener: (securities: SecurityInfo[]) => void): this;
   on(event: 'tradingSessionStatus', listener: (sessionInfo: TradingSessionInfo) => void): this;
   on(event: 'kseData', listener: (data: MarketDataItem[]) => void): this;
