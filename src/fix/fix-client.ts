@@ -791,7 +791,7 @@ export function createFixClient(options: FixClientOptions) {
         .addField('453', '1') // NoPartyIDs = 1
         .addField('448', '1') // PartyID
         .addField('447', 'D') // PartyIDSource = D (custom)
-        .addField('452', '3'); // PartyRole = 3 (ClientID)
+        .addField('452', '1'); // PartyRole = 1 (instead of 3)
 
       // Add symbols
       message.addField(FieldTag.NO_RELATED_SYM, symbols.length.toString());
