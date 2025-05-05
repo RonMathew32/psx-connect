@@ -1,61 +1,13 @@
 import net from 'net';
+import logger from '../utils/logger';
 import { EventEmitter } from 'events';
 import { createMessageBuilder } from './message-builder';
 import { parseFixMessage, ParsedFixMessage } from './message-parser';
-import { SOH, MessageType, FieldTag, SubscriptionRequestType, SecurityListRequestType } from './constants';
-import logger from '../utils/logger';
+import { SOH, MessageType, FieldTag } from './constants';
 import { Socket } from 'net';
 import { v4 as uuidv4 } from 'uuid';
-import { parseMarketDataSnapshotToJson } from './fix-parser';
+import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } from '../types';
 
-export interface FixClientOptions {
-  host: string;
-  port: number;
-  senderCompId: string;
-  targetCompId: string;
-  username: string;
-  password: string;
-  heartbeatIntervalSecs: number;
-  resetOnLogon?: boolean;
-  resetOnLogout?: boolean;
-  resetOnDisconnect?: boolean;
-  validateFieldsOutOfOrder?: boolean;
-  checkFieldsOutOfOrder?: boolean;
-  rejectInvalidMessage?: boolean;
-  forceResync?: boolean;
-  fileLogPath?: string;
-  fileStorePath?: string;
-  connectTimeoutMs?: number;
-  reconnectIntervalMs?: number;
-  maxReconnectAttempts?: number;
-  onBehalfOfCompId?: string;
-  rawDataLength?: number;
-  rawData?: string;
-}
-
-export interface MarketDataItem {
-  symbol: string;
-  entryType: string;
-  price?: number;
-  size?: number;
-  entryId?: string;
-  timestamp?: string;
-}
-
-export interface SecurityInfo {
-  symbol: string;
-  securityType: string;
-  securityDesc?: string;
-  currency?: string;
-  isin?: string;
-}
-
-export interface TradingSessionInfo {
-  sessionId: string;
-  status: string;
-  startTime?: string;
-  endTime?: string;
-}
 
 /**
  * Create a FIX client with the specified options
@@ -143,6 +95,14 @@ export function createFixClient(options: FixClientOptions) {
         if (logonTimer) {
           clearTimeout(logonTimer);
         }
+
+        // Request data for specific symbols
+        const symbols = ['KSE100', 'KSE30'];
+        const entryTypes = ['0', '1', '3']; // Bid, Offer, Index Value
+
+        // Send market data request
+        const requestId = client.sendMarketDataRequest(symbols, entryTypes);
+        console.log('Sent market data request with ID:', requestId);
 
         // Send logon message after a short delay - exactly like fn-psx
         logonTimer = setTimeout(() => {
@@ -240,7 +200,7 @@ export function createFixClient(options: FixClientOptions) {
   const processMessage = (message: string): void => {
     try {
       const segments = message.split(SOH);
-      
+
       // FIX message should start with "8=FIX"
       const fixVersion = segments.find(s => s.startsWith('8=FIX'));
       if (!fixVersion) {
@@ -252,7 +212,7 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`Received FIX message: ${message}`);
       emitter.emit('rawMessage', parseFixMessage(message));
       const parsedMessage = parseFixMessage(message);
-      
+
       if (!parsedMessage) {
         logger.warn('Could not parse FIX message');
         return;
@@ -277,10 +237,10 @@ export function createFixClient(options: FixClientOptions) {
         if (parsedMessage['387']) logger.info(`  Total Value: ${parsedMessage['387']}`);
         if (parsedMessage['8504']) logger.info(`  Market Cap: ${parsedMessage['8504']}`);
       }
-      
+
       // Emit the raw message
       emitter.emit('message', parsedMessage);
-      
+
       // Process specific message types
       switch (messageType) {
         case MessageType.LOGON:
@@ -546,7 +506,7 @@ export function createFixClient(options: FixClientOptions) {
    */
   const handleLogon = (message: ParsedFixMessage): void => {
     loggedIn = true;
-    
+
     // Reset our sequence number to ensure we start fresh
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);

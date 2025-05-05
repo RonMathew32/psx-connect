@@ -145,9 +145,6 @@ function createMessageBuilder() {
     return messageBuilder;
 }
 /**
- * Helper functions for creating specific message types
- */
-/**
  * Create a logon message
  */
 function createLogonMessage(senderCompId, targetCompId, username, password, resetSeqNum = true, heartBtInt = 30) {

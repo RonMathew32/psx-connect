@@ -4,11 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createFixClient = createFixClient;
+const logger_1 = __importDefault(require("../utils/logger"));
 const events_1 = require("events");
 const message_builder_1 = require("./message-builder");
 const message_parser_1 = require("./message-parser");
 const constants_1 = require("./constants");
-const logger_1 = __importDefault(require("../utils/logger"));
 const net_1 = require("net");
 const uuid_1 = require("uuid");
 /**
@@ -85,6 +85,12 @@ function createFixClient(options) {
                 if (logonTimer) {
                     clearTimeout(logonTimer);
                 }
+                // Request data for specific symbols
+                const symbols = ['KSE100', 'KSE30'];
+                const entryTypes = ['0', '1', '3']; // Bid, Offer, Index Value
+                // Send market data request
+                const requestId = client.sendMarketDataRequest(symbols, entryTypes);
+                console.log('Sent market data request with ID:', requestId);
                 // Send logon message after a short delay - exactly like fn-psx
                 logonTimer = setTimeout(() => {
                     try {

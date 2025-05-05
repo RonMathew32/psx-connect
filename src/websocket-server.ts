@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { createFixClient, FixClient, MarketDataItem } from './fix/fix-client';
+import { createFixClient, FixClient } from './fix/fix-client';
 import logger from './utils/logger';
+import { MarketDataItem } from './types';
 
 interface WebSocketMessage {
   type: 'rawMessage' | 'marketData' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';

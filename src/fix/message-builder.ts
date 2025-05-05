@@ -1,5 +1,4 @@
 import { SOH, MessageType, FieldTag, DEFAULT_CONNECTION, SecurityListRequestType } from './constants';
-import moment from 'moment';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -19,7 +18,6 @@ function getCurrentTimestamp(): string {
   
   return `${year}${month}${day}-${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
-
 /**
  * Creates a new message builder with utility functions for building FIX messages
  */
@@ -156,11 +154,6 @@ export function createMessageBuilder() {
   
   return messageBuilder;
 }
-
-/**
- * Helper functions for creating specific message types
- */
-
 /**
  * Create a logon message
  */
@@ -187,7 +180,6 @@ export function createLogonMessage(
     .addField('1408', 'FIX5.00_PSX_1.00')
     .buildMessage();
 }
-
 /**
  * Create a heartbeat message
  */
@@ -207,7 +199,6 @@ export function createHeartbeatMessage(
   
   return builder.buildMessage();
 }
-
 /**
  * Create a test request message
  */
@@ -223,7 +214,6 @@ export function createTestRequestMessage(
     .addField(FieldTag.TEST_REQ_ID, testReqId || new Date().getTime().toString())
     .buildMessage();
 }
-
 /**
  * Create a logout message
  */
@@ -279,7 +269,6 @@ export function createMarketDataRequest(
   
   return builder.buildMessage();
 }
-
 /**
  * Create a security list request
  */
@@ -302,7 +291,6 @@ export function createSecurityListRequest(
   
   return builder.buildMessage();
 }
-
 /**
  * Create a trading session status request
  */

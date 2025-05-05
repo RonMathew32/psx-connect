@@ -2,8 +2,9 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import logger from './utils/logger';
-import { createFixClient, FixClientOptions, MarketDataItem } from './fix/fix-client';
 import { createWebSocketServer } from './websocket-server';
+import { FixClientOptions, MarketDataItem } from './types';
+import { createFixClient } from './fix/fix-client';
 
 // Load environment variables from .env file if present
 dotenv.config();

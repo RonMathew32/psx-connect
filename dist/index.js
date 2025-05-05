@@ -7,8 +7,8 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = __importDefault(require("./utils/logger"));
-const fix_client_1 = require("./fix/fix-client");
 const websocket_server_1 = require("./websocket-server");
+const fix_client_1 = require("./fix/fix-client");
 // Load environment variables from .env file if present
 dotenv_1.default.config();
 // Log startup information
