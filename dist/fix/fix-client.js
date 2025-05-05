@@ -85,12 +85,6 @@ function createFixClient(options) {
                 if (logonTimer) {
                     clearTimeout(logonTimer);
                 }
-                // Request data for specific symbols
-                // const symbols = ['KSE100', 'KSE30'];
-                // const entryTypes = ['0', '1', '3']; // Bid, Offer, Index Value
-                // // Send market data request
-                // const requestId = client.sendMarketDataRequest(symbols, entryTypes);
-                // console.log('Sent market data request with ID:', requestId);
                 // Send logon message after a short delay - exactly like fn-psx
                 logonTimer = setTimeout(() => {
                     try {
@@ -461,6 +455,8 @@ function createFixClient(options) {
         // Reset our sequence number to ensure we start fresh
         msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
         logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
+        const requestId = client.sendMarketDataRequest(['KSE100'], ['0', '1', '3']);
+        logger_1.default.info(`Sent market data request with ID: ${requestId}`);
     };
     /**
      * Check server features to understand its capabilities
