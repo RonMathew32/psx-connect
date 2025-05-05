@@ -455,8 +455,8 @@ function createFixClient(options) {
         // Reset our sequence number to ensure we start fresh
         msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
         logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-        // const requestId = client.sendMarketDataRequest(['KSE100'], ['0', '1', '3']);
-        // logger.info(`Sent market data request with ID: ${requestId}`);
+        const requestId = client.sendMarketDataRequest(['CNERGY'], ['0', '1', '3']); // CNERGY symbol
+        logger_1.default.info(`Sent market data request with ID: ${requestId}`);
     };
     /**
      * Check server features to understand its capabilities
@@ -705,7 +705,7 @@ function createFixClient(options) {
                 .addField('453', '1') // NoPartyIDs = 1
                 .addField('448', '1') // PartyID
                 .addField('447', 'D') // PartyIDSource = D (custom)
-                .addField('452', '2'); // PartyRole = 2 (instead of 1)
+                .addField('452', '3'); // PartyRole = 3 (instead of 2)
             // Add symbols
             message.addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString());
             for (const symbol of symbols) {
