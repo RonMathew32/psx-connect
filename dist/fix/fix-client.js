@@ -455,8 +455,8 @@ function createFixClient(options) {
         // Reset our sequence number to ensure we start fresh
         msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
         logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-        const requestId = client.sendMarketDataRequest(['KSE100'], ['0', '1', '3']);
-        logger_1.default.info(`Sent market data request with ID: ${requestId}`);
+        // const requestId = client.sendMarketDataRequest(['KSE100'], ['0', '1', '3']);
+        // logger.info(`Sent market data request with ID: ${requestId}`);
     };
     /**
      * Check server features to understand its capabilities
