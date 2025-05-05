@@ -691,33 +691,34 @@ function createFixClient(options) {
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
-            const message = (0, message_builder_1.createMessageBuilder)()
-                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(msgSeqNum++)
-                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
-                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType) // Subscription type
-                .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
-                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
-            // Add PartyID group (required by PSX)
-            message
-                .addField('453', '1') // NoPartyIDs = 1
-                .addField('448', options.partyId || options.senderCompId) // PartyID
-                .addField('447', 'D') // PartyIDSource = D (custom)
-                .addField('452', '3'); // PartyRole = 3 (ClientID)
-            // Add symbols
-            message.addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString());
-            for (const symbol of symbols) {
-                message.addField(constants_1.FieldTag.SYMBOL, symbol);
-            }
-            // Add entry types
-            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
-            for (const entryType of entryTypes) {
-                message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
-            }
-            const rawMessage = message.buildMessage();
-            socket.write(rawMessage);
+            // const message = createMessageBuilder()
+            //   .setMsgType(MessageType.MARKET_DATA_REQUEST)
+            //   .setSenderCompID(options.senderCompId)
+            //   .setTargetCompID(options.targetCompId)
+            //   .setMsgSeqNum(msgSeqNum++)
+            //   .addField(FieldTag.MD_REQ_ID, requestId)
+            //   .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType) // Subscription type
+            //   .addField(FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
+            //   .addField(FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
+            // // Add PartyID group (required by PSX)
+            // message
+            //   .addField('453', '1') // NoPartyIDs = 1
+            //   .addField('448', options.partyId || options.senderCompId) // PartyID
+            //   .addField('447', 'D') // PartyIDSource = D (custom)
+            //   .addField('452', '3'); // PartyRole = 3 (ClientID)
+            // // Add symbols
+            // message.addField(FieldTag.NO_RELATED_SYM, symbols.length.toString());
+            // for (const symbol of symbols) {
+            //   message.addField(FieldTag.SYMBOL, symbol);
+            // }
+            // // Add entry types
+            // message.addField(FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
+            // for (const entryType of entryTypes) {
+            //   message.addField(FieldTag.MD_ENTRY_TYPE, entryType);
+            // }
+            // const rawMessage = message.buildMessage();
+            socket.write("8=FIXT.1.19=25435=W49=NMDUFISQ000156=realtime34=5952=20230104-09:40:37.62442=20230104-09:40:37.00010201=30211500=08055=ASCR8538=T1140=2.57008503=0387=0.008504=0.0000268=2269=xe270=4.570000271=0.001023=0346=0269=xf270=0.570000271=0.001023=0346=010=250");
+            logger_1.default.info(`Sent market data request with ID: ${requestId}`);
             return requestId;
         }
         catch (error) {
