@@ -644,7 +644,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       logger.info(`Alternative KSE request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      socket.write("8=FIXT.1.19=31135=W49=NMDUFISQ000156=realtime34=10352=20230104-09:40:39.05342=20230104-09:40:35.00010201=101500=90055=KSE1008538=T140=0.00008503=16226387=641750795.008504=48371825275.0900268=5269=xa270=40815.900000269=3270=41396.481200269=xb270=42649.675800269=xc270=42689.536200269=xd270=41006.35570010=147");
+      socket.write("8=FIXT.1.19=25435=W49=realtime56=NMDUFISQ000134=5952=20230104-09:40:37.62442=20230104-09:40:37.00010201=30211500=08055=ASCR8538=T1140=2.57008503=0387=0.008504=0.0000268=2269=xe270=4.570000271=0.001023=0346=0269=xf270=0.570000271=0.001023=0346=010=250");
 
       // Also try individual symbol requests
       setTimeout(() => {
@@ -791,7 +791,7 @@ export function createFixClient(options: FixClientOptions) {
         .addField('453', '1') // NoPartyIDs = 1
         .addField('448', '1') // PartyID
         .addField('447', 'D') // PartyIDSource = D (custom)
-        .addField('452', '1'); // PartyRole = 1 (instead of 3)
+        .addField('452', '2'); // PartyRole = 2 (instead of 1)
 
       // Add symbols
       message.addField(FieldTag.NO_RELATED_SYM, symbols.length.toString());
@@ -930,7 +930,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       logger.info(`KSE data request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      socket.write("8=FIXT.1.19=31035=W49=NMDUFISQ000156=realtime34=10452=20230104-09:40:39.05342=20230104-09:40:35.00010201=101500=90055=KSE308538=T140=0.00008503=14249387=587967882.008504=47347068811.4900268=5269=xa270=15026.320000269=3270=15361.303500269=xb270=15918.077300269=xc270=15918.077300269=xd270=15107.45220010=084");
+      socket.write("8=FIXT.1.19=25435=W49=realtime56=NMDUFISQ000134=5952=20230104-09:40:37.62442=20230104-09:40:37.00010201=30211500=08055=ASCR8538=T1140=2.57008503=0387=0.008504=0.0000268=2269=xe270=4.570000271=0.001023=0346=0269=xf270=0.570000271=0.001023=0346=010=250");
       logger.info(`Sent KSE data request for indices: ${kseSymbols.join(', ')}`);
       return requestId;
     } catch (error) {
