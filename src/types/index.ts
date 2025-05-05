@@ -21,6 +21,7 @@ export interface FixClientOptions {
     onBehalfOfCompId?: string;
     rawDataLength?: number;
     rawData?: string;
+    partyId?: string;
   }
   
   export interface MarketDataItem {

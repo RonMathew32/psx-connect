@@ -786,6 +786,13 @@ export function createFixClient(options: FixClientOptions) {
         .addField(FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
         .addField(FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
 
+      // Add PartyID group (required by PSX)
+      message
+        .addField('453', '1') // NoPartyIDs = 1
+        .addField('448', options.partyId || options.senderCompId) // PartyID
+        .addField('447', 'D') // PartyIDSource = D (custom)
+        .addField('452', '3'); // PartyRole = 3 (ClientID)
+
       // Add symbols
       message.addField(FieldTag.NO_RELATED_SYM, symbols.length.toString());
       for (const symbol of symbols) {
