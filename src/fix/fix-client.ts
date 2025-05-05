@@ -807,6 +807,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       logger.info(`Sent market data request with ID: ${requestId}`);
+      logger.info(`Market data request message: ${rawMessage}`);
       socket.write(rawMessage);
       return requestId;
     } catch (error) {

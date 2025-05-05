@@ -718,6 +718,7 @@ function createFixClient(options) {
             }
             const rawMessage = message.buildMessage();
             logger_1.default.info(`Sent market data request with ID: ${requestId}`);
+            logger_1.default.info(`Market data request message: ${rawMessage}`);
             socket.write(rawMessage);
             return requestId;
         }
