@@ -806,7 +806,7 @@ export function createFixClient(options: FixClientOptions) {
       // }
 
       // const rawMessage = message.buildMessage();
-      socket.write("8=FIXT.1.19=25435=W49=NMDUFISQ000156=realtime34=5952=20230104-09:40:37.62442=20230104-09:40:37.00010201=30211500=08055=ASCR8538=T1140=2.57008503=0387=0.008504=0.0000268=2269=xe270=4.570000271=0.001023=0346=0269=xf270=0.570000271=0.001023=0346=010=250");
+      socket.write("8=FIXT.1.19=25435=W56=NMDUFISQ000149=realtime34=5952=20230104-09:40:37.62442=20230104-09:40:37.00010201=30211500=08055=ASCR8538=T1140=2.57008503=0387=0.008504=0.0000268=2269=xe270=4.570000271=0.001023=0346=0269=xf270=0.570000271=0.001023=0346=010=250");
       logger.info(`Sent market data request with ID: ${requestId}`);
       return requestId;
     } catch (error) {
