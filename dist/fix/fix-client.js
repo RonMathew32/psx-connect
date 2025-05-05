@@ -86,11 +86,11 @@ function createFixClient(options) {
                     clearTimeout(logonTimer);
                 }
                 // Request data for specific symbols
-                const symbols = ['KSE100', 'KSE30'];
-                const entryTypes = ['0', '1', '3']; // Bid, Offer, Index Value
-                // Send market data request
-                const requestId = client.sendMarketDataRequest(symbols, entryTypes);
-                console.log('Sent market data request with ID:', requestId);
+                // const symbols = ['KSE100', 'KSE30'];
+                // const entryTypes = ['0', '1', '3']; // Bid, Offer, Index Value
+                // // Send market data request
+                // const requestId = client.sendMarketDataRequest(symbols, entryTypes);
+                // console.log('Sent market data request with ID:', requestId);
                 // Send logon message after a short delay - exactly like fn-psx
                 logonTimer = setTimeout(() => {
                     try {
