@@ -703,7 +703,7 @@ function createFixClient(options) {
             // Add PartyID group (required by PSX)
             message
                 .addField('453', '1') // NoPartyIDs = 1
-                .addField('448', '1') // PartyID
+                .addField('448', options.partyId || options.senderCompId) // PartyID (use partyId or senderCompId)
                 .addField('447', 'D') // PartyIDSource = D (custom)
                 .addField('452', '3'); // PartyRole = 3 (instead of 2)
             // Add symbols
