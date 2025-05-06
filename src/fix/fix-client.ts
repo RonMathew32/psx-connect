@@ -500,13 +500,13 @@ export function createFixClient(options: FixClientOptions) {
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
     
-    // Add a small delay before sending market data request
-    setTimeout(() => {
-      if (loggedIn) {  // Check if still logged in after delay
-        const requestId = client.sendMarketDataRequest(['CNERGY'], ['0', '1', '3']); // CNERGY symbol
-        logger.info(`Sent market data request with ID: ${requestId}`);
-      }
-    }, 1000); // Wait 1 second after logon before sending market data request
+    // // Add a small delay before sending market data request
+    // setTimeout(() => {
+    //   if (loggedIn) {  // Check if still logged in after delay
+    //     const requestId = client.sendMarketDataRequest(['CNERGY'], ['0', '1', '3']); // CNERGY symbol
+    //     logger.info(`Sent market data request with ID: ${requestId}`);
+    //   }
+    // }, 1000); // Wait 1 second after logon before sending market data request
   };
 
   /**
