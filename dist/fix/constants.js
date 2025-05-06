@@ -34,60 +34,61 @@ var MessageType;
 /**
  * FIX field tags
  */
-var FieldTag;
-(function (FieldTag) {
-    FieldTag["BEGIN_STRING"] = "8";
-    FieldTag["BODY_LENGTH"] = "9";
-    FieldTag["MSG_TYPE"] = "35";
-    FieldTag["SENDER_COMP_ID"] = "49";
-    FieldTag["TARGET_COMP_ID"] = "56";
-    FieldTag["MSG_SEQ_NUM"] = "34";
-    FieldTag["SENDING_TIME"] = "52";
-    FieldTag["CHECK_SUM"] = "10";
-    FieldTag["TEXT"] = "58";
-    FieldTag["TEST_REQ_ID"] = "112";
-    FieldTag["ENCRYPT_METHOD"] = "98";
-    FieldTag["HEART_BT_INT"] = "108";
-    FieldTag["RESET_SEQ_NUM_FLAG"] = "141";
-    FieldTag["USERNAME"] = "553";
-    FieldTag["PASSWORD"] = "554";
+exports.FieldTag = {
+    BEGIN_STRING: '8',
+    BODY_LENGTH: '9',
+    MSG_TYPE: '35',
+    SENDER_COMP_ID: '49',
+    TARGET_COMP_ID: '56',
+    MSG_SEQ_NUM: '34',
+    SENDING_TIME: '52',
+    CHECK_SUM: '10',
+    TEXT: '58',
+    TEST_REQ_ID: '112',
+    ENCRYPT_METHOD: '98',
+    HEART_BT_INT: '108',
+    RESET_SEQ_NUM_FLAG: '141',
+    USERNAME: '553',
+    PASSWORD: '554',
     //Real-time Market Data
-    FieldTag["ORIG_TIME"] = "42";
-    FieldTag["MD_REPORT_ID"] = "1500";
-    FieldTag["PREV_CLOSE_PX"] = "140";
-    FieldTag["TOTAL_VOLUME_TRADED"] = "387";
-    FieldTag["NO_MD_ENTRIES"] = "268";
-    FieldTag["NO_ORDERS"] = "73";
-    FieldTag["ORDER_QTY"] = "38";
-    FieldTag["ORDER_ID"] = "37";
+    ORIG_TIME: '42',
+    MD_REPORT_ID: '1500',
+    PREV_CLOSE_PX: '140',
+    TOTAL_VOLUME_TRADED: '387',
+    NO_MD_ENTRIES: '268',
+    NO_ORDERS: '73',
+    ORDER_QTY: '38',
+    ORDER_ID: '37',
     // Additional field tags needed by the application
-    FieldTag["DEFAULT_APPL_VER_ID"] = "1137";
-    FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1129";
-    FieldTag["MD_REQ_ID"] = "262";
-    FieldTag["SUBSCRIPTION_REQUEST_TYPE"] = "263";
-    FieldTag["MARKET_DEPTH"] = "264";
-    FieldTag["MD_UPDATE_TYPE"] = "265";
-    FieldTag["NO_MD_ENTRY_TYPES"] = "267";
-    FieldTag["MD_ENTRY_TYPE"] = "269";
-    FieldTag["MD_ENTRY_PX"] = "270";
-    FieldTag["MD_ENTRY_SIZE"] = "271";
-    FieldTag["MD_REJECT_REASON"] = "281";
-    FieldTag["NO_RELATED_SYM"] = "146";
-    FieldTag["SYMBOL"] = "55";
-    FieldTag["SECURITY_LIST_REQUEST_TYPE"] = "559";
-    FieldTag["SECURITY_REQ_ID"] = "320";
-    FieldTag["SECURITY_STATUS_REQ_ID"] = "324";
-    FieldTag["SECURITY_TYPE"] = "167";
-    FieldTag["SECURITY_DESC"] = "107";
-    FieldTag["TRADING_SESSION_ID"] = "336";
-    FieldTag["TRAD_SES_REQ_ID"] = "335";
-    FieldTag["TRAD_SES_STATUS"] = "340";
-    FieldTag["START_TIME"] = "341";
-    FieldTag["END_TIME"] = "342";
-    FieldTag["ON_BEHALF_OF_COMP_ID"] = "115";
-    FieldTag["RAW_DATA"] = "96";
-    FieldTag["RAW_DATA_LENGTH"] = "95";
-})(FieldTag || (exports.FieldTag = FieldTag = {}));
+    DEFAULT_APPL_VER_ID: '1137',
+    DEFAULT_CSTM_APPL_VER_ID: '1129',
+    MD_REQ_ID: '262',
+    SUBSCRIPTION_REQUEST_TYPE: '263',
+    MARKET_DEPTH: '264',
+    MD_UPDATE_TYPE: '265',
+    NO_MD_ENTRY_TYPES: '267',
+    MD_ENTRY_TYPE: '269',
+    MD_ENTRY_PX: '270', // Market Data Entry Price
+    MD_ENTRY_SIZE: '271', // Market Data Entry Size
+    MD_REJECT_REASON: '281', // Market Data Reject Reason
+    NO_RELATED_SYM: '146',
+    SYMBOL: '55',
+    SECURITY_LIST_REQUEST_TYPE: '559',
+    SECURITY_REQ_ID: '320',
+    SECURITY_STATUS_REQ_ID: '324', // Security Status Request ID
+    SECURITY_TYPE: '167',
+    SECURITY_DESC: '107', // Security Description
+    TRADING_SESSION_ID: '336',
+    TRAD_SES_REQ_ID: '335',
+    TRAD_SES_STATUS: '340', // Trading Session Status
+    START_TIME: '341', // Start Time
+    END_TIME: '342', // End Time
+    ON_BEHALF_OF_COMP_ID: '115',
+    RAW_DATA: '96',
+    RAW_DATA_LENGTH: '95',
+    REF_SEQ_NUM: '45',
+    REF_TAG_ID: '373'
+};
 // Subscription Request Types
 var SubscriptionRequestType;
 (function (SubscriptionRequestType) {

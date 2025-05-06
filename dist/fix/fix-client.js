@@ -247,10 +247,7 @@ function createFixClient(options) {
                     handleTradingStatus(parsedMessage);
                     break;
                 case constants_1.MessageType.REJECT:
-                    logger_1.default.error(`Received REJECT message: ${JSON.stringify(parsedMessage)}`);
-                    if (parsedMessage[constants_1.FieldTag.TEXT]) {
-                        logger_1.default.error(`Reject reason: ${parsedMessage[constants_1.FieldTag.TEXT]}`);
-                    }
+                    handleReject(parsedMessage);
                     break;
                 case 'Y': // Market Data Request Reject
                     logger_1.default.error(`Received MARKET DATA REQUEST REJECT message: ${JSON.stringify(parsedMessage)}`);
@@ -841,16 +838,15 @@ function createFixClient(options) {
      * Send a logon message to the server
      */
     const sendLogon = () => {
-        logger_1.default.info('logout first');
+        logger_1.default.info('Sending logon message...');
         if (!connected) {
             logger_1.default.warn('Cannot send logon, not connected');
             return;
         }
         try {
-            if (options.resetOnLogon) {
-                msgSeqNum = 1;
-                logger_1.default.info('Resetting sequence numbers for new logon');
-            }
+            // Always reset sequence number on logon
+            msgSeqNum = 1;
+            logger_1.default.info('Resetting sequence number to 1 for new logon');
             const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
             logger_1.default.debug(`Generated SendingTime: ${sendingTime}`);
             const builder = (0, message_builder_1.createMessageBuilder)();
@@ -858,21 +854,20 @@ function createFixClient(options) {
                 .setMsgType(constants_1.MessageType.LOGON)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(msgSeqNum++)
+                .setMsgSeqNum(msgSeqNum)
                 .addField(constants_1.FieldTag.SENDING_TIME, sendingTime)
                 .addField(constants_1.FieldTag.ENCRYPT_METHOD, '0')
                 .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
                 .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, '9')
                 .addField('1408', 'FIX5.00_PSX_1.00')
                 .addField(constants_1.FieldTag.USERNAME, options.username)
-                .addField(constants_1.FieldTag.PASSWORD, options.password);
-            if (options.resetOnLogon) {
-                builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
-            }
+                .addField(constants_1.FieldTag.PASSWORD, options.password)
+                .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always request sequence number reset
             const message = builder.buildMessage();
-            logger_1.default.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            // logger.info(`Sending Logon Message with sequence number ${msgSeqNum - 1}: 8=FIXT.1.19=12735=A34=149=realtime52=20250422-09:36:31.27556=NMDUFISQ000198=0108=30141=Y554=NMDUFISQ00011137=91408=FIX5.00_PSX_1.0010=159`);
+            logger_1.default.info(`Sending Logon Message with sequence number ${msgSeqNum}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             sendMessage(message);
+            // Increment sequence number after sending
+            msgSeqNum++;
         }
         catch (error) {
             logger_1.default.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
@@ -992,6 +987,37 @@ function createFixClient(options) {
         catch (error) {
             logger_1.default.error('Error sending UBL market data request:', error);
             return null;
+        }
+    };
+    /**
+     * Handle a reject message from the server
+     */
+    const handleReject = (message) => {
+        try {
+            const refSeqNum = message[constants_1.FieldTag.REF_SEQ_NUM];
+            const refTagId = message[constants_1.FieldTag.REF_TAG_ID];
+            const text = message[constants_1.FieldTag.TEXT];
+            logger_1.default.error(`Received REJECT message for sequence number ${refSeqNum}`);
+            logger_1.default.error(`Reject reason (Tag ${refTagId}): ${text || 'No reason provided'}`);
+            // If it's a sequence number issue, try to resync
+            if (refTagId === '11') { // 11 is the tag for sequence number
+                logger_1.default.info('Sequence number mismatch detected, attempting to resync...');
+                // Disconnect and reconnect to reset sequence numbers
+                disconnect().then(() => {
+                    setTimeout(() => {
+                        connect();
+                    }, 1000);
+                });
+            }
+            // Emit reject event
+            emitter.emit('reject', {
+                refSeqNum,
+                refTagId,
+                text
+            });
+        }
+        catch (error) {
+            logger_1.default.error(`Error handling reject message: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
     // Return the public API

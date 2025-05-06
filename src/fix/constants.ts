@@ -33,61 +33,63 @@ export enum MessageType {
 /**
  * FIX field tags
  */
-export enum FieldTag {
-  BEGIN_STRING = '8',
-  BODY_LENGTH = '9',
-  MSG_TYPE = '35',
-  SENDER_COMP_ID = '49',
-  TARGET_COMP_ID = '56',
-  MSG_SEQ_NUM = '34',
-  SENDING_TIME = '52',
-  CHECK_SUM = '10',
-  TEXT = '58',
-  TEST_REQ_ID = '112',
-  ENCRYPT_METHOD = '98',
-  HEART_BT_INT = '108',
-  RESET_SEQ_NUM_FLAG = '141',
-  USERNAME = '553',
-  PASSWORD = '554',
+export const FieldTag = {
+  BEGIN_STRING: '8',
+  BODY_LENGTH: '9',
+  MSG_TYPE: '35',
+  SENDER_COMP_ID: '49',
+  TARGET_COMP_ID: '56',
+  MSG_SEQ_NUM: '34',
+  SENDING_TIME: '52',
+  CHECK_SUM: '10',
+  TEXT: '58',
+  TEST_REQ_ID: '112',
+  ENCRYPT_METHOD: '98',
+  HEART_BT_INT: '108',
+  RESET_SEQ_NUM_FLAG: '141',
+  USERNAME: '553',
+  PASSWORD: '554',
 
   //Real-time Market Data
-  ORIG_TIME = '42',
-  MD_REPORT_ID = '1500',
-  PREV_CLOSE_PX = '140',
-  TOTAL_VOLUME_TRADED = '387',
-  NO_MD_ENTRIES = '268',
-  NO_ORDERS =  '73',
-  ORDER_QTY = '38',
-  ORDER_ID = '37',
+  ORIG_TIME: '42',
+  MD_REPORT_ID: '1500',
+  PREV_CLOSE_PX: '140',
+  TOTAL_VOLUME_TRADED: '387',
+  NO_MD_ENTRIES: '268',
+  NO_ORDERS: '73',
+  ORDER_QTY: '38',
+  ORDER_ID: '37',
   
   // Additional field tags needed by the application
-  DEFAULT_APPL_VER_ID = '1137',
-  DEFAULT_CSTM_APPL_VER_ID = '1129',
-  MD_REQ_ID = '262',
-  SUBSCRIPTION_REQUEST_TYPE = '263',
-  MARKET_DEPTH = '264',
-  MD_UPDATE_TYPE = '265',
-  NO_MD_ENTRY_TYPES = '267',
-  MD_ENTRY_TYPE = '269',
-  MD_ENTRY_PX = '270',           // Market Data Entry Price
-  MD_ENTRY_SIZE = '271',         // Market Data Entry Size
-  MD_REJECT_REASON = '281',      // Market Data Reject Reason
-  NO_RELATED_SYM = '146',
-  SYMBOL = '55',
-  SECURITY_LIST_REQUEST_TYPE = '559',
-  SECURITY_REQ_ID = '320',
-  SECURITY_STATUS_REQ_ID = '324', // Security Status Request ID
-  SECURITY_TYPE = '167',
-  SECURITY_DESC = '107',        // Security Description
-  TRADING_SESSION_ID = '336',
-  TRAD_SES_REQ_ID = '335',
-  TRAD_SES_STATUS = '340',      // Trading Session Status
-  START_TIME = '341',           // Start Time
-  END_TIME = '342',             // End Time
-  ON_BEHALF_OF_COMP_ID = '115',
-  RAW_DATA = '96',
-  RAW_DATA_LENGTH = '95'
-}
+  DEFAULT_APPL_VER_ID: '1137',
+  DEFAULT_CSTM_APPL_VER_ID: '1129',
+  MD_REQ_ID: '262',
+  SUBSCRIPTION_REQUEST_TYPE: '263',
+  MARKET_DEPTH: '264',
+  MD_UPDATE_TYPE: '265',
+  NO_MD_ENTRY_TYPES: '267',
+  MD_ENTRY_TYPE: '269',
+  MD_ENTRY_PX: '270',           // Market Data Entry Price
+  MD_ENTRY_SIZE: '271',         // Market Data Entry Size
+  MD_REJECT_REASON: '281',      // Market Data Reject Reason
+  NO_RELATED_SYM: '146',
+  SYMBOL: '55',
+  SECURITY_LIST_REQUEST_TYPE: '559',
+  SECURITY_REQ_ID: '320',
+  SECURITY_STATUS_REQ_ID: '324', // Security Status Request ID
+  SECURITY_TYPE: '167',
+  SECURITY_DESC: '107',        // Security Description
+  TRADING_SESSION_ID: '336',
+  TRAD_SES_REQ_ID: '335',
+  TRAD_SES_STATUS: '340',      // Trading Session Status
+  START_TIME: '341',           // Start Time
+  END_TIME: '342',             // End Time
+  ON_BEHALF_OF_COMP_ID: '115',
+  RAW_DATA: '96',
+  RAW_DATA_LENGTH: '95',
+  REF_SEQ_NUM: '45',
+  REF_TAG_ID: '373'
+};
 
 // Subscription Request Types
 export enum SubscriptionRequestType {
