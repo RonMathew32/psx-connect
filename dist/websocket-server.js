@@ -112,7 +112,7 @@ function createWebSocketServer(port, fixConfig = {
             fixClient.on(event, (data) => {
                 try {
                     const message = transformer(data);
-                    logger_1.default.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
+                    // logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
                     broadcast(message);
                 }
                 catch (error) {

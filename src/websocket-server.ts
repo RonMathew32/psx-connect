@@ -132,7 +132,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       fixClient!.on(event, (data: any) => {
         try {
           const message = transformer(data);
-          logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
+          // logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
           broadcast(message);
         } catch (error) {
           logger.error(`Error processing ${event}: ${error}`);
