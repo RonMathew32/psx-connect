@@ -945,56 +945,6 @@ function createFixClient(options) {
         }
     };
     /**
-     * Send a market data request specifically for UBL symbol
-     */
-    const sendUblMarketDataRequest = () => {
-        try {
-            if (!socket || !connected) {
-                logger_1.default.error('Cannot send UBL market data request: not connected');
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            logger_1.default.info(`Creating UBL market data request with ID: ${requestId}`);
-            // UBL symbol
-            const ublSymbol = 'UBL';
-            // Entry types for market data
-            const entryTypes = ['0', '1', '2']; // 0 = Bid, 1 = Offer, 2 = Trade
-            logger_1.default.info(`Requesting market data for UBL with entry types: ${entryTypes.join(', ')}`);
-            const message = (0, message_builder_1.createMessageBuilder)()
-                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
-                .setSenderCompID('realtime')
-                .setTargetCompID('NMDUFISQ0001')
-                .setMsgSeqNum(msgSeqNum++)
-                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
-                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
-                .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
-                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
-            // Add PartyID group (required by PSX)
-            message
-                .addField('453', '1') // NoPartyIDs = 1
-                .addField('448', options.partyId || options.senderCompId) // PartyID
-                .addField('447', 'D') // PartyIDSource = D (custom)
-                .addField('452', '3'); // PartyRole = 3
-            // Add UBL symbol
-            message.addField(constants_1.FieldTag.NO_RELATED_SYM, '1');
-            message.addField(constants_1.FieldTag.SYMBOL, ublSymbol);
-            // Add entry types
-            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
-            for (const entryType of entryTypes) {
-                message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
-            }
-            const rawMessage = message.buildMessage();
-            logger_1.default.info(`UBL market data request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            socket.write(rawMessage);
-            logger_1.default.info(`Sent market data request for UBL`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.default.error('Error sending UBL market data request:', error);
-            return null;
-        }
-    };
-    /**
      * Handle a reject message from the server
      */
     const handleReject = (message) => {
@@ -1039,7 +989,6 @@ function createFixClient(options) {
         sendKseDataRequest,
         sendKseTradingStatusRequest: () => null,
         sendSecurityStatusRequest,
-        sendUblMarketDataRequest,
         sendLogon,
         sendLogout,
         start,
