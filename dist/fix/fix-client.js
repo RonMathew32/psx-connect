@@ -508,13 +508,19 @@ function createFixClient(options) {
      */
     const handleLogon = (message) => {
         loggedIn = true;
-        msgSeqNum = 2;
-        logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-        // Send initial requests
-        sendTradingSessionStatusRequest();
-        sendSecurityListRequestForEquity();
-        sendSecurityListRequestForIndex();
-        startIndexUpdates();
+        // Get server's sequence number
+        const serverSeq = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
+        msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
+        logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
+        // Send initial requests after a short delay to ensure sequence numbers are synced
+        setTimeout(() => {
+            if (loggedIn) {
+                sendTradingSessionStatusRequest();
+                sendSecurityListRequestForEquity();
+                sendSecurityListRequestForIndex();
+                startIndexUpdates();
+            }
+        }, 1000);
     };
     /**
      * Check server features to understand its capabilities
@@ -1014,8 +1020,7 @@ function createFixClient(options) {
             const message = builder.buildMessage();
             logger_1.default.info(`Sending Logon Message with sequence number ${msgSeqNum}: ${message.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             sendMessage(message);
-            // Increment sequence number after sending
-            msgSeqNum++;
+            // Don't increment sequence number here - wait for server's response
         }
         catch (error) {
             logger_1.default.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
@@ -1100,12 +1105,10 @@ function createFixClient(options) {
             // If it's a sequence number issue, try to resync
             if (refTagId === '11') { // 11 is the tag for sequence number
                 logger_1.default.info('Sequence number mismatch detected, attempting to resync...');
-                // Disconnect and reconnect to reset sequence numbers
-                disconnect().then(() => {
-                    setTimeout(() => {
-                        connect();
-                    }, 1000);
-                });
+                // Get server's current sequence number
+                const serverSeq = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
+                msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
+                logger_1.default.info(`Resynced sequence numbers. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
             }
             // Emit reject event
             emitter.emit('reject', {
