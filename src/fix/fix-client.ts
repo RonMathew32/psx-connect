@@ -176,11 +176,34 @@ export function createFixClient(options: FixClientOptions) {
 
       logger.debug(`Received data: ${dataStr.length} bytes`);
 
-      // Handle complete messages
-      receivedData += dataStr;
-      processMessage(receivedData);
-      // parseMarketDataSnapshotToJson(receivedData);
-      receivedData = '';
+      // // Handle complete messages
+      // receivedData += dataStr;
+      // processMessage(receivedData);
+      // // parseMarketDataSnapshotToJson(receivedData);
+      // receivedData = '';
+
+      // Split the data into individual FIX messages
+      const messages = dataStr.split(SOH);
+      let currentMessage = '';
+
+      for (const segment of messages) {
+        if (segment.startsWith('8=FIX')) {
+          // If we have a previous message, process it
+          if (currentMessage) {
+            processMessage(currentMessage);
+          }
+          // Start a new message
+          currentMessage = segment;
+        } else if (currentMessage) {
+          // Add to current message
+          currentMessage += SOH + segment;
+        }
+      }
+
+      // Process the last message if exists
+      if (currentMessage) {
+        processMessage(currentMessage);
+      }
     } catch (error) {
       logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -228,6 +251,38 @@ export function createFixClient(options: FixClientOptions) {
         if (parsedMessage['8503']) logger.info(`  Volume: ${parsedMessage['8503']}`);
         if (parsedMessage['387']) logger.info(`  Total Value: ${parsedMessage['387']}`);
         if (parsedMessage['8504']) logger.info(`  Market Cap: ${parsedMessage['8504']}`);
+        
+        // Additional market data fields
+        if (parsedMessage['269']) {
+          const entryType = parsedMessage['269'];
+          const price = parsedMessage['270'];
+          const size = parsedMessage['271'];
+          logger.info(`  Entry Type ${entryType}: Price=${price}, Size=${size}`);
+        }
+        
+        // Change and percentage change
+        if (parsedMessage['x1']) logger.info(`  Change: ${parsedMessage['x1']}`);
+        if (parsedMessage['x2']) logger.info(`  Change %: ${parsedMessage['x2']}`);
+        
+        // High and Low
+        if (parsedMessage['xe']) logger.info(`  High: ${parsedMessage['xe']}`);
+        if (parsedMessage['xf']) logger.info(`  Low: ${parsedMessage['xf']}`);
+        
+        // Open and Close
+        if (parsedMessage['0']) logger.info(`  Open: ${parsedMessage['0']}`);
+        if (parsedMessage['140']) logger.info(`  Close: ${parsedMessage['140']}`);
+        
+        // Bid and Ask
+        if (parsedMessage['2']) logger.info(`  Bid: ${parsedMessage['2']}`);
+        if (parsedMessage['4']) logger.info(`  Ask: ${parsedMessage['4']}`);
+        
+        // Trading Status
+        if (parsedMessage['102']) logger.info(`  Trading Status: ${parsedMessage['102']}`);
+        
+        // Additional PSX specific fields
+        if (parsedMessage['8538']) logger.info(`  Trading Session: ${parsedMessage['8538']}`);
+        if (parsedMessage['10201']) logger.info(`  Market ID: ${parsedMessage['10201']}`);
+        if (parsedMessage['11500']) logger.info(`  Market Type: ${parsedMessage['11500']}`);
       }
 
       // Emit the raw message
@@ -499,7 +554,7 @@ export function createFixClient(options: FixClientOptions) {
     // Reset our sequence number to ensure we start fresh
     msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
     logger.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-    
+
     // // Add a small delay before sending market data request
     // setTimeout(() => {
     //   if (loggedIn) {  // Check if still logged in after delay
@@ -979,7 +1034,7 @@ export function createFixClient(options: FixClientOptions) {
       const message = builder.buildMessage();
       logger.info(`Sending Logon Message with sequence number ${msgSeqNum}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
       sendMessage(message);
-      
+
       // Increment sequence number after sending
       msgSeqNum++;
     } catch (error) {

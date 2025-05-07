@@ -159,11 +159,32 @@ function createFixClient(options) {
             lastActivityTime = Date.now();
             const dataStr = data.toString();
             logger_1.default.debug(`Received data: ${dataStr.length} bytes`);
-            // Handle complete messages
-            receivedData += dataStr;
-            processMessage(receivedData);
-            // parseMarketDataSnapshotToJson(receivedData);
-            receivedData = '';
+            // // Handle complete messages
+            // receivedData += dataStr;
+            // processMessage(receivedData);
+            // // parseMarketDataSnapshotToJson(receivedData);
+            // receivedData = '';
+            // Split the data into individual FIX messages
+            const messages = dataStr.split(constants_1.SOH);
+            let currentMessage = '';
+            for (const segment of messages) {
+                if (segment.startsWith('8=FIX')) {
+                    // If we have a previous message, process it
+                    if (currentMessage) {
+                        processMessage(currentMessage);
+                    }
+                    // Start a new message
+                    currentMessage = segment;
+                }
+                else if (currentMessage) {
+                    // Add to current message
+                    currentMessage += constants_1.SOH + segment;
+                }
+            }
+            // Process the last message if exists
+            if (currentMessage) {
+                processMessage(currentMessage);
+            }
         }
         catch (error) {
             logger_1.default.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
@@ -209,6 +230,43 @@ function createFixClient(options) {
                     logger_1.default.info(`  Total Value: ${parsedMessage['387']}`);
                 if (parsedMessage['8504'])
                     logger_1.default.info(`  Market Cap: ${parsedMessage['8504']}`);
+                // Additional market data fields
+                if (parsedMessage['269']) {
+                    const entryType = parsedMessage['269'];
+                    const price = parsedMessage['270'];
+                    const size = parsedMessage['271'];
+                    logger_1.default.info(`  Entry Type ${entryType}: Price=${price}, Size=${size}`);
+                }
+                // Change and percentage change
+                if (parsedMessage['x1'])
+                    logger_1.default.info(`  Change: ${parsedMessage['x1']}`);
+                if (parsedMessage['x2'])
+                    logger_1.default.info(`  Change %: ${parsedMessage['x2']}`);
+                // High and Low
+                if (parsedMessage['xe'])
+                    logger_1.default.info(`  High: ${parsedMessage['xe']}`);
+                if (parsedMessage['xf'])
+                    logger_1.default.info(`  Low: ${parsedMessage['xf']}`);
+                // Open and Close
+                if (parsedMessage['0'])
+                    logger_1.default.info(`  Open: ${parsedMessage['0']}`);
+                if (parsedMessage['140'])
+                    logger_1.default.info(`  Close: ${parsedMessage['140']}`);
+                // Bid and Ask
+                if (parsedMessage['2'])
+                    logger_1.default.info(`  Bid: ${parsedMessage['2']}`);
+                if (parsedMessage['4'])
+                    logger_1.default.info(`  Ask: ${parsedMessage['4']}`);
+                // Trading Status
+                if (parsedMessage['102'])
+                    logger_1.default.info(`  Trading Status: ${parsedMessage['102']}`);
+                // Additional PSX specific fields
+                if (parsedMessage['8538'])
+                    logger_1.default.info(`  Trading Session: ${parsedMessage['8538']}`);
+                if (parsedMessage['10201'])
+                    logger_1.default.info(`  Market ID: ${parsedMessage['10201']}`);
+                if (parsedMessage['11500'])
+                    logger_1.default.info(`  Market Type: ${parsedMessage['11500']}`);
             }
             // Emit the raw message
             emitter.emit('message', parsedMessage);
