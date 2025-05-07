@@ -87,7 +87,8 @@ exports.FieldTag = {
     RAW_DATA: '96',
     RAW_DATA_LENGTH: '95',
     REF_SEQ_NUM: '45',
-    REF_TAG_ID: '373'
+    REF_TAG_ID: '373',
+    MARKET_ID: '10201'
 };
 // Subscription Request Types
 var SubscriptionRequestType;

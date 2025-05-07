@@ -508,16 +508,13 @@ function createFixClient(options) {
      */
     const handleLogon = (message) => {
         loggedIn = true;
-        // Reset our sequence number to ensure we start fresh
-        msgSeqNum = 2; // Start from 2 since we just sent message 1 (logon)
+        msgSeqNum = 2;
         logger_1.default.info(`Successfully logged in to FIX server. Next sequence number: ${msgSeqNum}`);
-        // // Add a small delay before sending market data request
-        // setTimeout(() => {
-        //   if (loggedIn) {  // Check if still logged in after delay
-        //     const requestId = client.sendMarketDataRequest(['CNERGY'], ['0', '1', '3']); // CNERGY symbol
-        //     logger.info(`Sent market data request with ID: ${requestId}`);
-        //   }
-        // }, 1000); // Wait 1 second after logon before sending market data request
+        // Send initial requests
+        sendTradingSessionStatusRequest();
+        sendSecurityListRequestForEquity();
+        sendSecurityListRequestForIndex();
+        startIndexUpdates();
     };
     /**
      * Check server features to understand its capabilities
@@ -816,9 +813,9 @@ function createFixClient(options) {
         }
     };
     /**
-     * Send a trading session status request
+     * Send a trading session status request for REG market
      */
-    const sendTradingSessionStatusRequest = (tradingSessionID) => {
+    const sendTradingSessionStatusRequest = () => {
         try {
             if (!socket || !connected) {
                 logger_1.default.error('Cannot send trading session status request: not connected');
@@ -831,14 +828,11 @@ function createFixClient(options) {
                 .setTargetCompID(options.targetCompId)
                 .setMsgSeqNum(msgSeqNum++)
                 .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
-                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1'); // 1 = Snapshot + Updates
-            // Add trading session ID if provided
-            if (tradingSessionID) {
-                message.addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
-            }
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
+                .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info(`Sent trading session status request${tradingSessionID ? ` for session ${tradingSessionID}` : ''}`);
+            logger_1.default.info('Sent trading session status request for REG market');
             return requestId;
         }
         catch (error) {
@@ -847,21 +841,111 @@ function createFixClient(options) {
         }
     };
     /**
-     * Send a request specifically for KSE (Karachi Stock Exchange) data
+     * Send a security list request for REG and FUT markets (EQUITY)
      */
-    const sendKseDataRequest = () => {
+    const sendSecurityListRequestForEquity = () => {
         try {
             if (!socket || !connected) {
-                logger_1.default.error('Cannot send KSE data request: not connected');
+                logger_1.default.error('Cannot send security list request: not connected');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
-            logger_1.default.info(`Creating KSE data request with ID: ${requestId}`);
-            // Add KSE index or key symbols
-            const kseSymbols = ['KSE100', 'KSE30', 'KMI30'];
-            // Add entry types - for indices we typically want the index value
-            const entryTypes = ['3']; // 3 = Index Value
-            logger_1.default.info(`Requesting symbols: ${kseSymbols.join(', ')} with entry types: ${entryTypes.join(', ')}`);
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
+                .addField(constants_1.FieldTag.SECURITY_TYPE, 'EQUITY') // Product type EQUITY
+                .addField(constants_1.FieldTag.MARKET_ID, 'REG') // Regular market
+                .addField(constants_1.FieldTag.MARKET_ID, 'FUT'); // Futures market
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info('Sent security list request for REG and FUT markets (EQUITY)');
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error('Error sending security list request:', error);
+            return null;
+        }
+    };
+    /**
+     * Send a security list request for REG market (INDEX)
+     */
+    const sendSecurityListRequestForIndex = () => {
+        try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send security list request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
+                .addField(constants_1.FieldTag.SECURITY_TYPE, 'INDEX') // Product type INDEX
+                .addField(constants_1.FieldTag.MARKET_ID, 'REG'); // Regular market
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info('Sent security list request for REG market (INDEX)');
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error('Error sending security list request:', error);
+            return null;
+        }
+    };
+    /**
+     * Send a market data request for index values
+     */
+    const sendIndexMarketDataRequest = (symbols) => {
+        try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send market data request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
+                .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
+                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0');
+            // Add symbols
+            message.addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString());
+            for (const symbol of symbols) {
+                message.addField(constants_1.FieldTag.SYMBOL, symbol);
+            }
+            // Add entry types (3 = Index Value)
+            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, '1');
+            message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, '3');
+            const rawMessage = message.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent market data request for indices: ${symbols.join(', ')}`);
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error('Error sending market data request:', error);
+            return null;
+        }
+    };
+    /**
+     * Send a market data subscription request for symbol data
+     */
+    const sendSymbolMarketDataSubscription = (symbols) => {
+        try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send market data subscription: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
                 .setSenderCompID(options.senderCompId)
@@ -869,34 +953,34 @@ function createFixClient(options) {
                 .setMsgSeqNum(msgSeqNum++)
                 .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
-                .addField(constants_1.FieldTag.MARKET_DEPTH, '0') // 0 = Full Book
-                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0'); // 0 = Full Refresh
+                .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
+                .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0');
             // Add symbols
-            message.addField(constants_1.FieldTag.NO_RELATED_SYM, kseSymbols.length.toString());
-            for (const symbol of kseSymbols) {
+            message.addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString());
+            for (const symbol of symbols) {
                 message.addField(constants_1.FieldTag.SYMBOL, symbol);
             }
             // Add entry types
-            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
-            for (const entryType of entryTypes) {
-                message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
-            }
-            // Add custom KSE identifier field if needed
-            if (options.rawData === 'kse') {
-                logger_1.default.info(`Adding raw data field: ${options.rawData} with length: ${options.rawDataLength}`);
-                message.addField(constants_1.FieldTag.RAW_DATA_LENGTH, options.rawDataLength?.toString() || '3');
-                message.addField(constants_1.FieldTag.RAW_DATA, 'kse');
-            }
+            message.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, '3');
+            message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, '0'); // Bid
+            message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, '1'); // Offer
+            message.addField(constants_1.FieldTag.MD_ENTRY_TYPE, '2'); // Trade
             const rawMessage = message.buildMessage();
-            logger_1.default.info(`KSE data request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-            socket.write("8=FIXT.1.19=25435=W49=realtime56=NMDUFISQ000134=5952=20230104-09:40:37.62442=20230104-09:40:37.00010201=30211500=08055=ASCR8538=T1140=2.57008503=0387=0.008504=0.0000268=2269=xe270=4.570000271=0.001023=0346=0269=xf270=0.570000271=0.001023=0346=010=250");
-            logger_1.default.info(`Sent KSE data request for indices: ${kseSymbols.join(', ')}`);
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent market data subscription for symbols: ${symbols.join(', ')}`);
             return requestId;
         }
         catch (error) {
-            logger_1.default.error('Error sending KSE data request:', error);
+            logger_1.default.error('Error sending market data subscription:', error);
             return null;
         }
+    };
+    // Start index data updates every 20 seconds
+    const startIndexUpdates = () => {
+        const indexSymbols = ['KSE100', 'KMI30'];
+        setInterval(() => {
+            sendIndexMarketDataRequest(indexSymbols);
+        }, 20000);
     };
     /**
      * Send a logon message to the server
@@ -1045,8 +1129,10 @@ function createFixClient(options) {
         sendMarketDataRequest,
         sendSecurityListRequest,
         sendTradingSessionStatusRequest,
-        sendKseDataRequest,
-        sendKseTradingStatusRequest: () => null,
+        sendSecurityListRequestForEquity,
+        sendSecurityListRequestForIndex,
+        sendIndexMarketDataRequest,
+        sendSymbolMarketDataSubscription,
         sendSecurityStatusRequest,
         sendLogon,
         sendLogout,
