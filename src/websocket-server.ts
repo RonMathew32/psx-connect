@@ -32,7 +32,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
   heartbeatIntervalSecs: 30,
   resetOnLogon: true
 }) {
-  const wss = new WebSocketServer({ 
+  const wss = new WebSocketServer({
     port,
     perMessageDeflate: false,
     clientTracking: true
@@ -110,15 +110,12 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
 
     const events: Record<string, (data: any) => WebSocketMessage> = {
       rawMessage: (data: string) => {
-        logger.info(`Transforming rawMessage: ${data}`);
         return { type: 'rawMessage', data, timestamp: Date.now() };
       },
       marketData: (data: MarketDataItem[]) => {
-        logger.info(`Transforming marketData: ${JSON.stringify(data)}`);
         return { type: 'marketData', data, timestamp: Date.now() };
       },
       kseData: (data: MarketDataItem[]) => {
-        logger.debug(`Transforming kseData: ${JSON.stringify(data)}`);
         return { type: 'kseData', data, timestamp: Date.now() };
       },
       logon: (data: { message: string; timestamp: number }) => {
@@ -162,7 +159,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
   wss.on('connection', (ws: WebSocket) => {
     logger.info('New WebSocket client connected');
     clients.add(ws);
-    
+
     // Send initial connection status
     ws.send(JSON.stringify({
       type: 'status',

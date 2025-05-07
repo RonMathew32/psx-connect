@@ -225,6 +225,7 @@ export function createFixClient(options: FixClientOptions) {
 
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
+      logger.info(`------------------------------------------------------------------------------------------------------------`);
       emitter.emit('rawMessage', parseFixMessage(message));
       const parsedMessage = parseFixMessage(message);
 
@@ -305,7 +306,7 @@ export function createFixClient(options: FixClientOptions) {
           sendHeartbeat(parsedMessage[FieldTag.TEST_REQ_ID]);
           break;
         case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-          logger.info(`Received market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          // logger.info(`Received market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           handleMarketDataSnapshot(parsedMessage);
           break;
         case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:

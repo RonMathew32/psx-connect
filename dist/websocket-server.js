@@ -91,15 +91,12 @@ function createWebSocketServer(port, fixConfig = {
             return;
         const events = {
             rawMessage: (data) => {
-                logger_1.default.info(`Transforming rawMessage: ${data}`);
                 return { type: 'rawMessage', data, timestamp: Date.now() };
             },
             marketData: (data) => {
-                logger_1.default.info(`Transforming marketData: ${JSON.stringify(data)}`);
                 return { type: 'marketData', data, timestamp: Date.now() };
             },
             kseData: (data) => {
-                logger_1.default.debug(`Transforming kseData: ${JSON.stringify(data)}`);
                 return { type: 'kseData', data, timestamp: Date.now() };
             },
             logon: (data) => {
