@@ -512,13 +512,29 @@ function createFixClient(options) {
         const serverSeq = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
         msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
         logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
-        // Send initial requests after a short delay to ensure sequence numbers are synced
+        // Send initial requests sequentially with delays
         setTimeout(() => {
             if (loggedIn) {
+                // First request
                 sendTradingSessionStatusRequest();
-                sendSecurityListRequestForEquity();
-                sendSecurityListRequestForIndex();
-                startIndexUpdates();
+                // Second request after 500ms
+                setTimeout(() => {
+                    if (loggedIn) {
+                        sendSecurityListRequestForEquity();
+                        // Third request after another 500ms
+                        setTimeout(() => {
+                            if (loggedIn) {
+                                sendSecurityListRequestForIndex();
+                                // Start index updates after all initial requests
+                                setTimeout(() => {
+                                    if (loggedIn) {
+                                        startIndexUpdates();
+                                    }
+                                }, 500);
+                            }
+                        }, 500);
+                    }
+                }, 500);
             }
         }, 1000);
     };
@@ -823,8 +839,8 @@ function createFixClient(options) {
      */
     const sendTradingSessionStatusRequest = () => {
         try {
-            if (!socket || !connected) {
-                logger_1.default.error('Cannot send trading session status request: not connected');
+            if (!socket || !connected || !loggedIn) {
+                logger_1.default.error('Cannot send trading session status request: not connected or not logged in');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
@@ -838,7 +854,7 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info('Sent trading session status request for REG market');
+            logger_1.default.info(`Sent trading session status request for REG market (seq: ${msgSeqNum - 1})`);
             return requestId;
         }
         catch (error) {
@@ -851,8 +867,8 @@ function createFixClient(options) {
      */
     const sendSecurityListRequestForEquity = () => {
         try {
-            if (!socket || !connected) {
-                logger_1.default.error('Cannot send security list request: not connected');
+            if (!socket || !connected || !loggedIn) {
+                logger_1.default.error('Cannot send security list request: not connected or not logged in');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
@@ -868,7 +884,7 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.MARKET_ID, 'FUT'); // Futures market
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info('Sent security list request for REG and FUT markets (EQUITY)');
+            logger_1.default.info(`Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
             return requestId;
         }
         catch (error) {
@@ -881,8 +897,8 @@ function createFixClient(options) {
      */
     const sendSecurityListRequestForIndex = () => {
         try {
-            if (!socket || !connected) {
-                logger_1.default.error('Cannot send security list request: not connected');
+            if (!socket || !connected || !loggedIn) {
+                logger_1.default.error('Cannot send security list request: not connected or not logged in');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
@@ -897,7 +913,7 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.MARKET_ID, 'REG'); // Regular market
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info('Sent security list request for REG market (INDEX)');
+            logger_1.default.info(`Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
             return requestId;
         }
         catch (error) {

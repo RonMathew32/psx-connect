@@ -557,13 +557,32 @@ export function createFixClient(options: FixClientOptions) {
     msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
     
-    // Send initial requests after a short delay to ensure sequence numbers are synced
+    // Send initial requests sequentially with delays
     setTimeout(() => {
       if (loggedIn) {
+        // First request
         sendTradingSessionStatusRequest();
-        sendSecurityListRequestForEquity();
-        sendSecurityListRequestForIndex();
-        startIndexUpdates();
+        
+        // Second request after 500ms
+        setTimeout(() => {
+          if (loggedIn) {
+            sendSecurityListRequestForEquity();
+            
+            // Third request after another 500ms
+            setTimeout(() => {
+              if (loggedIn) {
+                sendSecurityListRequestForIndex();
+                
+                // Start index updates after all initial requests
+                setTimeout(() => {
+                  if (loggedIn) {
+                    startIndexUpdates();
+                  }
+                }, 500);
+              }
+            }, 500);
+          }
+        }, 500);
       }
     }, 1000);
   };
@@ -912,8 +931,8 @@ export function createFixClient(options: FixClientOptions) {
    */
   const sendTradingSessionStatusRequest = (): string | null => {
     try {
-      if (!socket || !connected) {
-        logger.error('Cannot send trading session status request: not connected');
+      if (!socket || !connected || !loggedIn) {
+        logger.error('Cannot send trading session status request: not connected or not logged in');
         return null;
       }
 
@@ -929,7 +948,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info('Sent trading session status request for REG market');
+      logger.info(`Sent trading session status request for REG market (seq: ${msgSeqNum - 1})`);
       return requestId;
     } catch (error) {
       logger.error('Error sending trading session status request:', error);
@@ -942,8 +961,8 @@ export function createFixClient(options: FixClientOptions) {
    */
   const sendSecurityListRequestForEquity = (): string | null => {
     try {
-      if (!socket || !connected) {
-        logger.error('Cannot send security list request: not connected');
+      if (!socket || !connected || !loggedIn) {
+        logger.error('Cannot send security list request: not connected or not logged in');
         return null;
       }
 
@@ -961,7 +980,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info('Sent security list request for REG and FUT markets (EQUITY)');
+      logger.info(`Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
       return requestId;
     } catch (error) {
       logger.error('Error sending security list request:', error);
@@ -974,8 +993,8 @@ export function createFixClient(options: FixClientOptions) {
    */
   const sendSecurityListRequestForIndex = (): string | null => {
     try {
-      if (!socket || !connected) {
-        logger.error('Cannot send security list request: not connected');
+      if (!socket || !connected || !loggedIn) {
+        logger.error('Cannot send security list request: not connected or not logged in');
         return null;
       }
 
@@ -992,7 +1011,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info('Sent security list request for REG market (INDEX)');
+      logger.info(`Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
       return requestId;
     } catch (error) {
       logger.error('Error sending security list request:', error);
