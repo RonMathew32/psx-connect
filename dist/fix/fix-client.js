@@ -513,30 +513,30 @@ function createFixClient(options) {
         msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
         logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
         // Send initial requests sequentially with delays
-        setTimeout(() => {
-            if (loggedIn) {
-                // First request
-                sendTradingSessionStatusRequest();
-                // Second request after 500ms
-                setTimeout(() => {
-                    if (loggedIn) {
-                        sendSecurityListRequestForEquity();
-                        // Third request after another 500ms
-                        setTimeout(() => {
-                            if (loggedIn) {
-                                sendSecurityListRequestForIndex();
-                                // Start index updates after all initial requests
-                                setTimeout(() => {
-                                    if (loggedIn) {
-                                        startIndexUpdates();
-                                    }
-                                }, 500);
-                            }
-                        }, 500);
-                    }
-                }, 500);
-            }
-        }, 1000);
+        // setTimeout(() => {
+        //   if (loggedIn) {
+        //     // First request
+        //     sendTradingSessionStatusRequest();
+        //     // Second request after 500ms
+        //     setTimeout(() => {
+        //       if (loggedIn) {
+        //         sendSecurityListRequestForEquity();
+        //         // Third request after another 500ms
+        //         setTimeout(() => {
+        //           if (loggedIn) {
+        //             sendSecurityListRequestForIndex();
+        //             // Start index updates after all initial requests
+        //             setTimeout(() => {
+        //               if (loggedIn) {
+        //                 startIndexUpdates();
+        //               }
+        //             }, 500);
+        //           }
+        //         }, 500);
+        //       }
+        //     }, 500);
+        //   }
+        // }, 1000);
     };
     /**
      * Check server features to understand its capabilities
