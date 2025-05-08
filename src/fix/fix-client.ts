@@ -314,6 +314,7 @@ export function createFixClient(options: FixClientOptions) {
           handleMarketDataIncremental(parsedMessage);
           break;
         case MessageType.SECURITY_LIST:
+          logger.info(`Received SECURITY LIST for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           handleSecurityList(parsedMessage);
           break;
         case MessageType.TRADING_SESSION_STATUS:
@@ -556,6 +557,9 @@ export function createFixClient(options: FixClientOptions) {
     const serverSeq = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
     msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
+    
+    // Start heartbeat monitoring
+    startHeartbeatMonitoring();
     
     // Send initial requests sequentially with delays
     setTimeout(() => {
@@ -1243,12 +1247,19 @@ export function createFixClient(options: FixClientOptions) {
       logger.error(`Reject reason (Tag ${refTagId}): ${text || 'No reason provided'}`);
 
       // If it's a sequence number issue, try to resync
-      if (refTagId === '11') { // 11 is the tag for sequence number
+      if (refTagId === '34' || text?.includes('MsgSeqNum')) { // 34 is the tag for sequence number
         logger.info('Sequence number mismatch detected, attempting to resync...');
         // Get server's current sequence number
         const serverSeq = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
         msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
         logger.info(`Resynced sequence numbers. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
+        
+        // Re-send the last message with correct sequence number
+        if (loggedIn) {
+          logger.info('Re-sending last message with corrected sequence number...');
+          // Re-send the security list request
+          sendSecurityListRequestForEquity();
+        }
       }
 
       // Emit reject event

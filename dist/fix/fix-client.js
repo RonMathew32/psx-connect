@@ -296,6 +296,7 @@ function createFixClient(options) {
                     handleMarketDataIncremental(parsedMessage);
                     break;
                 case constants_1.MessageType.SECURITY_LIST:
+                    logger_1.default.info(`Received SECURITY LIST for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
                     handleSecurityList(parsedMessage);
                     break;
                 case constants_1.MessageType.TRADING_SESSION_STATUS:
@@ -512,6 +513,8 @@ function createFixClient(options) {
         const serverSeq = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
         msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
         logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
+        // Start heartbeat monitoring
+        startHeartbeatMonitoring();
         // Send initial requests sequentially with delays
         setTimeout(() => {
             if (loggedIn) {
@@ -1119,12 +1122,18 @@ function createFixClient(options) {
             logger_1.default.error(`Received REJECT message for sequence number ${refSeqNum}`);
             logger_1.default.error(`Reject reason (Tag ${refTagId}): ${text || 'No reason provided'}`);
             // If it's a sequence number issue, try to resync
-            if (refTagId === '11') { // 11 is the tag for sequence number
+            if (refTagId === '34' || text?.includes('MsgSeqNum')) { // 34 is the tag for sequence number
                 logger_1.default.info('Sequence number mismatch detected, attempting to resync...');
                 // Get server's current sequence number
                 const serverSeq = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
                 msgSeqNum = serverSeq + 1; // Set our next sequence number to be one more than server's
                 logger_1.default.info(`Resynced sequence numbers. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
+                // Re-send the last message with correct sequence number
+                if (loggedIn) {
+                    logger_1.default.info('Re-sending last message with corrected sequence number...');
+                    // Re-send the security list request
+                    sendSecurityListRequestForEquity();
+                }
             }
             // Emit reject event
             emitter.emit('reject', {
