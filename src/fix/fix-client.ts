@@ -594,13 +594,13 @@ export function createFixClient(options: FixClientOptions) {
                   if (loggedIn) {
                     startIndexUpdates();
                   }
-                }, 500);
+                }, 1000);
               }
-            }, 500);
+            }, 1000);
           }
-        }, 500);
+        }, 1000);
       }
-    }, 1000);
+    }, 2000);
   };
 
   /**
