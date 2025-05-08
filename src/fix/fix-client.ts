@@ -425,32 +425,59 @@ export function createFixClient(options: FixClientOptions) {
   const handleSecurityList = (message: ParsedFixMessage): void => {
     try {
       const reqId = message[FieldTag.SECURITY_REQ_ID];
-      logger.info(`[SECURITY_LIST] Received security list for request: ${reqId}`);
+      const securityReqType = message[FieldTag.SECURITY_LIST_REQUEST_TYPE];
+      const securityType = message[FieldTag.SECURITY_TYPE];
+      const marketId = message[FieldTag.MARKET_ID];
+      
+      logger.info(`[SECURITY_LIST] Received security list response:`);
+      logger.info(`[SECURITY_LIST] - Request ID: ${reqId}`);
+      logger.info(`[SECURITY_LIST] - Security Request Type: ${securityReqType}`);
+      logger.info(`[SECURITY_LIST] - Security Type: ${securityType}`);
+      logger.info(`[SECURITY_LIST] - Market ID: ${marketId}`);
 
       // Extract securities
       const securities: SecurityInfo[] = [];
       const noSecurities = parseInt(message[FieldTag.NO_RELATED_SYM] || '0', 10);
+      logger.info(`[SECURITY_LIST] Number of securities in response: ${noSecurities}`);
 
       if (noSecurities > 0) {
-        // Simplified parsing of security list - real implementation would handle groups properly
-        // This is just a skeleton
+        // Log all fields in the message for debugging
+        logger.info(`[SECURITY_LIST] Message fields: ${JSON.stringify(message)}`);
+        
+        // Parse security list entries
         for (let i = 0; i < 100; i++) {  // Safe upper limit
           const symbol = message[`${FieldTag.SYMBOL}.${i}`] || message[FieldTag.SYMBOL];
           const securityType = message[`${FieldTag.SECURITY_TYPE}.${i}`] || message[FieldTag.SECURITY_TYPE];
+          const securityDesc = message[`${FieldTag.SECURITY_DESC}.${i}`] || message[FieldTag.SECURITY_DESC];
+          const marketId = message[`${FieldTag.MARKET_ID}.${i}`] || message[FieldTag.MARKET_ID];
 
-          if (!symbol) break;  // No more securities
+          if (!symbol) {
+            logger.info(`[SECURITY_LIST] No more securities found at index ${i}`);
+            break;
+          }
+
+          logger.info(`[SECURITY_LIST] Processing security ${i + 1}:`);
+          logger.info(`[SECURITY_LIST] - Symbol: ${symbol}`);
+          logger.info(`[SECURITY_LIST] - Security Type: ${securityType}`);
+          logger.info(`[SECURITY_LIST] - Description: ${securityDesc}`);
+          logger.info(`[SECURITY_LIST] - Market ID: ${marketId}`);
 
           securities.push({
             symbol,
             securityType: securityType || '',
-            securityDesc: message[`${FieldTag.SECURITY_DESC}.${i}`] || message[FieldTag.SECURITY_DESC]
-          });
+            securityDesc: securityDesc || '',
+            marketId: marketId || ''
+          } as SecurityInfo);
         }
+      } else {
+        logger.warn(`[SECURITY_LIST] No securities found in response`);
       }
 
       if (securities.length > 0) {
-        logger.info(`[SECURITY_LIST] Extracted ${securities.length} securities`);
+        logger.info(`[SECURITY_LIST] Successfully extracted ${securities.length} securities`);
         emitter.emit('securityList', securities);
+      } else {
+        logger.warn(`[SECURITY_LIST] No securities were extracted from the response`);
       }
     } catch (error) {
       logger.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
@@ -951,11 +978,13 @@ export function createFixClient(options: FixClientOptions) {
   const sendSecurityListRequestForEquity = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
-        logger.error('Cannot send security list request: not connected or not logged in');
+        logger.error('[SECURITY_LIST] Cannot send security list request: not connected or not logged in');
         return null;
       }
 
       const requestId = uuidv4();
+      logger.info(`[SECURITY_LIST] Sending security list request for REG and FUT markets (EQUITY) with ID: ${requestId}`);
+      
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -968,11 +997,12 @@ export function createFixClient(options: FixClientOptions) {
         .addField(FieldTag.MARKET_ID, 'FUT'); // Futures market
 
       const rawMessage = message.buildMessage();
+      logger.info(`[SECURITY_LIST] Sending security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
       socket.write(rawMessage);
-      logger.info(`Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
+      logger.info(`[SECURITY_LIST] Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
       return requestId;
     } catch (error) {
-      logger.error('Error sending security list request:', error);
+      logger.error(`[SECURITY_LIST] Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   };
@@ -983,11 +1013,13 @@ export function createFixClient(options: FixClientOptions) {
   const sendSecurityListRequestForIndex = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
-        logger.error('Cannot send security list request: not connected or not logged in');
+        logger.error('[SECURITY_LIST] Cannot send security list request: not connected or not logged in');
         return null;
       }
 
       const requestId = uuidv4();
+      logger.info(`[SECURITY_LIST] Sending security list request for REG market (INDEX) with ID: ${requestId}`);
+      
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -999,11 +1031,12 @@ export function createFixClient(options: FixClientOptions) {
         .addField(FieldTag.MARKET_ID, 'REG'); // Regular market
 
       const rawMessage = message.buildMessage();
+      logger.info(`[SECURITY_LIST] Sending security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
       socket.write(rawMessage);
-      logger.info(`Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
+      logger.info(`[SECURITY_LIST] Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
       return requestId;
     } catch (error) {
-      logger.error('Error sending security list request:', error);
+      logger.error(`[SECURITY_LIST] Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   };

@@ -386,28 +386,53 @@ function createFixClient(options) {
     const handleSecurityList = (message) => {
         try {
             const reqId = message[constants_1.FieldTag.SECURITY_REQ_ID];
-            logger_1.default.info(`[SECURITY_LIST] Received security list for request: ${reqId}`);
+            const securityReqType = message[constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE];
+            const securityType = message[constants_1.FieldTag.SECURITY_TYPE];
+            const marketId = message[constants_1.FieldTag.MARKET_ID];
+            logger_1.default.info(`[SECURITY_LIST] Received security list response:`);
+            logger_1.default.info(`[SECURITY_LIST] - Request ID: ${reqId}`);
+            logger_1.default.info(`[SECURITY_LIST] - Security Request Type: ${securityReqType}`);
+            logger_1.default.info(`[SECURITY_LIST] - Security Type: ${securityType}`);
+            logger_1.default.info(`[SECURITY_LIST] - Market ID: ${marketId}`);
             // Extract securities
             const securities = [];
             const noSecurities = parseInt(message[constants_1.FieldTag.NO_RELATED_SYM] || '0', 10);
+            logger_1.default.info(`[SECURITY_LIST] Number of securities in response: ${noSecurities}`);
             if (noSecurities > 0) {
-                // Simplified parsing of security list - real implementation would handle groups properly
-                // This is just a skeleton
+                // Log all fields in the message for debugging
+                logger_1.default.info(`[SECURITY_LIST] Message fields: ${JSON.stringify(message)}`);
+                // Parse security list entries
                 for (let i = 0; i < 100; i++) { // Safe upper limit
                     const symbol = message[`${constants_1.FieldTag.SYMBOL}.${i}`] || message[constants_1.FieldTag.SYMBOL];
                     const securityType = message[`${constants_1.FieldTag.SECURITY_TYPE}.${i}`] || message[constants_1.FieldTag.SECURITY_TYPE];
-                    if (!symbol)
-                        break; // No more securities
+                    const securityDesc = message[`${constants_1.FieldTag.SECURITY_DESC}.${i}`] || message[constants_1.FieldTag.SECURITY_DESC];
+                    const marketId = message[`${constants_1.FieldTag.MARKET_ID}.${i}`] || message[constants_1.FieldTag.MARKET_ID];
+                    if (!symbol) {
+                        logger_1.default.info(`[SECURITY_LIST] No more securities found at index ${i}`);
+                        break;
+                    }
+                    logger_1.default.info(`[SECURITY_LIST] Processing security ${i + 1}:`);
+                    logger_1.default.info(`[SECURITY_LIST] - Symbol: ${symbol}`);
+                    logger_1.default.info(`[SECURITY_LIST] - Security Type: ${securityType}`);
+                    logger_1.default.info(`[SECURITY_LIST] - Description: ${securityDesc}`);
+                    logger_1.default.info(`[SECURITY_LIST] - Market ID: ${marketId}`);
                     securities.push({
                         symbol,
                         securityType: securityType || '',
-                        securityDesc: message[`${constants_1.FieldTag.SECURITY_DESC}.${i}`] || message[constants_1.FieldTag.SECURITY_DESC]
+                        securityDesc: securityDesc || '',
+                        marketId: marketId || ''
                     });
                 }
             }
+            else {
+                logger_1.default.warn(`[SECURITY_LIST] No securities found in response`);
+            }
             if (securities.length > 0) {
-                logger_1.default.info(`[SECURITY_LIST] Extracted ${securities.length} securities`);
+                logger_1.default.info(`[SECURITY_LIST] Successfully extracted ${securities.length} securities`);
                 emitter.emit('securityList', securities);
+            }
+            else {
+                logger_1.default.warn(`[SECURITY_LIST] No securities were extracted from the response`);
             }
         }
         catch (error) {
@@ -848,10 +873,11 @@ function createFixClient(options) {
     const sendSecurityListRequestForEquity = () => {
         try {
             if (!socket || !connected || !loggedIn) {
-                logger_1.default.error('Cannot send security list request: not connected or not logged in');
+                logger_1.default.error('[SECURITY_LIST] Cannot send security list request: not connected or not logged in');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
+            logger_1.default.info(`[SECURITY_LIST] Sending security list request for REG and FUT markets (EQUITY) with ID: ${requestId}`);
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
@@ -863,12 +889,13 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.MARKET_ID, 'REG') // Regular market
                 .addField(constants_1.FieldTag.MARKET_ID, 'FUT'); // Futures market
             const rawMessage = message.buildMessage();
+            logger_1.default.info(`[SECURITY_LIST] Sending security list request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             socket.write(rawMessage);
-            logger_1.default.info(`Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
+            logger_1.default.info(`[SECURITY_LIST] Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
             return requestId;
         }
         catch (error) {
-            logger_1.default.error('Error sending security list request:', error);
+            logger_1.default.error(`[SECURITY_LIST] Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
             return null;
         }
     };
@@ -878,10 +905,11 @@ function createFixClient(options) {
     const sendSecurityListRequestForIndex = () => {
         try {
             if (!socket || !connected || !loggedIn) {
-                logger_1.default.error('Cannot send security list request: not connected or not logged in');
+                logger_1.default.error('[SECURITY_LIST] Cannot send security list request: not connected or not logged in');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
+            logger_1.default.info(`[SECURITY_LIST] Sending security list request for REG market (INDEX) with ID: ${requestId}`);
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
@@ -892,12 +920,13 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.SECURITY_TYPE, 'INDEX') // Product type INDEX
                 .addField(constants_1.FieldTag.MARKET_ID, 'REG'); // Regular market
             const rawMessage = message.buildMessage();
+            logger_1.default.info(`[SECURITY_LIST] Sending security list request message: ${rawMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             socket.write(rawMessage);
-            logger_1.default.info(`Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
+            logger_1.default.info(`[SECURITY_LIST] Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
             return requestId;
         }
         catch (error) {
-            logger_1.default.error('Error sending security list request:', error);
+            logger_1.default.error(`[SECURITY_LIST] Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
             return null;
         }
     };
