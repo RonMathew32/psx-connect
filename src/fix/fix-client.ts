@@ -558,33 +558,33 @@ export function createFixClient(options: FixClientOptions) {
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeq}, Next sequence: ${msgSeqNum}`);
     
     // Send initial requests sequentially with delays
-    // setTimeout(() => {
-    //   if (loggedIn) {
-    //     // First request
-    //     sendTradingSessionStatusRequest();
+    setTimeout(() => {
+      if (loggedIn) {
+        // First request
+        sendTradingSessionStatusRequest();
         
-    //     // Second request after 500ms
-    //     setTimeout(() => {
-    //       if (loggedIn) {
-    //         sendSecurityListRequestForEquity();
+        // Second request after 500ms
+        setTimeout(() => {
+          if (loggedIn) {
+            sendSecurityListRequestForEquity();
             
-    //         // Third request after another 500ms
-    //         setTimeout(() => {
-    //           if (loggedIn) {
-    //             sendSecurityListRequestForIndex();
+            // Third request after another 500ms
+            setTimeout(() => {
+              if (loggedIn) {
+                sendSecurityListRequestForIndex();
                 
-    //             // Start index updates after all initial requests
-    //             setTimeout(() => {
-    //               if (loggedIn) {
-    //                 startIndexUpdates();
-    //               }
-    //             }, 500);
-    //           }
-    //         }, 500);
-    //       }
-    //     }, 500);
-    //   }
-    // }, 1000);
+                // Start index updates after all initial requests
+                setTimeout(() => {
+                  if (loggedIn) {
+                    startIndexUpdates();
+                  }
+                }, 500);
+              }
+            }, 500);
+          }
+        }, 500);
+      }
+    }, 1000);
   };
 
   /**
