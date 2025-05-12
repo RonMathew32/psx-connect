@@ -35,6 +35,9 @@ function createWebSocketServer(port, fixConfig = {
                 return;
             }
             const messageStr = JSON.stringify(message);
+            if (message.type === 'tradingSessionStatus') {
+                logger_1.default.info(`Broadcasting trading session status: ${messageStr}`);
+            }
             logger_1.default.debug(`Broadcasting to ${clients.size} clients: ${messageStr}`);
             clients.forEach((client) => {
                 if (client.readyState === ws_1.WebSocket.OPEN) {
@@ -96,6 +99,10 @@ function createWebSocketServer(port, fixConfig = {
             marketData: (data) => {
                 return { type: 'marketData', data, timestamp: Date.now() };
             },
+            tradingSessionStatus: (data) => {
+                logger_1.default.debug(`Transforming trading session status: ${JSON.stringify(data)}`);
+                return { type: 'tradingSessionStatus', data, timestamp: Date.now() };
+            },
             kseData: (data) => {
                 return { type: 'kseData', data, timestamp: Date.now() };
             },
@@ -112,7 +119,7 @@ function createWebSocketServer(port, fixConfig = {
             fixClient.on(event, (data) => {
                 try {
                     const message = transformer(data);
-                    // logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
+                    logger_1.default.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
                     broadcast(message);
                 }
                 catch (error) {

@@ -448,6 +448,7 @@ function createFixClient(options) {
             const sessionId = message[constants_1.FieldTag.TRADING_SESSION_ID];
             const status = message[constants_1.FieldTag.TRAD_SES_STATUS];
             logger_1.default.info(`[TRADING_STATUS] Received trading session status for request: ${reqId}, session: ${sessionId}, status: ${status}`);
+            logger_1.default.info(`[TRADING_STATUS]: ${message}`);
             const sessionInfo = {
                 sessionId: sessionId || '',
                 status: status || '',

@@ -494,6 +494,7 @@ export function createFixClient(options: FixClientOptions) {
       const status = message[FieldTag.TRAD_SES_STATUS];
 
       logger.info(`[TRADING_STATUS] Received trading session status for request: ${reqId}, session: ${sessionId}, status: ${status}`);
+      logger.info(`[TRADING_STATUS]: ${message}`);
 
       const sessionInfo: TradingSessionInfo = {
         sessionId: sessionId || '',

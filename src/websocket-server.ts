@@ -52,6 +52,10 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
         return;
       }
       const messageStr = JSON.stringify(message);
+      if (message.type === 'tradingSessionStatus') {
+        logger.info(`Broadcasting trading session status: ${messageStr}`);
+      }
+
       logger.debug(`Broadcasting to ${clients.size} clients: ${messageStr}`);
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
