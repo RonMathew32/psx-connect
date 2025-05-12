@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { createFixClient, FixClient } from './fix/fix-client';
 import logger from './utils/logger';
-import { MarketDataItem, TradingSessionInfo } from './types';
+import { MarketDataItem, TradingSessionInfo, SecurityInfo } from './types';
 
 interface WebSocketMessage {
   type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'securityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
@@ -112,7 +112,6 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
   const setupFixClientListeners = (): void => {
     if (!fixClient) return;
 
-
     const events: Record<string, (data: any) => WebSocketMessage> = {
       rawMessage: (data: string) => {
         return { type: 'rawMessage', data, timestamp: Date.now() };
@@ -123,7 +122,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       tradingSessionStatus: (data: TradingSessionInfo) => {
         return { type: 'tradingSessionStatus', data, timestamp: Date.now() };
       },
-      securityList: (data: any) => {
+      securityList: (data: SecurityInfo[]) => {
         return { type: 'securityList', data, timestamp: Date.now() };
       },
       kseData: (data: MarketDataItem[]) => {
