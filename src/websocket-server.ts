@@ -1,11 +1,11 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { createFixClient, FixClient } from './fix/fix-client';
 import logger from './utils/logger';
-import { MarketDataItem } from './types';
+import { MarketDataItem, TradingSessionInfo } from './types';
 
 interface WebSocketMessage {
-  type: 'rawMessage' | 'marketData' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
-  data?: MarketDataItem[] | string;
+  type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
+  data?: MarketDataItem[] | string | TradingSessionInfo;
   message?: string;
   timestamp?: number;
   connected?: boolean;
@@ -115,6 +115,10 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       marketData: (data: MarketDataItem[]) => {
         return { type: 'marketData', data, timestamp: Date.now() };
       },
+      tradingSessionStatus: (data: TradingSessionInfo) => {
+        logger.debug(`Transforming trading session status: ${JSON.stringify(data)}`);
+        return { type: 'tradingSessionStatus', data, timestamp: Date.now() };
+      },
       kseData: (data: MarketDataItem[]) => {
         return { type: 'kseData', data, timestamp: Date.now() };
       },
@@ -132,7 +136,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       fixClient!.on(event, (data: any) => {
         try {
           const message = transformer(data);
-          // logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
+          logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
           broadcast(message);
         } catch (error) {
           logger.error(`Error processing ${event}: ${error}`);
