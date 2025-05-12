@@ -4,8 +4,8 @@ import logger from './utils/logger';
 import { MarketDataItem, TradingSessionInfo } from './types';
 
 interface WebSocketMessage {
-  type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
-  data?: MarketDataItem[] | string | TradingSessionInfo;
+  type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'securityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
+  data?: MarketDataItem[] | string | TradingSessionInfo | any;
   message?: string;
   timestamp?: number;
   connected?: boolean;
@@ -112,22 +112,6 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
   const setupFixClientListeners = (): void => {
     if (!fixClient) return;
 
-    // Add direct listener for trading session status
-    fixClient.on('tradingSessionStatus', (data: TradingSessionInfo) => {
-      logger.info('Received trading session status directly:', JSON.stringify(data));
-      try {
-        const message: WebSocketMessage = {
-          type: 'tradingSessionStatus',
-          data,
-          timestamp: Date.now()
-        };
-        logger.info('Broadcasting trading session status message:', JSON.stringify(message));
-        broadcast(message);
-      } catch (error) {
-        logger.error(`Error processing trading session status: ${error}`);
-        broadcastError(`Error processing trading session status: ${error}`);
-      }
-    });
 
     const events: Record<string, (data: any) => WebSocketMessage> = {
       rawMessage: (data: string) => {
@@ -135,6 +119,12 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       },
       marketData: (data: MarketDataItem[]) => {
         return { type: 'marketData', data, timestamp: Date.now() };
+      },
+      tradingSessionStatus: (data: TradingSessionInfo) => {
+        return { type: 'tradingSessionStatus', data, timestamp: Date.now() };
+      },
+      securityList: (data: any) => {
+        return { type: 'securityList', data, timestamp: Date.now() };
       },
       kseData: (data: MarketDataItem[]) => {
         return { type: 'kseData', data, timestamp: Date.now() };

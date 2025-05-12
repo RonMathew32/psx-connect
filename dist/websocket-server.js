@@ -92,29 +92,18 @@ function createWebSocketServer(port, fixConfig = {
     const setupFixClientListeners = () => {
         if (!fixClient)
             return;
-        // Add direct listener for trading session status
-        fixClient.on('tradingSessionStatus', (data) => {
-            logger_1.default.info('Received trading session status directly:', JSON.stringify(data));
-            try {
-                const message = {
-                    type: 'tradingSessionStatus',
-                    data,
-                    timestamp: Date.now()
-                };
-                logger_1.default.info('Broadcasting trading session status message:', JSON.stringify(message));
-                broadcast(message);
-            }
-            catch (error) {
-                logger_1.default.error(`Error processing trading session status: ${error}`);
-                broadcastError(`Error processing trading session status: ${error}`);
-            }
-        });
         const events = {
             rawMessage: (data) => {
                 return { type: 'rawMessage', data, timestamp: Date.now() };
             },
             marketData: (data) => {
                 return { type: 'marketData', data, timestamp: Date.now() };
+            },
+            tradingSessionStatus: (data) => {
+                return { type: 'tradingSessionStatus', data, timestamp: Date.now() };
+            },
+            securityList: (data) => {
+                return { type: 'securityList', data, timestamp: Date.now() };
             },
             kseData: (data) => {
                 return { type: 'kseData', data, timestamp: Date.now() };
