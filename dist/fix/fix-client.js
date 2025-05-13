@@ -277,11 +277,11 @@ function createFixClient(options) {
                     break;
                 case constants_1.MessageType.TRADING_SESSION_STATUS:
                     logger_1.default.info(`[TRADING_STATUS] Handling trading session status update`);
-                    handleTradingSessionStatus(parsedMessage);
+                    // handleTradingSessionStatus(parsedMessage);
                     break;
                 case 'f': // Trading Status - specific PSX format
                     logger_1.default.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
-                    handleTradingStatus(parsedMessage);
+                    // handleTradingStatus(parsedMessage);
                     break;
                 case constants_1.MessageType.REJECT:
                     logger_1.default.error(`[REJECT] Handling reject message`);
@@ -911,12 +911,13 @@ function createFixClient(options) {
         logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
+        sendSecurityListRequestForEquity();
         // Send initial requests sequentially with delays
         setTimeout(() => {
             if (loggedIn) {
                 // First request
                 // sendTradingSessionStatusRequest();
-                sendSecurityListRequestForEquity();
+                // sendSecurityListRequestForEquity();
                 // Second request after 500ms
                 setTimeout(() => {
                     if (loggedIn) {

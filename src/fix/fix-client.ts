@@ -304,11 +304,11 @@ export function createFixClient(options: FixClientOptions) {
           break;
         case MessageType.TRADING_SESSION_STATUS:
           logger.info(`[TRADING_STATUS] Handling trading session status update`);
-          handleTradingSessionStatus(parsedMessage);
+          // handleTradingSessionStatus(parsedMessage);
           break;
         case 'f': // Trading Status - specific PSX format
           logger.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-          handleTradingStatus(parsedMessage);
+          // handleTradingStatus(parsedMessage);
           break;
         case MessageType.REJECT:
           logger.error(`[REJECT] Handling reject message`);
@@ -1002,13 +1002,15 @@ export function createFixClient(options: FixClientOptions) {
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
+    sendSecurityListRequestForEquity();
+
 
     // Send initial requests sequentially with delays
     setTimeout(() => {
       if (loggedIn) {
         // First request
         // sendTradingSessionStatusRequest();
-        sendSecurityListRequestForEquity();
+        // sendSecurityListRequestForEquity();
 
 
         // Second request after 500ms
