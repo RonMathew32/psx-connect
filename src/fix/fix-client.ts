@@ -492,18 +492,93 @@ export function createFixClient(options: FixClientOptions) {
       const reqId = message[FieldTag.TRAD_SES_REQ_ID];
       const sessionId = message[FieldTag.TRADING_SESSION_ID];
       const status = message[FieldTag.TRAD_SES_STATUS];
+      const startTime = message[FieldTag.START_TIME];
+      const endTime = message[FieldTag.END_TIME];
 
-      logger.info(`[TRADING_STATUS] Received trading session status for request: ${reqId}, session: ${sessionId}, status: ${status}`);
-      logger.info(`[TRADING_STATUS]: ${message}`);
+      // Detailed logging to troubleshoot missing data
+      logger.info(`[TRADING_STATUS] Received trading session status for request: ${reqId || 'unknown'}`);
+      logger.info(`[TRADING_STATUS] Session ID (Tag 336): ${sessionId || 'undefined'}`);
+      logger.info(`[TRADING_STATUS] Status (Tag 340): ${status || 'undefined'}`);
+      logger.info(`[TRADING_STATUS] Start Time (Tag 341): ${startTime || 'undefined'}`);
+      logger.info(`[TRADING_STATUS] End Time (Tag 342): ${endTime || 'undefined'}`);
 
+      // Alternative field names for PSX-specific formats
+      // Sometimes exchanges use non-standard field tags or field locations
+      let resolvedSessionId = sessionId;
+      let resolvedStatus = status;
+      let resolvedStartTime = startTime;
+      let resolvedEndTime = endTime;
+
+      // Check if standard fields are undefined, try alternative fields
+      if (!resolvedSessionId) {
+        // Try alternative tags that might contain session ID (e.g. 1151, 1300, 1301)
+        const altSessionId = message['1151'] || message['1300'] || message['1301'];
+        if (altSessionId) {
+          logger.info(`[TRADING_STATUS] Found session ID in alternative tag: ${altSessionId}`);
+          resolvedSessionId = altSessionId;
+        } else {
+          // Last resort - if we have market ID but no session ID, use market ID
+          const marketId = message[FieldTag.MARKET_ID];
+          if (marketId) {
+            logger.info(`[TRADING_STATUS] Using market ID as session ID: ${marketId}`);
+            resolvedSessionId = marketId;
+          } else {
+            // If all else fails, default to 'REG'
+            logger.warn(`[TRADING_STATUS] No session ID found, defaulting to 'REG'`);
+            resolvedSessionId = 'REG';
+          }
+        }
+      }
+
+      if (!resolvedStatus) {
+        // Try alternative tags that might contain status (e.g. 326, 327, 328)
+        const altStatus = message['326'] || message['327'] || message['328'];
+        if (altStatus) {
+          logger.info(`[TRADING_STATUS] Found status in alternative tag: ${altStatus}`);
+          resolvedStatus = altStatus;
+        } else {
+          // If TradingSessionSubID exists, try to derive status from it
+          const tradingSessionSubID = message['625'];
+          if (tradingSessionSubID) {
+            if (tradingSessionSubID.includes('OPEN')) resolvedStatus = '2';
+            else if (tradingSessionSubID.includes('CLOS')) resolvedStatus = '3';
+            else if (tradingSessionSubID.includes('PRE')) resolvedStatus = '4';
+            
+            if (resolvedStatus) {
+              logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from TradingSessionSubID: ${tradingSessionSubID}`);
+            }
+          } else {
+            // Last resort - check if text field might indicate status
+            const text = message[FieldTag.TEXT];
+            if (text) {
+              if (text.includes('OPEN')) resolvedStatus = '2';
+              else if (text.includes('CLOSE')) resolvedStatus = '3';
+              else if (text.includes('HALT')) resolvedStatus = '1';
+              
+              if (resolvedStatus) {
+                logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from text: ${text}`);
+              }
+            }
+          }
+        }
+      }
+
+      // Some exchanges don't provide start/end times in standard fields
+      // Try to find them in other fields if needed
+
+      // Construct session info with resolved values
       const sessionInfo: TradingSessionInfo = {
-        sessionId: sessionId || '',
-        status: status || '',
-        startTime: message[FieldTag.START_TIME],
-        endTime: message[FieldTag.END_TIME]
+        sessionId: resolvedSessionId || '',
+        status: resolvedStatus || '',
+        startTime: resolvedStartTime,
+        endTime: resolvedEndTime
       };
 
+      logger.info(`[TRADING_STATUS] Emitting session info: ${JSON.stringify(sessionInfo)}`);
       emitter.emit('tradingSessionStatus', sessionInfo);
+      
+      // Log the complete raw message for debugging
+      logger.info(`[TRADING_STATUS] Complete raw message: ${JSON.stringify(message)}`);
     } catch (error) {
       logger.error(`[TRADING_STATUS] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
     }
