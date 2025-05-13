@@ -237,10 +237,35 @@ export function createFixClient(options: FixClientOptions) {
 
       // Track server's sequence number if available
       if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
-        serverSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
-        logger.info(`Server sequence number: ${serverSeqNum}`);
-        // Update our sequence number to be one more than server's
-        msgSeqNum = serverSeqNum + 1;
+        const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+        
+        // Special handling for logout and reject messages with sequence errors
+        const msgType = parsedMessage[FieldTag.MSG_TYPE];
+        const text = parsedMessage[FieldTag.TEXT] || '';
+        
+        // Check if this is a sequence error message
+        const isSequenceError = text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence');
+        
+        if ((msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) && isSequenceError) {
+          // For sequence errors, don't update our sequence counter
+          // This will be handled in the handleLogout or handleReject methods
+          logger.warn(`Received ${msgType} with sequence error: ${text}`);
+        } else {
+          // For normal messages, track the server's sequence
+          serverSeqNum = incomingSeqNum;
+          logger.info(`Server sequence number updated to: ${serverSeqNum}`);
+          
+          // Only update our outgoing sequence if this isn't a duplicate message
+          // or a resend of an old message (possDup flag not set)
+          if (!parsedMessage[FieldTag.POSS_DUP_FLAG] || parsedMessage[FieldTag.POSS_DUP_FLAG] !== 'Y') {
+            // Our next message should be one more than what the server expects
+            // The server expects our next message to have a sequence number of serverSeqNum + 1
+            if (msgSeqNum <= serverSeqNum) {
+              msgSeqNum = serverSeqNum + 1;
+              logger.info(`Updated our next sequence number to: ${msgSeqNum}`);
+            }
+          }
+        }
       }
 
       // Log message type for debugging
@@ -1028,13 +1053,23 @@ export function createFixClient(options: FixClientOptions) {
 
     // Get server's sequence number
     serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
-    msgSeqNum = serverSeqNum + 1; // Set our next sequence number to be one more than server's
+    
+    // If reset sequence number flag is Y, we should reset our sequence counter to 2
+    // (1 for the server's logon acknowledgment, and our next message will be 2)
+    if (message[FieldTag.RESET_SEQ_NUM_FLAG] === 'Y') {
+      msgSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
+      logger.info(`Reset sequence flag is Y, setting our next sequence number to ${msgSeqNum}`);
+    } else {
+      // Otherwise, set our next sequence to be one more than the server's
+      msgSeqNum = serverSeqNum + 1;
+    }
+    
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
     
-    // Wait a moment for the connection to stabilize before sending any requests
+    // Wait a longer moment for the connection to stabilize before sending any requests
     setTimeout(() => {
       // Send security list requests with a delay between them
       logger.info('[SECURITY_LIST] Sending equity security list request after login');
@@ -1046,8 +1081,8 @@ export function createFixClient(options: FixClientOptions) {
           logger.info('[SECURITY_LIST] Sending index security list request after delay');
           sendSecurityListRequestForIndex();
         }
-      }, 3000);
-    }, 1000);
+      }, 5000); // Increase from 3000 to 5000 ms
+    }, 2000); // Increase from 1000 to 2000 ms
   };
 
   /**
@@ -1249,22 +1284,65 @@ export function createFixClient(options: FixClientOptions) {
     if (text && (text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence'))) {
       logger.warn(`Received logout due to sequence number issue: ${text}`);
       
-      // Perform a full disconnect and reconnect with sequence reset
-      if (socket) {
-        logger.info('Disconnecting due to sequence number error');
-        socket.destroy();
-        socket = null;
-      }
-      
-      // Wait a moment before reconnecting
-      setTimeout(() => {
-        // Reset sequence numbers
-        msgSeqNum = 1;
-        serverSeqNum = 1;
+      // Try to parse the expected sequence number from the message
+      const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
+      if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
+        const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
+        if (!isNaN(expectedSeqNum)) {
+          logger.info(`Server expects sequence number: ${expectedSeqNum}`);
+          
+          // Perform a full disconnect and reconnect with sequence reset
+          if (socket) {
+            logger.info('Disconnecting due to sequence number error');
+            socket.destroy();
+            socket = null;
+          }
+          
+          // Wait a moment before reconnecting
+          setTimeout(() => {
+            // Reset sequence numbers to what the server expects
+            msgSeqNum = expectedSeqNum;
+            serverSeqNum = expectedSeqNum - 1;
+            
+            logger.info(`Reconnecting with adjusted sequence numbers: msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
+            connect();
+          }, 2000);
+        } else {
+          // If we can't parse the expected sequence number, do a full reset
+          logger.info('Cannot parse expected sequence number, performing full reset');
+          
+          if (socket) {
+            socket.destroy();
+            socket = null;
+          }
+          
+          setTimeout(() => {
+            // Reset sequence numbers
+            msgSeqNum = 1;
+            serverSeqNum = 1;
+            
+            logger.info('Reconnecting with fully reset sequence numbers');
+            connect();
+          }, 2000);
+        }
+      } else {
+        // No match found, do a full reset
+        logger.info('No expected sequence number found in message, performing full reset');
         
-        logger.info('Reconnecting with reset sequence numbers after logout');
-        connect();
-      }, 2000);
+        if (socket) {
+          socket.destroy();
+          socket = null;
+        }
+        
+        setTimeout(() => {
+          // Reset sequence numbers
+          msgSeqNum = 1;
+          serverSeqNum = 1;
+          
+          logger.info('Reconnecting with fully reset sequence numbers');
+          connect();
+        }, 2000);
+      }
     } else {
       // Emit logout event for normal logouts
       emitter.emit('logout', message);
@@ -1456,13 +1534,14 @@ export function createFixClient(options: FixClientOptions) {
 
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId}`);
+      logger.info(`[SECURITY_LIST] Current sequence number before request: ${msgSeqNum}`);
 
       // Create message in the format used by fn-psx project
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum++);
+        .setMsgSeqNum(msgSeqNum);
       
       // Add required fields in same order as fn-psx
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
@@ -1482,7 +1561,10 @@ export function createFixClient(options: FixClientOptions) {
       
       if (socket) {
         socket.write(rawMessage);
+        // Increment sequence number after sending
+        msgSeqNum++;
         logger.info(`[SECURITY_LIST] Equity security list request sent successfully (seq: ${msgSeqNum - 1})`);
+        logger.info(`[SECURITY_LIST] Sequence number incremented to ${msgSeqNum} for next message`);
         return requestId;
       } else {
         logger.error(`[SECURITY_LIST] Failed to send equity security list request - socket not available`);
@@ -1506,13 +1588,14 @@ export function createFixClient(options: FixClientOptions) {
 
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
+      logger.info(`[SECURITY_LIST] Current sequence number before request: ${msgSeqNum}`);
 
       // Create message in the format used by fn-psx project
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum++);
+        .setMsgSeqNum(msgSeqNum);
       
       // Add required fields in same order as fn-psx
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
@@ -1526,7 +1609,10 @@ export function createFixClient(options: FixClientOptions) {
       
       if (socket) {
         socket.write(rawMessage);
+        // Increment sequence number after sending
+        msgSeqNum++;
         logger.info(`[SECURITY_LIST] Index security list request sent successfully (seq: ${msgSeqNum - 1})`);
+        logger.info(`[SECURITY_LIST] Sequence number incremented to ${msgSeqNum} for next message`);
         
         // Also start index market data updates
         setTimeout(() => {
@@ -1650,7 +1736,7 @@ export function createFixClient(options: FixClientOptions) {
 
     try {
       // Always reset sequence number on logon
-      msgSeqNum = 1;
+      msgSeqNum = 1; // Start with 1 for the logon message
       serverSeqNum = 1;
       logger.info('Resetting sequence numbers to 1 for new logon');
 
@@ -1664,7 +1750,7 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.LOGON)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum);
+        .setMsgSeqNum(msgSeqNum); // Use sequence number 1
       
       // Then add body fields in the order used by fn-psx
       builder.addField(FieldTag.ENCRYPT_METHOD, '0');
@@ -1678,8 +1764,10 @@ export function createFixClient(options: FixClientOptions) {
       const message = builder.buildMessage();
       logger.info(`Sending Logon Message with sequence number ${msgSeqNum}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
       sendMessage(message);
-
-      // Don't increment sequence number here - wait for server's response
+      
+      // Now increment sequence number for next message
+      msgSeqNum++;
+      logger.info(`Incremented sequence number to ${msgSeqNum} for next message after logon`);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -1769,37 +1857,86 @@ export function createFixClient(options: FixClientOptions) {
       const refSeqNum = message[FieldTag.REF_SEQ_NUM];
       const refTagId = message[FieldTag.REF_TAG_ID];
       const text = message[FieldTag.TEXT];
+      const msgType = message[FieldTag.MSG_TYPE];
 
       logger.error(`Received REJECT message for sequence number ${refSeqNum}`);
       logger.error(`Reject reason (Tag ${refTagId}): ${text || 'No reason provided'}`);
 
       // If it's a sequence number issue, reset the connection
-      if (refTagId === '34' || text?.includes('MsgSeqNum') || text?.includes('too large')) {
-        logger.info('Sequence number mismatch detected, resetting connection...');
+      const isSequenceError = refTagId === '34' || 
+                             text?.includes('MsgSeqNum') || 
+                             text?.includes('too large') || 
+                             text?.includes('sequence');
+      
+      if (isSequenceError) {
+        logger.info('Sequence number mismatch detected, handling sequence reset...');
         
-        // Perform a full disconnect and reconnect
-        if (socket) {
-          logger.info('Closing socket and resetting sequence numbers');
-          socket.destroy();
-          socket = null;
-        }
-        
-        // Wait a moment before reconnecting
-        setTimeout(() => {
-          // Reset sequence numbers
-          msgSeqNum = 1;
-          serverSeqNum = 1;
+        // If text contains specific sequence number information, try to parse it
+        const expectedSeqNumMatch = text?.match(/expected ['"]?(\d+)['"]?/);
+        if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
+          const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
+          if (!isNaN(expectedSeqNum)) {
+            logger.info(`Server expects sequence number: ${expectedSeqNum}`);
+            
+            // If the expected sequence is less than our current, we need to reset
+            if (expectedSeqNum < msgSeqNum) {
+              logger.info(`Our sequence (${msgSeqNum}) is greater than expected (${expectedSeqNum}), resetting connection`);
+              
+              // Perform a full disconnect and reconnect
+              if (socket) {
+                logger.info('Closing socket and resetting sequence numbers');
+                socket.destroy();
+                socket = null;
+              }
+              
+              // Wait a moment before reconnecting
+              setTimeout(() => {
+                // Reset sequence numbers
+                msgSeqNum = expectedSeqNum;
+                serverSeqNum = expectedSeqNum - 1;
+                
+                logger.info(`Reconnecting with adjusted sequence numbers: msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
+                connect();
+              }, 2000);
+            } else {
+              // If expected sequence is higher, try to continue with corrected sequence
+              logger.info(`Our sequence (${msgSeqNum}) is less than expected (${expectedSeqNum}), adjusting sequence`);
+              msgSeqNum = expectedSeqNum;
+              logger.info(`Adjusted sequence number to ${msgSeqNum}`);
+              
+              // Send a heartbeat with the correct sequence number to sync
+              sendHeartbeat('');
+            }
+          }
+        } else {
+          // If we can't determine the expected sequence, do a full reset
+          logger.info('Cannot determine expected sequence number, performing full reset');
           
-          logger.info('Reconnecting with reset sequence numbers');
-          connect();
-        }, 2000);
+          // Perform a full disconnect and reconnect
+          if (socket) {
+            logger.info('Closing socket and resetting sequence numbers to 1');
+            socket.destroy();
+            socket = null;
+          }
+          
+          // Wait a moment before reconnecting
+          setTimeout(() => {
+            // Reset sequence numbers
+            msgSeqNum = 1;
+            serverSeqNum = 1;
+            
+            logger.info('Reconnecting with reset sequence numbers = 1');
+            connect();
+          }, 2000);
+        }
       }
 
       // Emit reject event
       emitter.emit('reject', {
         refSeqNum,
         refTagId,
-        text
+        text,
+        msgType
       });
     } catch (error) {
       logger.error(`Error handling reject message: ${error instanceof Error ? error.message : String(error)}`);
