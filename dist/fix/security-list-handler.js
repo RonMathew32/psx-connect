@@ -31,22 +31,30 @@ class SecurityListHandler {
         this.receivedSecurities.set(SecurityListType.EQUITY, []);
         this.receivedSecurities.set(SecurityListType.INDEX, []);
         this.receivedSecurities.set(SecurityListType.BOND, []);
+        // Make sure security list sequence numbers are correctly set
+        this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
     }
     /**
      * Send a security list request for equities
      */
     requestEquitySecurities() {
         logger_1.default.info(`[SECURITY_LIST] Preparing to send equity security list request`);
-        // Enter security list mode to use fixed sequence number
+        // Enter security list mode to use dedicated sequence numbers
         this.sequenceManager.enterSecurityListMode();
+        // Set security list sequence to 2 if it's not already
+        const state = this.sequenceManager.getState();
+        if (state.securityList.outgoing !== 2) {
+            this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
+            logger_1.default.info(`[SECURITY_LIST] Reset security list sequence numbers to 2/1 for equity request`);
+        }
         const requestId = (0, uuid_1.v4)();
-        logger_1.default.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId}`);
+        logger_1.default.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId} using sequence number 2`);
         // Create message in the format used by fn-psx project
         const message = (0, message_builder_1.createMessageBuilder)()
             .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
             .setSenderCompID(this.config.senderCompId)
             .setTargetCompID(this.config.targetCompId)
-            .setMsgSeqNum(this.sequenceManager.getNextOutgoingSeqNum());
+            .setMsgSeqNum(this.sequenceManager.getNextOutgoingSeqNum()); // This will use security list sequence
         // Add required fields in same order as fn-psx
         message.addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId);
         message.addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
@@ -60,6 +68,8 @@ class SecurityListHandler {
             this.requestsInProgress.add(requestId);
             // Send the message
             this.socketWrite(rawMessage);
+            // DO NOT increment sequence for security list messages to keep it fixed at 2
+            // The sequenceManager handles this internally now
             // Call the callback if provided
             if (this.config.onRequestSent) {
                 this.config.onRequestSent(requestId, SecurityListType.EQUITY);
@@ -77,16 +87,22 @@ class SecurityListHandler {
      */
     requestIndexSecurities() {
         logger_1.default.info(`[SECURITY_LIST] Preparing to send index security list request`);
-        // Enter security list mode to use fixed sequence number
+        // Enter security list mode to use dedicated sequence numbers
         this.sequenceManager.enterSecurityListMode();
+        // Set security list sequence to 2 if it's not already
+        const state = this.sequenceManager.getState();
+        if (state.securityList.outgoing !== 2) {
+            this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
+            logger_1.default.info(`[SECURITY_LIST] Reset security list sequence numbers to 2/1 for index request`);
+        }
         const requestId = (0, uuid_1.v4)();
-        logger_1.default.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
+        logger_1.default.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId} using sequence number 2`);
         // Create message in the format used by fn-psx project
         const message = (0, message_builder_1.createMessageBuilder)()
             .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
             .setSenderCompID(this.config.senderCompId)
             .setTargetCompID(this.config.targetCompId)
-            .setMsgSeqNum(this.sequenceManager.getNextOutgoingSeqNum());
+            .setMsgSeqNum(this.sequenceManager.getNextOutgoingSeqNum()); // This will use security list sequence
         // Add required fields in same order as fn-psx
         message.addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId);
         message.addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
@@ -100,6 +116,8 @@ class SecurityListHandler {
             this.requestsInProgress.add(requestId);
             // Send the message
             this.socketWrite(rawMessage);
+            // DO NOT increment sequence for security list messages to keep it fixed at 2
+            // The sequenceManager handles this internally now
             // Call the callback if provided
             if (this.config.onRequestSent) {
                 this.config.onRequestSent(requestId, SecurityListType.INDEX);
@@ -116,12 +134,15 @@ class SecurityListHandler {
      * Request both equity and index securities in sequence
      */
     requestAllSecurities() {
+        // Make sure we're starting with clean security list sequence numbers
+        this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
         // First request equities
         const equityRequestId = this.requestEquitySecurities();
         logger_1.default.info(`[SECURITY_LIST] Started comprehensive security list request, equity ID: ${equityRequestId}`);
         // Set up a timer to request index securities after a delay
         setTimeout(() => {
             // Reset sequence number again for the index request
+            this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
             this.sequenceManager.enterSecurityListMode();
             const indexRequestId = this.requestIndexSecurities();
             logger_1.default.info(`[SECURITY_LIST] Continuing comprehensive security list request, index ID: ${indexRequestId}`);
@@ -131,6 +152,11 @@ class SecurityListHandler {
                 if (this.requestsInProgress.size > 0) {
                     logger_1.default.warn(`[SECURITY_LIST] Some security list requests still pending after timeout, retrying...`);
                     this.retryPendingRequests();
+                }
+                else {
+                    // Exit security list mode if all requests completed
+                    this.sequenceManager.exitSecurityListMode();
+                    logger_1.default.info(`[SECURITY_LIST] All security list requests completed successfully`);
                 }
             }, 10000);
         }, 5000); // Wait 5 seconds between requests
@@ -144,6 +170,17 @@ class SecurityListHandler {
             if (!requestId || !this.requestsInProgress.has(requestId)) {
                 logger_1.default.warn(`[SECURITY_LIST] Received security list response for unknown request ID: ${requestId}`);
                 return;
+            }
+            // Make sure we're in security list mode to update the correct sequence numbers
+            if (!this.sequenceManager.getState().inSecurityListMode) {
+                this.sequenceManager.enterSecurityListMode();
+                logger_1.default.info(`[SECURITY_LIST] Entering security list mode to properly handle response`);
+            }
+            // If there's a sequence number in the response, update our security list incoming sequence
+            if (message[constants_1.FieldTag.MSG_SEQ_NUM]) {
+                const seqNum = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM], 10);
+                this.sequenceManager.updateIncomingSeqNum(seqNum);
+                logger_1.default.info(`[SECURITY_LIST] Updated security list incoming sequence to ${seqNum}`);
             }
             // Extract securities from the message
             const securities = this.parseSecurities(message);
@@ -176,7 +213,7 @@ class SecurityListHandler {
         }
         catch (error) {
             logger_1.default.error(`[SECURITY_LIST] Error handling security list response: ${error instanceof Error ? error.message : String(error)}`);
-            this.sequenceManager.exitSecurityListMode();
+            // Don't exit security list mode on error - we might still be expecting more responses
         }
     }
     /**
@@ -267,13 +304,15 @@ class SecurityListHandler {
     retryPendingRequests() {
         if (this.requestsInProgress.size === 0) {
             logger_1.default.info(`[SECURITY_LIST] No pending requests to retry`);
+            this.sequenceManager.exitSecurityListMode();
             return;
         }
         logger_1.default.info(`[SECURITY_LIST] Retrying ${this.requestsInProgress.size} pending security list requests`);
         // Reset and clear pending requests
         const pendingRequests = Array.from(this.requestsInProgress);
         this.requestsInProgress.clear();
-        // Re-enter security list mode with fresh sequence
+        // Reset security list sequence numbers and re-enter security list mode
+        this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
         this.sequenceManager.enterSecurityListMode();
         // Request both types again
         this.requestAllSecurities();
