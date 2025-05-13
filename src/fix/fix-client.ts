@@ -1034,17 +1034,20 @@ export function createFixClient(options: FixClientOptions) {
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
     
-    // Send security list requests immediately after login
-    logger.info('[SECURITY_LIST] Sending equity security list request immediately after login');
-    sendSecurityListRequestForEquity();
-    
-    // Send index security list request after a short delay
+    // Wait a moment for the connection to stabilize before sending any requests
     setTimeout(() => {
-      if (loggedIn) {
-        logger.info('[SECURITY_LIST] Sending index security list request after delay');
-        sendSecurityListRequestForIndex();
-      }
-    }, 3000);
+      // Send security list requests with a delay between them
+      logger.info('[SECURITY_LIST] Sending equity security list request after login');
+      sendSecurityListRequestForEquity();
+      
+      // Send index security list request after a longer delay
+      setTimeout(() => {
+        if (loggedIn) {
+          logger.info('[SECURITY_LIST] Sending index security list request after delay');
+          sendSecurityListRequestForIndex();
+        }
+      }, 3000);
+    }, 1000);
   };
 
   /**

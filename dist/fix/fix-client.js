@@ -938,16 +938,19 @@ function createFixClient(options) {
         logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
-        // Send security list requests immediately after login
-        logger_1.default.info('[SECURITY_LIST] Sending equity security list request immediately after login');
-        sendSecurityListRequestForEquity();
-        // Send index security list request after a short delay
+        // Wait a moment for the connection to stabilize before sending any requests
         setTimeout(() => {
-            if (loggedIn) {
-                logger_1.default.info('[SECURITY_LIST] Sending index security list request after delay');
-                sendSecurityListRequestForIndex();
-            }
-        }, 3000);
+            // Send security list requests with a delay between them
+            logger_1.default.info('[SECURITY_LIST] Sending equity security list request after login');
+            sendSecurityListRequestForEquity();
+            // Send index security list request after a longer delay
+            setTimeout(() => {
+                if (loggedIn) {
+                    logger_1.default.info('[SECURITY_LIST] Sending index security list request after delay');
+                    sendSecurityListRequestForIndex();
+                }
+            }, 3000);
+        }, 1000);
     };
     /**
      * Check server features to understand its capabilities
