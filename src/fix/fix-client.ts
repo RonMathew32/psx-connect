@@ -1080,20 +1080,12 @@ export function createFixClient(options: FixClientOptions) {
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
     
-    // Wait a longer moment for the connection to stabilize before sending any requests
-    setTimeout(() => {
-      // Send security list requests with a delay between them
-      logger.info('[SECURITY_LIST] Sending equity security list request after login');
-      sendSecurityListRequestForEquity();
-      
-      // Send index security list request after a longer delay
-      setTimeout(() => {
-        if (loggedIn) {
-          logger.info('[SECURITY_LIST] Sending index security list request after delay');
-          sendSecurityListRequestForIndex();
-        }
-      }, 5000); // Increase from 3000 to 5000 ms
-    }, 2000); // Increase from 1000 to 2000 ms
+    // Emit event so client can handle login success
+    emitter.emit('logon', message);
+    
+    // Note: We're removing automatic security list requests after login
+    // because we need to control sequence numbers manually
+    logger.info('[SECURITY_LIST] Login successful. Use sendSecurityListRequestForEquity() with forced sequence numbers to request security lists.');
   };
 
   /**
@@ -1543,9 +1535,12 @@ export function createFixClient(options: FixClientOptions) {
         return null;
       }
       
-      // Force reset sequence number to 2 for security list request
-      forceResetSequenceNumber(2);
-      logger.info('[SECURITY_LIST] Forced sequence number reset to 2 for security list request');
+      logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
+      
+      // Manually set sequence number to 2
+      msgSeqNum = 2;
+      serverSeqNum = 1;
+      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
 
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId}`);
@@ -1601,9 +1596,12 @@ export function createFixClient(options: FixClientOptions) {
         return null;
       }
       
-      // Force reset sequence number to 2 for security list request
-      forceResetSequenceNumber(2);
-      logger.info('[SECURITY_LIST] Forced sequence number reset to 2 for index security list request');
+      logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
+      
+      // Manually set sequence number to 2
+      msgSeqNum = 2;
+      serverSeqNum = 1;
+      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
 
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
@@ -1986,12 +1984,42 @@ export function createFixClient(options: FixClientOptions) {
       forceResetSequenceNumber(newSeq);
       return client;
     },
+    reset: () => {
+      // Disconnect completely
+      logger.info('[RESET] Performing complete reset with disconnection and reconnection');
+      if (socket) {
+        socket.destroy();
+        socket = null;
+      }
+      connected = false;
+      loggedIn = false;
+      
+      // Clear any timers
+      clearTimers();
+      
+      // Reset sequence numbers
+      msgSeqNum = 1;
+      serverSeqNum = 1;
+      
+      logger.info('[RESET] Connection and sequence numbers reset to initial state');
+      
+      // Wait a moment and reconnect
+      setTimeout(() => {
+        logger.info('[RESET] Reconnecting after reset');
+        connect();
+      }, 3000);
+      
+      return client;
+    },
     requestSecurityList: () => {
       logger.info('[SECURITY_LIST] Starting comprehensive security list request');
       
-      // Reset sequence numbers to what server expects
-      forceResetSequenceNumber(2);
-      logger.info('[SECURITY_LIST] Forced sequence number reset to 2 for comprehensive security list request');
+      logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
+      
+      // Manually set sequence number to 2
+      msgSeqNum = 2;
+      serverSeqNum = 1;
+      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
       
       // Keep track of request IDs for logging
       const equityRequestId = uuidv4();
@@ -2024,9 +2052,10 @@ export function createFixClient(options: FixClientOptions) {
             return;
           }
           
-          // Reset sequence number again for index request
-          forceResetSequenceNumber(2);
-          logger.info('[SECURITY_LIST] Reset sequence number to 2 for index security list request');
+          // Manually set sequence number to 2 again for index request
+          msgSeqNum = 2;
+          serverSeqNum = 1;
+          logger.info(`[SECURITY_LIST] Manually reset sequence numbers to msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum} for index request`);
           
           const indexRequestId = uuidv4();
           logger.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
@@ -2103,5 +2132,6 @@ export interface FixClient {
   start(): void;
   stop(): void;
   setSequenceNumber(newSeq: number): this;
+  reset(): this;
   requestSecurityList(): this;
 }
