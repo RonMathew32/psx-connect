@@ -1239,8 +1239,33 @@ export function createFixClient(options: FixClientOptions) {
   const handleLogout = (message: ParsedFixMessage): void => {
     loggedIn = false;
 
-    // Emit logout event
-    emitter.emit('logout', message);
+    // Get any provided text reason for the logout
+    const text = message[FieldTag.TEXT];
+
+    // Check if this is a sequence number related logout
+    if (text && (text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence'))) {
+      logger.warn(`Received logout due to sequence number issue: ${text}`);
+      
+      // Perform a full disconnect and reconnect with sequence reset
+      if (socket) {
+        logger.info('Disconnecting due to sequence number error');
+        socket.destroy();
+        socket = null;
+      }
+      
+      // Wait a moment before reconnecting
+      setTimeout(() => {
+        // Reset sequence numbers
+        msgSeqNum = 1;
+        serverSeqNum = 1;
+        
+        logger.info('Reconnecting with reset sequence numbers after logout');
+        connect();
+      }, 2000);
+    } else {
+      // Emit logout event for normal logouts
+      emitter.emit('logout', message);
+    }
 
     // Clear the heartbeat timer as we're logged out
     if (heartbeatTimer) {
@@ -1429,20 +1454,25 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId}`);
 
+      // Create message in the format used by fn-psx project
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum++)
-        .addField(FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
-        .addField(FieldTag.SECURITY_TYPE, 'EQUITY'); // Product type EQUITY
-        
-      // In some PSX implementations, we need to add these fields explicitly
-      message.addField('453', '1'); // NoPartyIDs = 1
-      message.addField('448', options.senderCompId); // PartyID
-      message.addField('447', 'D'); // PartyIDSource = D (custom)
-      message.addField('452', '3'); // PartyRole = 3
+        .setMsgSeqNum(msgSeqNum++);
+      
+      // Add required fields in same order as fn-psx
+      message.addField(FieldTag.SECURITY_REQ_ID, requestId);
+      message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
+      message.addField('55', 'NA'); // Symbol = NA as used in fn-psx
+      message.addField('460', '4'); // Product = EQUITY (4)
+      message.addField('336', 'REG'); // TradingSessionID = REG
+      
+      // These are not needed and may cause issues
+      // message.addField('453', '1'); // NoPartyIDs = 1
+      // message.addField('448', options.senderCompId); // PartyID
+      // message.addField('447', 'D'); // PartyIDSource = D (custom)
+      // message.addField('452', '3'); // PartyRole = 3
 
       const rawMessage = message.buildMessage();
       logger.info(`[SECURITY_LIST] Raw equity security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
@@ -1474,20 +1504,19 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
 
+      // Create message in the format used by fn-psx project
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum++)
-        .addField(FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
-        .addField(FieldTag.SECURITY_TYPE, 'INDEX'); // Product type INDEX
-        
-      // In some PSX implementations, we need to add these fields explicitly
-      message.addField('453', '1'); // NoPartyIDs = 1
-      message.addField('448', options.senderCompId); // PartyID
-      message.addField('447', 'D'); // PartyIDSource = D (custom)
-      message.addField('452', '3'); // PartyRole = 3
+        .setMsgSeqNum(msgSeqNum++);
+      
+      // Add required fields in same order as fn-psx
+      message.addField(FieldTag.SECURITY_REQ_ID, requestId);
+      message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
+      message.addField('55', 'NA'); // Symbol = NA as used in fn-psx
+      message.addField('460', '5'); // Product = INDEX (5)
+      message.addField('336', 'REG'); // TradingSessionID = REG
 
       const rawMessage = message.buildMessage();
       logger.info(`[SECURITY_LIST] Raw index security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
@@ -1619,25 +1648,29 @@ export function createFixClient(options: FixClientOptions) {
     try {
       // Always reset sequence number on logon
       msgSeqNum = 1;
-      logger.info('Resetting sequence number to 1 for new logon');
+      serverSeqNum = 1;
+      logger.info('Resetting sequence numbers to 1 for new logon');
 
       const sendingTime = new Date().toISOString().replace('T', '-').replace('Z', '').substring(0, 23);
       logger.debug(`Generated SendingTime: ${sendingTime}`);
 
+      // Create logon message following fn-psx format
+      // First set header fields
       const builder = createMessageBuilder();
       builder
         .setMsgType(MessageType.LOGON)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum)
-        .addField(FieldTag.SENDING_TIME, sendingTime)
-        .addField(FieldTag.ENCRYPT_METHOD, '0')
-        .addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
-        .addField(FieldTag.DEFAULT_APPL_VER_ID, '9')
-        .addField('1408', 'FIX5.00_PSX_1.00')
-        .addField(FieldTag.USERNAME, options.username)
-        .addField(FieldTag.PASSWORD, options.password)
-        .addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always request sequence number reset
+        .setMsgSeqNum(msgSeqNum);
+      
+      // Then add body fields in the order used by fn-psx
+      builder.addField(FieldTag.ENCRYPT_METHOD, '0');
+      builder.addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
+      builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always use Y to reset sequence numbers
+      builder.addField(FieldTag.USERNAME, options.username);
+      builder.addField(FieldTag.PASSWORD, options.password);
+      builder.addField(FieldTag.DEFAULT_APPL_VER_ID, '9');
+      builder.addField('1408', 'FIX5.00_PSX_1.00'); // DefaultCstmApplVerID
 
       const message = builder.buildMessage();
       logger.info(`Sending Logon Message with sequence number ${msgSeqNum}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
@@ -1737,20 +1770,26 @@ export function createFixClient(options: FixClientOptions) {
       logger.error(`Received REJECT message for sequence number ${refSeqNum}`);
       logger.error(`Reject reason (Tag ${refTagId}): ${text || 'No reason provided'}`);
 
-      // If it's a sequence number issue, try to resync
-      if (refTagId === '34' || text?.includes('MsgSeqNum')) {
-        logger.info('Sequence number mismatch detected, attempting to resync...');
-        // Get server's current sequence number
-        serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
-        msgSeqNum = serverSeqNum + 1; // Set our next sequence number to be one more than server's
-        logger.info(`Resynced sequence numbers. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
-
-        // Re-send the last message with correct sequence number
-        if (loggedIn) {
-          logger.info('Re-sending last message with corrected sequence number...');
-          // Re-send the security list request
-          sendSecurityListRequestForIndex();
+      // If it's a sequence number issue, reset the connection
+      if (refTagId === '34' || text?.includes('MsgSeqNum') || text?.includes('too large')) {
+        logger.info('Sequence number mismatch detected, resetting connection...');
+        
+        // Perform a full disconnect and reconnect
+        if (socket) {
+          logger.info('Closing socket and resetting sequence numbers');
+          socket.destroy();
+          socket = null;
         }
+        
+        // Wait a moment before reconnecting
+        setTimeout(() => {
+          // Reset sequence numbers
+          msgSeqNum = 1;
+          serverSeqNum = 1;
+          
+          logger.info('Reconnecting with reset sequence numbers');
+          connect();
+        }, 2000);
       }
 
       // Emit reject event
