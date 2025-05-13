@@ -503,7 +503,7 @@ export function createFixClient(options: FixClientOptions) {
         endTime: message[FieldTag.END_TIME]
       };
 
-      emitter.emit('tradingSessionStatus', message);
+      emitter.emit('tradingSessionStatus', sessionInfo);
     } catch (error) {
       logger.error(`[TRADING_STATUS] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
     }

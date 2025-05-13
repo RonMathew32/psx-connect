@@ -455,7 +455,7 @@ function createFixClient(options) {
                 startTime: message[constants_1.FieldTag.START_TIME],
                 endTime: message[constants_1.FieldTag.END_TIME]
             };
-            emitter.emit('tradingSessionStatus', message);
+            emitter.emit('tradingSessionStatus', sessionInfo);
         }
         catch (error) {
             logger_1.default.error(`[TRADING_STATUS] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
