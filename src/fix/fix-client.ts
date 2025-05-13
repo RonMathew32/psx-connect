@@ -1007,14 +1007,16 @@ export function createFixClient(options: FixClientOptions) {
     setTimeout(() => {
       if (loggedIn) {
         // First request
-        sendTradingSessionStatusRequest();
+        // sendTradingSessionStatusRequest();
+        sendSecurityListRequestForEquity();
+
 
         // Second request after 500ms
         setTimeout(() => {
           if (loggedIn) {
             // Request security list data for equity securities
             logger.info('Requesting equity security list data after logon');
-            sendSecurityListRequestForEquity();
+            // sendSecurityListRequestForEquity();
 
             // Request security list data for index securities after another delay
             setTimeout(() => {
