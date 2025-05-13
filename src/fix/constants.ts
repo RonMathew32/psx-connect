@@ -92,7 +92,8 @@ export enum FieldTag {
   ORIG_TIME = '42',
   NO_ORDERS = '73',
   ORDER_QTY = '38',
-  ORDER_ID = '37'
+  ORDER_ID = '37',
+  NO_SECURITIES = '393'  // Number of securities in a security list response, same as TOT_NO_RELATED_SYM
 }
 
 // Subscription Request Types

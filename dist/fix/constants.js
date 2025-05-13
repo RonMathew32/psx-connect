@@ -95,6 +95,7 @@ var FieldTag;
     FieldTag["NO_ORDERS"] = "73";
     FieldTag["ORDER_QTY"] = "38";
     FieldTag["ORDER_ID"] = "37";
+    FieldTag["NO_SECURITIES"] = "393"; // Number of securities in a security list response, same as TOT_NO_RELATED_SYM
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;

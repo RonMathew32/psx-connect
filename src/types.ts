@@ -1,8 +1,14 @@
 export interface SecurityInfo {
   symbol: string;
-  securityType: string;
   securityDesc: string;
-  marketId: string;  // Changed from optional to required
+  securityType?: string;
+  marketId?: string;
+  productType?: string;  // Added for PSX distinction between EQUITY (4) and INDEX (5)
+  lotSize?: number;
+  tickSize?: number;
+  exchange?: string;
+  isin?: string;
+  currency?: string;
 }
 
 export interface MarketDataItem {
