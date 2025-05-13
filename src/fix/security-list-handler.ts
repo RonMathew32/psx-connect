@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
 import { SOH, MessageType, FieldTag } from './constants';
 import { createMessageBuilder } from './message-builder';
-import SequenceManager from './sequence-manager';
+import SequenceManager, { SequenceStream } from './sequence-manager';
 import { SecurityInfo } from '../types';
 
 export enum SecurityListType {
@@ -46,8 +46,8 @@ export class SecurityListHandler {
     this.receivedSecurities.set(SecurityListType.INDEX, []);
     this.receivedSecurities.set(SecurityListType.BOND, []);
     
-    // Make sure security list sequence numbers are correctly set
-    this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
+    // Make sure security list sequence numbers are correctly initialized
+    this.sequenceManager.resetSecurityListSequence(1, 0);
   }
   
   /**
@@ -56,18 +56,11 @@ export class SecurityListHandler {
   public requestEquitySecurities(): string {
     logger.info(`[SECURITY_LIST] Preparing to send equity security list request`);
     
-    // Enter security list mode to use dedicated sequence numbers
-    this.sequenceManager.enterSecurityListMode();
-    
-    // Set security list sequence to 2 if it's not already
-    const state = this.sequenceManager.getState();
-    if (state.securityList.outgoing !== 2) {
-      this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
-      logger.info(`[SECURITY_LIST] Reset security list sequence numbers to 2/1 for equity request`);
-    }
+    // Switch to security list sequence stream
+    this.sequenceManager.switchToStream(SequenceStream.SECURITY_LIST);
     
     const requestId = uuidv4();
-    logger.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId} using sequence number 2`);
+    logger.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId}`);
     
     // Create message in the format used by fn-psx project
     const message = createMessageBuilder()
@@ -93,8 +86,8 @@ export class SecurityListHandler {
       // Send the message
       this.socketWrite(rawMessage);
       
-      // DO NOT increment sequence for security list messages to keep it fixed at 2
-      // The sequenceManager handles this internally now
+      // Increment the security list sequence number
+      this.sequenceManager.incrementOutgoingSeqNum();
       
       // Call the callback if provided
       if (this.config.onRequestSent) {
@@ -104,7 +97,8 @@ export class SecurityListHandler {
       return requestId;
     } catch (error) {
       logger.error(`[SECURITY_LIST] Error sending equity security list request: ${error instanceof Error ? error.message : String(error)}`);
-      this.sequenceManager.exitSecurityListMode();
+      // Switch back to regular stream
+      this.sequenceManager.switchToStream(SequenceStream.REGULAR);
       throw error;
     }
   }
@@ -115,18 +109,11 @@ export class SecurityListHandler {
   public requestIndexSecurities(): string {
     logger.info(`[SECURITY_LIST] Preparing to send index security list request`);
     
-    // Enter security list mode to use dedicated sequence numbers
-    this.sequenceManager.enterSecurityListMode();
-    
-    // Set security list sequence to 2 if it's not already
-    const state = this.sequenceManager.getState();
-    if (state.securityList.outgoing !== 2) {
-      this.sequenceManager.setSecurityListSequenceNumbers(2, 1); 
-      logger.info(`[SECURITY_LIST] Reset security list sequence numbers to 2/1 for index request`);
-    }
+    // Switch to security list sequence stream
+    this.sequenceManager.switchToStream(SequenceStream.SECURITY_LIST);
     
     const requestId = uuidv4();
-    logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId} using sequence number 2`);
+    logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
     
     // Create message in the format used by fn-psx project
     const message = createMessageBuilder()
@@ -152,8 +139,8 @@ export class SecurityListHandler {
       // Send the message
       this.socketWrite(rawMessage);
       
-      // DO NOT increment sequence for security list messages to keep it fixed at 2
-      // The sequenceManager handles this internally now
+      // Increment the security list sequence number
+      this.sequenceManager.incrementOutgoingSeqNum();
       
       // Call the callback if provided
       if (this.config.onRequestSent) {
@@ -163,7 +150,8 @@ export class SecurityListHandler {
       return requestId;
     } catch (error) {
       logger.error(`[SECURITY_LIST] Error sending index security list request: ${error instanceof Error ? error.message : String(error)}`);
-      this.sequenceManager.exitSecurityListMode();
+      // Switch back to regular stream
+      this.sequenceManager.switchToStream(SequenceStream.REGULAR);
       throw error;
     }
   }
@@ -173,7 +161,7 @@ export class SecurityListHandler {
    */
   public requestAllSecurities(): void {
     // Make sure we're starting with clean security list sequence numbers
-    this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
+    this.sequenceManager.resetSecurityListSequence(1, 0);
     
     // First request equities
     const equityRequestId = this.requestEquitySecurities();
@@ -181,10 +169,6 @@ export class SecurityListHandler {
     
     // Set up a timer to request index securities after a delay
     setTimeout(() => {
-      // Reset sequence number again for the index request
-      this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
-      this.sequenceManager.enterSecurityListMode();
-      
       const indexRequestId = this.requestIndexSecurities();
       logger.info(`[SECURITY_LIST] Continuing comprehensive security list request, index ID: ${indexRequestId}`);
       
@@ -195,8 +179,8 @@ export class SecurityListHandler {
           logger.warn(`[SECURITY_LIST] Some security list requests still pending after timeout, retrying...`);
           this.retryPendingRequests();
         } else {
-          // Exit security list mode if all requests completed
-          this.sequenceManager.exitSecurityListMode();
+          // Switch back to regular stream if all requests completed
+          this.sequenceManager.switchToStream(SequenceStream.REGULAR);
           logger.info(`[SECURITY_LIST] All security list requests completed successfully`);
         }
       }, 10000);
@@ -215,10 +199,10 @@ export class SecurityListHandler {
         return;
       }
       
-      // Make sure we're in security list mode to update the correct sequence numbers
-      if (!this.sequenceManager.getState().inSecurityListMode) {
-        this.sequenceManager.enterSecurityListMode();
-        logger.info(`[SECURITY_LIST] Entering security list mode to properly handle response`);
+      // Make sure we're in security list stream to update the correct sequence numbers
+      if (this.sequenceManager.getCurrentStream() !== SequenceStream.SECURITY_LIST) {
+        this.sequenceManager.switchToStream(SequenceStream.SECURITY_LIST);
+        logger.info(`[SECURITY_LIST] Switching to security list stream to properly handle response`);
       }
       
       // If there's a sequence number in the response, update our security list incoming sequence
@@ -256,14 +240,14 @@ export class SecurityListHandler {
         this.config.onDataReceived(securities, securityType);
       }
       
-      // If we have no more pending requests, exit security list mode
+      // If we have no more pending requests, switch back to regular stream
       if (this.requestsInProgress.size === 0) {
-        this.sequenceManager.exitSecurityListMode();
-        logger.info(`[SECURITY_LIST] All security list requests completed, exiting security list mode`);
+        this.sequenceManager.switchToStream(SequenceStream.REGULAR);
+        logger.info(`[SECURITY_LIST] All security list requests completed, switching back to regular stream`);
       }
     } catch (error) {
       logger.error(`[SECURITY_LIST] Error handling security list response: ${error instanceof Error ? error.message : String(error)}`);
-      // Don't exit security list mode on error - we might still be expecting more responses
+      // Don't switch stream on error - we might still be expecting more responses
     }
   }
   
@@ -370,7 +354,7 @@ export class SecurityListHandler {
   private retryPendingRequests(): void {
     if (this.requestsInProgress.size === 0) {
       logger.info(`[SECURITY_LIST] No pending requests to retry`);
-      this.sequenceManager.exitSecurityListMode();
+      this.sequenceManager.switchToStream(SequenceStream.REGULAR);
       return;
     }
     
@@ -380,9 +364,9 @@ export class SecurityListHandler {
     const pendingRequests = Array.from(this.requestsInProgress);
     this.requestsInProgress.clear();
     
-    // Reset security list sequence numbers and re-enter security list mode
-    this.sequenceManager.setSecurityListSequenceNumbers(2, 1);
-    this.sequenceManager.enterSecurityListMode();
+    // Reset security list sequence numbers and switch to security list stream
+    this.sequenceManager.resetSecurityListSequence(1, 0);
+    this.sequenceManager.switchToStream(SequenceStream.SECURITY_LIST);
     
     // Request both types again
     this.requestAllSecurities();
