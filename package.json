@@ -7,9 +7,7 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "test": "jest",
-    "trading-status": "ts-node src/examples/get-trading-session-status.ts",
-    "manual-trading-status": "ts-node src/examples/manual-trading-session-status.ts"
+    "test": "jest"
   },
   "dependencies": {
     "dotenv": "^16.5.0",

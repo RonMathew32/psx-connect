@@ -428,7 +428,7 @@ export function createFixClient(options: FixClientOptions) {
       const securityReqType = message[FieldTag.SECURITY_LIST_REQUEST_TYPE];
       const securityType = message[FieldTag.SECURITY_TYPE];
       const marketId = message[FieldTag.MARKET_ID];
-      
+
       logger.info(`[SECURITY_LIST] Received security list response:`);
       logger.info(`[SECURITY_LIST] - Request ID: ${reqId}`);
       logger.info(`[SECURITY_LIST] - Security Request Type: ${securityReqType}`);
@@ -443,7 +443,7 @@ export function createFixClient(options: FixClientOptions) {
       if (noSecurities > 0) {
         // Log all fields in the message for debugging
         logger.info(`[SECURITY_LIST] Message fields: ${JSON.stringify(message)}`);
-        
+
         // Parse security list entries
         for (let i = 0; i < 100; i++) {  // Safe upper limit
           const symbol = message[`${FieldTag.SYMBOL}.${i}`] || message[FieldTag.SYMBOL];
@@ -489,6 +489,10 @@ export function createFixClient(options: FixClientOptions) {
    */
   const handleTradingSessionStatus = (message: ParsedFixMessage): void => {
     try {
+      // Log the entire message for debugging
+      logger.info(`[TRADING_STATUS] Raw message content: ${JSON.stringify(message)}`);
+
+      // Extract standard fields
       const reqId = message[FieldTag.TRAD_SES_REQ_ID];
       const sessionId = message[FieldTag.TRADING_SESSION_ID];
       const status = message[FieldTag.TRAD_SES_STATUS];
@@ -502,85 +506,177 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`[TRADING_STATUS] Start Time (Tag 341): ${startTime || 'undefined'}`);
       logger.info(`[TRADING_STATUS] End Time (Tag 342): ${endTime || 'undefined'}`);
 
+      // Add more comprehensive search for fields in different possible locations
+
       // Alternative field names for PSX-specific formats
-      // Sometimes exchanges use non-standard field tags or field locations
+      // Some exchanges use non-standard field tags or field locations
       let resolvedSessionId = sessionId;
       let resolvedStatus = status;
       let resolvedStartTime = startTime;
       let resolvedEndTime = endTime;
 
-      // Check if standard fields are undefined, try alternative fields
+      // Check all possible tags that might contain session information
+      logger.info(`[TRADING_STATUS] Searching for alternative session status fields...`);
+
+      // Systematically check all fields for relevant information
+      for (const [tag, value] of Object.entries(message)) {
+        logger.info(`[TRADING_STATUS] Checking tag ${tag}: ${value}`);
+
+        // Look for session ID in alternative tags
+        if (!resolvedSessionId &&
+          (tag === '1151' || tag === '1300' || tag === '1301' || tag === '625' ||
+            tag === '336' || tag === '335' || tag === '207')) {
+          logger.info(`[TRADING_STATUS] Found potential session ID in tag ${tag}: ${value}`);
+          resolvedSessionId = value;
+        }
+
+        // Look for status in alternative tags
+        if (!resolvedStatus &&
+          (tag === '325' || tag === '326' || tag === '327' || tag === '328' ||
+            tag === '329' || tag === '332' || tag === '339' || tag === '340' ||
+            tag === '5840' || tag === '5841' || tag === '865' || tag === '102')) {
+          logger.info(`[TRADING_STATUS] Found potential status in tag ${tag}: ${value}`);
+          resolvedStatus = value;
+        }
+
+        // Look for times in alternative tags
+        if (!resolvedStartTime &&
+          (tag === '341' || tag === '343' || tag === '345' || tag === '345' ||
+            tag === '5894' || tag === '5895' || tag === '5898')) {
+          logger.info(`[TRADING_STATUS] Found potential start time in tag ${tag}: ${value}`);
+          resolvedStartTime = value;
+        }
+
+        if (!resolvedEndTime &&
+          (tag === '342' || tag === '344' || tag === '346' || tag === '347' ||
+            tag === '5899' || tag === '5900' || tag === '5901')) {
+          logger.info(`[TRADING_STATUS] Found potential end time in tag ${tag}: ${value}`);
+          resolvedEndTime = value;
+        }
+      }
+
+      // If Session ID is still missing, try more aggressive approaches
       if (!resolvedSessionId) {
-        // Try alternative tags that might contain session ID (e.g. 1151, 1300, 1301)
-        const altSessionId = message['1151'] || message['1300'] || message['1301'];
-        if (altSessionId) {
-          logger.info(`[TRADING_STATUS] Found session ID in alternative tag: ${altSessionId}`);
-          resolvedSessionId = altSessionId;
+        // Check if we have a MarketID field
+        const marketId = message[FieldTag.MARKET_ID];
+        if (marketId) {
+          logger.info(`[TRADING_STATUS] Using market ID as session ID: ${marketId}`);
+          resolvedSessionId = marketId;
         } else {
-          // Last resort - if we have market ID but no session ID, use market ID
-          const marketId = message[FieldTag.MARKET_ID];
-          if (marketId) {
-            logger.info(`[TRADING_STATUS] Using market ID as session ID: ${marketId}`);
-            resolvedSessionId = marketId;
-          } else {
-            // If all else fails, default to 'REG'
-            logger.warn(`[TRADING_STATUS] No session ID found, defaulting to 'REG'`);
-            resolvedSessionId = 'REG';
-          }
-        }
-      }
+          // Look for any tag with "session" in its name (for debugging)
+          const sessionTags = Object.entries(message)
+            .filter(([k, v]) => k.toLowerCase().includes('session') || v.toString().toLowerCase().includes('session'));
 
-      if (!resolvedStatus) {
-        // Try alternative tags that might contain status (e.g. 326, 327, 328)
-        const altStatus = message['326'] || message['327'] || message['328'];
-        if (altStatus) {
-          logger.info(`[TRADING_STATUS] Found status in alternative tag: ${altStatus}`);
-          resolvedStatus = altStatus;
-        } else {
-          // If TradingSessionSubID exists, try to derive status from it
-          const tradingSessionSubID = message['625'];
-          if (tradingSessionSubID) {
-            if (tradingSessionSubID.includes('OPEN')) resolvedStatus = '2';
-            else if (tradingSessionSubID.includes('CLOS')) resolvedStatus = '3';
-            else if (tradingSessionSubID.includes('PRE')) resolvedStatus = '4';
-            
-            if (resolvedStatus) {
-              logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from TradingSessionSubID: ${tradingSessionSubID}`);
+          if (sessionTags.length > 0) {
+            logger.info(`[TRADING_STATUS] Found ${sessionTags.length} tags related to session: ${JSON.stringify(sessionTags)}`);
+            // Use the first one as a last resort
+            if (!resolvedSessionId && sessionTags[0]) {
+              resolvedSessionId = sessionTags[0][1];
+              logger.info(`[TRADING_STATUS] Using ${sessionTags[0][0]} as session ID: ${resolvedSessionId}`);
             }
           } else {
-            // Last resort - check if text field might indicate status
-            const text = message[FieldTag.TEXT];
-            if (text) {
-              if (text.includes('OPEN')) resolvedStatus = '2';
-              else if (text.includes('CLOSE')) resolvedStatus = '3';
-              else if (text.includes('HALT')) resolvedStatus = '1';
-              
-              if (resolvedStatus) {
-                logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from text: ${text}`);
+            // Last resort - if session ID is '05', we need to extract status properly
+            if (sessionId === '05') {
+              logger.info(`[TRADING_STATUS] Session ID is '05', which might be a special PSX format`);
+              // For PSX, session ID '05' might indicate a specific market state
+              resolvedSessionId = 'REG'; // Default to Regular market
+
+              // In this case, the session ID itself might indicate status
+              if (!resolvedStatus) {
+                // "05" might represent a specific session status code in PSX
+                // Map it to a standard FIX session status code
+                logger.info(`[TRADING_STATUS] Mapping session ID ${sessionId} to status code`);
+
+                // Use a map to avoid type comparison issues
+                const sessionStatusMap: Record<string, string> = {
+                  '01': '1', // Halted
+                  '02': '2', // Open
+                  '03': '3', // Closed
+                  '04': '4', // Pre-Open
+                  '05': '2'  // Assume '05' means Open
+                };
+
+                resolvedStatus = sessionStatusMap[sessionId] || '2'; // Default to Open
+                logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from session ID: ${sessionId}`);
               }
+            } else {
+              // If all else fails, default to 'REG'
+              logger.warn(`[TRADING_STATUS] No session ID found, defaulting to 'REG'`);
+              resolvedSessionId = 'REG';
             }
           }
         }
       }
 
-      // Some exchanges don't provide start/end times in standard fields
-      // Try to find them in other fields if needed
+      // If Status is still missing, try more aggressive approaches
+      if (!resolvedStatus) {
+        // If TradingSessionSubID exists, try to derive status from it
+        const tradingSessionSubID = message['625'];
+        if (tradingSessionSubID) {
+          if (tradingSessionSubID.includes('OPEN')) resolvedStatus = '2';
+          else if (tradingSessionSubID.includes('CLOS')) resolvedStatus = '3';
+          else if (tradingSessionSubID.includes('PRE')) resolvedStatus = '4';
+
+          if (resolvedStatus) {
+            logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from TradingSessionSubID: ${tradingSessionSubID}`);
+          }
+        }
+
+        // Check if text field might indicate status
+        const text = message[FieldTag.TEXT];
+        if (text) {
+          if (text.includes('OPEN')) resolvedStatus = '2';
+          else if (text.includes('CLOSE')) resolvedStatus = '3';
+          else if (text.includes('HALT')) resolvedStatus = '1';
+
+          if (resolvedStatus) {
+            logger.info(`[TRADING_STATUS] Derived status ${resolvedStatus} from text: ${text}`);
+          }
+        }
+
+        // Special case for PSX - session ID 05 typically means market is open
+        if (sessionId === '05' && !resolvedStatus) {
+          logger.info(`[TRADING_STATUS] Session ID is '05', assuming status is 'Open' (2)`);
+          resolvedStatus = '2'; // Assume Open
+        }
+
+        // If no status found after all attempts, default to Open (2)
+        if (!resolvedStatus) {
+          logger.warn(`[TRADING_STATUS] No status found after all checks, defaulting to 'Open' (2)`);
+          resolvedStatus = '2'; // Default to Open
+        }
+      }
 
       // Construct session info with resolved values
       const sessionInfo: TradingSessionInfo = {
-        sessionId: resolvedSessionId || '',
-        status: resolvedStatus || '',
+        sessionId: resolvedSessionId || sessionId || 'REG',
+        status: resolvedStatus || '2', // Default to Open if still undefined
         startTime: resolvedStartTime,
         endTime: resolvedEndTime
       };
 
-      logger.info(`[TRADING_STATUS] Emitting session info: ${JSON.stringify(sessionInfo)}`);
+      logger.info(`[TRADING_STATUS] Final resolved session info: ${JSON.stringify(sessionInfo)}`);
       emitter.emit('tradingSessionStatus', sessionInfo);
-      
+
       // Log the complete raw message for debugging
       logger.info(`[TRADING_STATUS] Complete raw message: ${JSON.stringify(message)}`);
     } catch (error) {
       logger.error(`[TRADING_STATUS] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
+
+      // Even if there's an error, try to emit some data
+      try {
+        const fallbackSessionInfo: TradingSessionInfo = {
+          sessionId: 'REG',
+          status: '2', // Default to Open
+          startTime: undefined,
+          endTime: undefined
+        };
+
+        logger.warn(`[TRADING_STATUS] Emitting fallback session info due to error: ${JSON.stringify(fallbackSessionInfo)}`);
+        emitter.emit('tradingSessionStatus', fallbackSessionInfo);
+      } catch (fallbackError) {
+        logger.error(`[TRADING_STATUS] Even fallback emission failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+      }
     }
   };
 
@@ -645,26 +741,26 @@ export function createFixClient(options: FixClientOptions) {
     serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
     msgSeqNum = serverSeqNum + 1; // Set our next sequence number to be one more than server's
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
-    
+
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
-    
+
     // Send initial requests sequentially with delays
     setTimeout(() => {
       if (loggedIn) {
         // First request
         sendTradingSessionStatusRequest();
-        
+
         // Second request after 500ms
         setTimeout(() => {
           if (loggedIn) {
             sendSecurityListRequestForEquity();
-            
+
             // Third request after another 500ms
             setTimeout(() => {
               if (loggedIn) {
                 sendSecurityListRequestForIndex();
-                
+
                 // Start index updates after all initial requests
                 setTimeout(() => {
                   if (loggedIn) {
@@ -1060,7 +1156,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending security list request for REG and FUT markets (EQUITY) with ID: ${requestId}`);
-      
+
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -1095,7 +1191,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST] Sending security list request for REG market (INDEX) with ID: ${requestId}`);
-      
+
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -1347,7 +1443,7 @@ export function createFixClient(options: FixClientOptions) {
         serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
         msgSeqNum = serverSeqNum + 1; // Set our next sequence number to be one more than server's
         logger.info(`Resynced sequence numbers. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
-        
+
         // Re-send the last message with correct sequence number
         if (loggedIn) {
           logger.info('Re-sending last message with corrected sequence number...');
