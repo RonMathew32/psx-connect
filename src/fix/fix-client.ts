@@ -445,11 +445,11 @@ export function createFixClient(options: FixClientOptions) {
         logger.info(`[SECURITY_LIST] Message fields: ${JSON.stringify(message)}`);
 
         // Parse security list entries
-        for (let i = 0; i < 100; i++) {  // Safe upper limit
-          const symbol = message[`${FieldTag.SYMBOL}.${i}`] || message[FieldTag.SYMBOL];
-          const securityType = message[`${FieldTag.SECURITY_TYPE}.${i}`] || message[FieldTag.SECURITY_TYPE];
-          const securityDesc = message[`${FieldTag.SECURITY_DESC}.${i}`] || message[FieldTag.SECURITY_DESC];
-          const marketId = message[`${FieldTag.MARKET_ID}.${i}`] || message[FieldTag.MARKET_ID];
+        for (let i = 0; i < 500; i++) {  // Increased upper limit for larger security lists
+          const symbol = message[`${FieldTag.SYMBOL}.${i}`] || (i === 0 ? message[FieldTag.SYMBOL] : null);
+          const securityType = message[`${FieldTag.SECURITY_TYPE}.${i}`] || (i === 0 ? message[FieldTag.SECURITY_TYPE] : null);
+          const securityDesc = message[`${FieldTag.SECURITY_DESC}.${i}`] || (i === 0 ? message[FieldTag.SECURITY_DESC] : null);
+          const marketId = message[`${FieldTag.MARKET_ID}.${i}`] || (i === 0 ? message[FieldTag.MARKET_ID] : null);
 
           if (!symbol) {
             logger.info(`[SECURITY_LIST] No more securities found at index ${i}`);
@@ -458,9 +458,9 @@ export function createFixClient(options: FixClientOptions) {
 
           logger.info(`[SECURITY_LIST] Processing security ${i + 1}:`);
           logger.info(`[SECURITY_LIST] - Symbol: ${symbol}`);
-          logger.info(`[SECURITY_LIST] - Security Type: ${securityType}`);
-          logger.info(`[SECURITY_LIST] - Description: ${securityDesc}`);
-          logger.info(`[SECURITY_LIST] - Market ID: ${marketId}`);
+          logger.info(`[SECURITY_LIST] - Security Type: ${securityType || 'UNKNOWN'}`);
+          logger.info(`[SECURITY_LIST] - Description: ${securityDesc || 'N/A'}`);
+          logger.info(`[SECURITY_LIST] - Market ID: ${marketId || 'N/A'}`);
 
           securities.push({
             symbol,
@@ -469,18 +469,71 @@ export function createFixClient(options: FixClientOptions) {
             marketId: marketId || ''
           } as SecurityInfo);
         }
+
+        // Sort securities by symbol for easier consumption
+        securities.sort((a, b) => a.symbol.localeCompare(b.symbol));
       } else {
-        logger.warn(`[SECURITY_LIST] No securities found in response`);
+        // Try alternative parsing method for PSX-specific format
+        // Some exchanges may not use standard repeating groups format
+        logger.warn(`[SECURITY_LIST] No securities found with standard parsing, trying alternative method`);
+        
+        for (const [key, value] of Object.entries(message)) {
+          // Look for keys that might contain symbol information 
+          // in a non-standard format
+          if (key.startsWith('55.') || key.startsWith('55_')) {
+            // Found a potential symbol entry
+            const index = key.split('.')[1] || key.split('_')[1];
+            const symbol = value;
+            const secTypeKey = `167.${index}` || `167_${index}`;
+            const descKey = `107.${index}` || `107_${index}`;
+            const marketIdKey = `1301.${index}` || `1301_${index}`;
+            
+            const securityType = message[secTypeKey] || '';
+            const securityDesc = message[descKey] || '';
+            const marketId = message[marketIdKey] || '';
+            
+            logger.info(`[SECURITY_LIST] Found security via alternative parsing - Symbol: ${symbol}`);
+            
+            securities.push({
+              symbol,
+              securityType,
+              securityDesc,
+              marketId
+            });
+          }
+        }
       }
 
       if (securities.length > 0) {
         logger.info(`[SECURITY_LIST] Successfully extracted ${securities.length} securities`);
+        
+        // Group securities by type for logging
+        const securityTypes = securities.reduce((acc, security) => {
+          const type = security.securityType || 'UNKNOWN';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        logger.info(`[SECURITY_LIST] Securities by type: ${JSON.stringify(securityTypes)}`);
+        
+        // Emit the security list event
         emitter.emit('securityList', securities);
+        
+        // Log some sample securities for verification
+        const sampleSize = Math.min(5, securities.length);
+        logger.info(`[SECURITY_LIST] Sample of ${sampleSize} securities:`);
+        for (let i = 0; i < sampleSize; i++) {
+          logger.info(`[SECURITY_LIST] Sample ${i+1}: ${JSON.stringify(securities[i])}`);
+        }
       } else {
         logger.warn(`[SECURITY_LIST] No securities were extracted from the response`);
+        // Emit an empty list to notify frontend that request was processed but no securities were found
+        emitter.emit('securityList', []);
       }
     } catch (error) {
       logger.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
+      // Even on error, emit an empty array so frontend knows the request completed
+      emitter.emit('securityList', []);
     }
   };
 
@@ -754,11 +807,14 @@ export function createFixClient(options: FixClientOptions) {
         // Second request after 500ms
         setTimeout(() => {
           if (loggedIn) {
+            // Request security list data for equity securities
+            logger.info('Requesting equity security list data after logon');
             sendSecurityListRequestForEquity();
 
-            // Third request after another 500ms
+            // Request security list data for index securities after another delay
             setTimeout(() => {
               if (loggedIn) {
+                logger.info('Requesting index security list data after logon');
                 sendSecurityListRequestForIndex();
 
                 // Start index updates after all initial requests
@@ -1482,7 +1538,18 @@ export function createFixClient(options: FixClientOptions) {
     sendLogon,
     sendLogout,
     start,
-    stop
+    stop,
+    requestSecurityList: () => {
+      // Request both equity and index securities with a delay between requests
+      sendSecurityListRequestForEquity();
+      
+      // Add a 2-second delay before requesting index securities
+      setTimeout(() => {
+        sendSecurityListRequestForIndex();
+      }, 2000);
+      
+      return client;
+    }
   };
   return client;
 }
@@ -1520,4 +1587,5 @@ export interface FixClient {
   sendLogout(text?: string): void;
   start(): void;
   stop(): void;
+  requestSecurityList(): this;
 }

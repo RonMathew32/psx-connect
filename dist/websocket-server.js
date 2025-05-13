@@ -152,6 +152,58 @@ function createWebSocketServer(port, fixConfig = {
             connected: isFixConnected,
             timestamp: Date.now()
         }));
+        // Handle incoming messages from clients
+        ws.on('message', (message) => {
+            try {
+                const parsedMessage = JSON.parse(message);
+                logger_1.default.info(`Received message from client: ${JSON.stringify(parsedMessage)}`);
+                // Handle different message types
+                switch (parsedMessage.type) {
+                    case 'requestSecurityList':
+                        // Client is requesting security list data
+                        logger_1.default.info('Client requested security list data');
+                        if (fixClient && isFixConnected) {
+                            // Request security list data
+                            logger_1.default.info('Requesting security list data from FIX server');
+                            fixClient.requestSecurityList();
+                            // Acknowledge the request
+                            ws.send(JSON.stringify({
+                                type: 'requestAcknowledged',
+                                message: 'Security list request sent to server',
+                                requestType: 'securityList',
+                                timestamp: Date.now()
+                            }));
+                        }
+                        else {
+                            // FIX client is not connected
+                            logger_1.default.warn('Cannot request security list data: FIX client not connected');
+                            ws.send(JSON.stringify({
+                                type: 'error',
+                                message: 'Cannot request security list data: FIX server not connected',
+                                timestamp: Date.now()
+                            }));
+                        }
+                        break;
+                    case 'ping':
+                        // Simple ping request
+                        ws.send(JSON.stringify({
+                            type: 'pong',
+                            timestamp: Date.now()
+                        }));
+                        break;
+                    default:
+                        logger_1.default.warn(`Unhandled message type: ${parsedMessage.type}`);
+                }
+            }
+            catch (error) {
+                logger_1.default.error(`Error processing client message: ${error}`);
+                ws.send(JSON.stringify({
+                    type: 'error',
+                    message: `Server could not process your request: ${error}`,
+                    timestamp: Date.now()
+                }));
+            }
+        });
         ws.on('close', () => {
             logger_1.default.info('WebSocket client disconnected');
             clients.delete(ws);

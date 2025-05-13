@@ -4,11 +4,12 @@ import logger from './utils/logger';
 import { MarketDataItem, TradingSessionInfo, SecurityInfo } from './types';
 
 interface WebSocketMessage {
-  type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'securityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
+  type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'securityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status' | 'requestAcknowledged' | 'pong';
   data?: MarketDataItem[] | string | TradingSessionInfo | any;
   message?: string;
   timestamp?: number;
   connected?: boolean;
+  requestType?: string;
 }
 
 interface FixConfig {
@@ -176,6 +177,61 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       connected: isFixConnected,
       timestamp: Date.now()
     }));
+
+    // Handle incoming messages from clients
+    ws.on('message', (message: string) => {
+      try {
+        const parsedMessage = JSON.parse(message);
+        logger.info(`Received message from client: ${JSON.stringify(parsedMessage)}`);
+
+        // Handle different message types
+        switch (parsedMessage.type) {
+          case 'requestSecurityList':
+            // Client is requesting security list data
+            logger.info('Client requested security list data');
+            if (fixClient && isFixConnected) {
+              // Request security list data
+              logger.info('Requesting security list data from FIX server');
+              fixClient.requestSecurityList();
+
+              // Acknowledge the request
+              ws.send(JSON.stringify({
+                type: 'requestAcknowledged',
+                message: 'Security list request sent to server',
+                requestType: 'securityList',
+                timestamp: Date.now()
+              }));
+            } else {
+              // FIX client is not connected
+              logger.warn('Cannot request security list data: FIX client not connected');
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Cannot request security list data: FIX server not connected',
+                timestamp: Date.now()
+              }));
+            }
+            break;
+
+          case 'ping':
+            // Simple ping request
+            ws.send(JSON.stringify({
+              type: 'pong',
+              timestamp: Date.now()
+            }));
+            break;
+
+          default:
+            logger.warn(`Unhandled message type: ${parsedMessage.type}`);
+        }
+      } catch (error) {
+        logger.error(`Error processing client message: ${error}`);
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: `Server could not process your request: ${error}`,
+          timestamp: Date.now()
+        }));
+      }
+    });
 
     ws.on('close', () => {
       logger.info('WebSocket client disconnected');
