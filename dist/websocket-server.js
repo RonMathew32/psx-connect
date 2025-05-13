@@ -184,6 +184,19 @@ function createWebSocketServer(port, fixConfig = {
                             // Request security list data
                             logger_1.default.info('Requesting security list data from FIX server');
                             fixClient.requestSecurityList();
+                            // Also try individual requests for better reliability
+                            setTimeout(() => {
+                                if (fixClient && isFixConnected) {
+                                    logger_1.default.info('Sending direct equity security list request');
+                                    fixClient.sendSecurityListRequestForEquity();
+                                    setTimeout(() => {
+                                        if (fixClient && isFixConnected) {
+                                            logger_1.default.info('Sending direct index security list request');
+                                            fixClient.sendSecurityListRequestForIndex();
+                                        }
+                                    }, 3000);
+                                }
+                            }, 1000);
                             // Acknowledge the request
                             ws.send(JSON.stringify({
                                 type: 'requestAcknowledged',

@@ -429,8 +429,14 @@ export function createFixClient(options: FixClientOptions) {
       const securityType = message[FieldTag.SECURITY_TYPE];
       const marketId = message[FieldTag.MARKET_ID];
       const totalNoRelatedSym = message[FieldTag.TOT_NO_RELATED_SYM]; // Now using the constant
+      
+      // Debug information - add more fields
+      const messageSeqNum = message[FieldTag.MSG_SEQ_NUM];
+      const sendingTime = message[FieldTag.SENDING_TIME];
 
       logger.info(`[SECURITY_LIST] ================== RECEIVED SECURITY LIST ==================`);
+      logger.info(`[SECURITY_LIST] Message Sequence Number: ${messageSeqNum}`);
+      logger.info(`[SECURITY_LIST] Sending Time: ${sendingTime}`);
       logger.info(`[SECURITY_LIST] Request ID: ${reqId}`);
       logger.info(`[SECURITY_LIST] Security Request Type: ${securityReqType}`);
       logger.info(`[SECURITY_LIST] Security Type: ${securityType}`);
@@ -504,8 +510,33 @@ export function createFixClient(options: FixClientOptions) {
         if (message['893'] === 'N') {  // LastFragment = N means more to come
           logger.info(`[SECURITY_LIST] This appears to be a partial response (LastFragment=N), waiting for more data`);
         } else {
-          // Emit an empty list to notify frontend that request was processed but no securities were found
+          // Still emit an event even if no securities were found, so the frontend knows a response was received
+          logger.info('[SECURITY_LIST] Emitting empty security list to frontend');
           emitter.emit('securityList', []);
+          
+          // Try one more time with a different request after a delay
+          setTimeout(() => {
+            if (connected && loggedIn) {
+              logger.info('[SECURITY_LIST] Retrying security list request with alternative format');
+              
+              // Try with different format that might work with this server
+              const requestId = uuidv4();
+              const retryMessage = createMessageBuilder()
+                .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(msgSeqNum++)
+                .addField(FieldTag.SECURITY_REQ_ID, requestId)
+                .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol, no type specified
+                
+              // Sometimes not specifying the security type works better
+              const rawRetryMessage = retryMessage.buildMessage();
+              if (socket) {
+                socket.write(rawRetryMessage);
+                logger.info('[SECURITY_LIST] Sent alternative security list request');
+              }
+            }
+          }, 5000);
         }
       }
       logger.info(`[SECURITY_LIST] ================== END SECURITY LIST ==================`);
@@ -1002,42 +1033,18 @@ export function createFixClient(options: FixClientOptions) {
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
+    
+    // Send security list requests immediately after login
+    logger.info('[SECURITY_LIST] Sending equity security list request immediately after login');
     sendSecurityListRequestForEquity();
-
-
-    // Send initial requests sequentially with delays
+    
+    // Send index security list request after a short delay
     setTimeout(() => {
       if (loggedIn) {
-        // First request
-        // sendTradingSessionStatusRequest();
-        // sendSecurityListRequestForEquity();
-
-
-        // Second request after 500ms
-        setTimeout(() => {
-          if (loggedIn) {
-            // Request security list data for equity securities
-            logger.info('Requesting equity security list data after logon');
-            // sendSecurityListRequestForEquity();
-
-            // Request security list data for index securities after another delay
-            setTimeout(() => {
-              if (loggedIn) {
-                logger.info('Requesting index security list data after logon');
-                sendSecurityListRequestForIndex();
-
-                // Start index updates after all initial requests
-                setTimeout(() => {
-                  if (loggedIn) {
-                    startIndexUpdates();
-                  }
-                }, 1000);
-              }
-            }, 1000);
-          }
-        }, 1000);
+        logger.info('[SECURITY_LIST] Sending index security list request after delay');
+        sendSecurityListRequestForIndex();
       }
-    }, 2000);
+    }, 3000);
   };
 
   /**
@@ -1415,12 +1422,12 @@ export function createFixClient(options: FixClientOptions) {
   const sendSecurityListRequestForEquity = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
-        logger.error('[SECURITY_LIST] Cannot send security list request: not connected or not logged in');
+        logger.error('[SECURITY_LIST] Cannot send equity security list request: not connected or not logged in');
         return null;
       }
 
       const requestId = uuidv4();
-      logger.info(`[SECURITY_LIST] Sending security list request for REG and FUT markets (EQUITY) with ID: ${requestId}`);
+      logger.info(`[SECURITY_LIST] Sending EQUITY security list request with ID: ${requestId}`);
 
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
@@ -1429,17 +1436,27 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgSeqNum(msgSeqNum++)
         .addField(FieldTag.SECURITY_REQ_ID, requestId)
         .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
-        .addField(FieldTag.SECURITY_TYPE, 'EQUITY') // Product type EQUITY
-        .addField(FieldTag.MARKET_ID, 'REG') // Regular market
-        .addField(FieldTag.MARKET_ID, 'FUT'); // Futures market
+        .addField(FieldTag.SECURITY_TYPE, 'EQUITY'); // Product type EQUITY
+        
+      // In some PSX implementations, we need to add these fields explicitly
+      message.addField('453', '1'); // NoPartyIDs = 1
+      message.addField('448', options.senderCompId); // PartyID
+      message.addField('447', 'D'); // PartyIDSource = D (custom)
+      message.addField('452', '3'); // PartyRole = 3
 
       const rawMessage = message.buildMessage();
-      logger.info(`[SECURITY_LIST] Sending security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      socket.write(rawMessage);
-      logger.info(`[SECURITY_LIST] Sent security list request for REG and FUT markets (EQUITY) (seq: ${msgSeqNum - 1})`);
-      return requestId;
+      logger.info(`[SECURITY_LIST] Raw equity security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+      
+      if (socket) {
+        socket.write(rawMessage);
+        logger.info(`[SECURITY_LIST] Equity security list request sent successfully (seq: ${msgSeqNum - 1})`);
+        return requestId;
+      } else {
+        logger.error(`[SECURITY_LIST] Failed to send equity security list request - socket not available`);
+        return null;
+      }
     } catch (error) {
-      logger.error(`[SECURITY_LIST] Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[SECURITY_LIST] Error sending equity security list request: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   };
@@ -1450,12 +1467,12 @@ export function createFixClient(options: FixClientOptions) {
   const sendSecurityListRequestForIndex = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
-        logger.error('[SECURITY_LIST] Cannot send security list request: not connected or not logged in');
+        logger.error('[SECURITY_LIST] Cannot send index security list request: not connected or not logged in');
         return null;
       }
 
       const requestId = uuidv4();
-      logger.info(`[SECURITY_LIST] Sending security list request for REG market (INDEX) with ID: ${requestId}`);
+      logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
 
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
@@ -1464,16 +1481,35 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgSeqNum(msgSeqNum++)
         .addField(FieldTag.SECURITY_REQ_ID, requestId)
         .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
-        .addField(FieldTag.SECURITY_TYPE, 'INDEX') // Product type INDEX
-        .addField(FieldTag.MARKET_ID, 'REG'); // Regular market
+        .addField(FieldTag.SECURITY_TYPE, 'INDEX'); // Product type INDEX
+        
+      // In some PSX implementations, we need to add these fields explicitly
+      message.addField('453', '1'); // NoPartyIDs = 1
+      message.addField('448', options.senderCompId); // PartyID
+      message.addField('447', 'D'); // PartyIDSource = D (custom)
+      message.addField('452', '3'); // PartyRole = 3
 
       const rawMessage = message.buildMessage();
-      logger.info(`[SECURITY_LIST] Sending security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      socket.write(rawMessage);
-      logger.info(`[SECURITY_LIST] Sent security list request for REG market (INDEX) (seq: ${msgSeqNum - 1})`);
-      return requestId;
+      logger.info(`[SECURITY_LIST] Raw index security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+      
+      if (socket) {
+        socket.write(rawMessage);
+        logger.info(`[SECURITY_LIST] Index security list request sent successfully (seq: ${msgSeqNum - 1})`);
+        
+        // Also start index market data updates
+        setTimeout(() => {
+          if (loggedIn) {
+            startIndexUpdates();
+          }
+        }, 5000);
+        
+        return requestId;
+      } else {
+        logger.error(`[SECURITY_LIST] Failed to send index security list request - socket not available`);
+        return null;
+      }
     } catch (error) {
-      logger.error(`[SECURITY_LIST] Error sending security list request: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[SECURITY_LIST] Error sending index security list request: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   };

@@ -205,7 +205,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       try {
         const parsedMessage = JSON.parse(message);
         logger.info(`Received message from client: ${JSON.stringify(parsedMessage)}`);
-
+        
         // Handle different message types
         switch (parsedMessage.type) {
           case 'requestSecurityList':
@@ -215,7 +215,22 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
               // Request security list data
               logger.info('Requesting security list data from FIX server');
               fixClient.requestSecurityList();
-
+              
+              // Also try individual requests for better reliability
+              setTimeout(() => {
+                if (fixClient && isFixConnected) {
+                  logger.info('Sending direct equity security list request');
+                  fixClient.sendSecurityListRequestForEquity();
+                  
+                  setTimeout(() => {
+                    if (fixClient && isFixConnected) {
+                      logger.info('Sending direct index security list request');
+                      fixClient.sendSecurityListRequestForIndex();
+                    }
+                  }, 3000);
+                }
+              }, 1000);
+              
               // Acknowledge the request
               ws.send(JSON.stringify({
                 type: 'requestAcknowledged',
