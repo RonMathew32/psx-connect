@@ -72,6 +72,7 @@ exports.FieldTag = {
     MD_ENTRY_SIZE: '271', // Market Data Entry Size
     MD_REJECT_REASON: '281', // Market Data Reject Reason
     NO_RELATED_SYM: '146',
+    TOT_NO_RELATED_SYM: '393', // Total number of securities in response
     SYMBOL: '55',
     SECURITY_LIST_REQUEST_TYPE: '559',
     SECURITY_REQ_ID: '320',

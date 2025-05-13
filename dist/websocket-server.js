@@ -66,6 +66,24 @@ function createWebSocketServer(port, fixConfig = {
             reconnectAttempts = 0;
             logger_1.default.info('FIX client initialized and connected successfully');
             broadcast({ type: 'status', connected: true, timestamp: Date.now() });
+            // Schedule regular security list updates - fetch every 30 minutes
+            // This ensures frontend always has the latest security list data
+            const securityListInterval = 30 * 60 * 1000; // 30 minutes
+            logger_1.default.info(`Setting up automatic security list updates every ${securityListInterval / 60000} minutes`);
+            // Request initially after 10 seconds to ensure connection is stable
+            setTimeout(() => {
+                if (fixClient && isFixConnected) {
+                    logger_1.default.info('Performing initial security list request after startup');
+                    fixClient.requestSecurityList();
+                }
+            }, 10000);
+            // Then set up recurring requests
+            setInterval(() => {
+                if (fixClient && isFixConnected) {
+                    logger_1.default.info('Performing scheduled security list request');
+                    fixClient.requestSecurityList();
+                }
+            }, securityListInterval);
         }
         catch (error) {
             logger_1.default.error(`FIX client initialization failed: ${error}`);
@@ -239,6 +257,23 @@ function createWebSocketServer(port, fixConfig = {
         isFixConnected: () => isFixConnected,
         emitToClients: (message) => {
             broadcast(message);
+        },
+        requestImmediateSecurityList: () => {
+            if (fixClient && isFixConnected) {
+                logger_1.default.info('Manually triggered immediate security list request');
+                fixClient.requestSecurityList();
+                broadcast({
+                    type: 'requestAcknowledged',
+                    message: 'Manual security list request initiated',
+                    requestType: 'securityList',
+                    timestamp: Date.now()
+                });
+                return true;
+            }
+            else {
+                logger_1.default.warn('Cannot perform manual security list request - not connected');
+                return false;
+            }
         }
     };
 }

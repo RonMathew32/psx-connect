@@ -428,87 +428,60 @@ export function createFixClient(options: FixClientOptions) {
       const securityReqType = message[FieldTag.SECURITY_LIST_REQUEST_TYPE];
       const securityType = message[FieldTag.SECURITY_TYPE];
       const marketId = message[FieldTag.MARKET_ID];
+      const totalNoRelatedSym = message[FieldTag.TOT_NO_RELATED_SYM]; // Now using the constant
 
-      logger.info(`[SECURITY_LIST] Received security list response:`);
-      logger.info(`[SECURITY_LIST] - Request ID: ${reqId}`);
-      logger.info(`[SECURITY_LIST] - Security Request Type: ${securityReqType}`);
-      logger.info(`[SECURITY_LIST] - Security Type: ${securityType}`);
-      logger.info(`[SECURITY_LIST] - Market ID: ${marketId}`);
+      logger.info(`[SECURITY_LIST] ================== RECEIVED SECURITY LIST ==================`);
+      logger.info(`[SECURITY_LIST] Request ID: ${reqId}`);
+      logger.info(`[SECURITY_LIST] Security Request Type: ${securityReqType}`);
+      logger.info(`[SECURITY_LIST] Security Type: ${securityType}`);
+      logger.info(`[SECURITY_LIST] Market ID: ${marketId}`);
+      logger.info(`[SECURITY_LIST] Total Related Symbols: ${totalNoRelatedSym || 'Not specified'}`);
+
+      // Check message for debug purposes
+      const msgType = message[FieldTag.MSG_TYPE];
+      if (msgType !== 'y') {
+        logger.warn(`[SECURITY_LIST] Unexpected message type: ${msgType}, expected 'y' (Security List)`);
+      }
 
       // Extract securities
       const securities: SecurityInfo[] = [];
       const noSecurities = parseInt(message[FieldTag.NO_RELATED_SYM] || '0', 10);
       logger.info(`[SECURITY_LIST] Number of securities in response: ${noSecurities}`);
 
+      // Dump all message fields for debugging
+      logger.info(`[SECURITY_LIST] All message fields for debugging:`);
+      Object.entries(message).forEach(([key, value]) => {
+        if (key !== 'raw') { // Skip raw data which could be large
+          logger.info(`[SECURITY_LIST] Field ${key}: ${value}`);
+        }
+      });
+
       if (noSecurities > 0) {
-        // Log all fields in the message for debugging
-        logger.info(`[SECURITY_LIST] Message fields: ${JSON.stringify(message)}`);
-
-        // Parse security list entries
-        for (let i = 0; i < 500; i++) {  // Increased upper limit for larger security lists
-          const symbol = message[`${FieldTag.SYMBOL}.${i}`] || (i === 0 ? message[FieldTag.SYMBOL] : null);
-          const securityType = message[`${FieldTag.SECURITY_TYPE}.${i}`] || (i === 0 ? message[FieldTag.SECURITY_TYPE] : null);
-          const securityDesc = message[`${FieldTag.SECURITY_DESC}.${i}`] || (i === 0 ? message[FieldTag.SECURITY_DESC] : null);
-          const marketId = message[`${FieldTag.MARKET_ID}.${i}`] || (i === 0 ? message[FieldTag.MARKET_ID] : null);
-
-          if (!symbol) {
-            logger.info(`[SECURITY_LIST] No more securities found at index ${i}`);
-            break;
-          }
-
-          logger.info(`[SECURITY_LIST] Processing security ${i + 1}:`);
-          logger.info(`[SECURITY_LIST] - Symbol: ${symbol}`);
-          logger.info(`[SECURITY_LIST] - Security Type: ${securityType || 'UNKNOWN'}`);
-          logger.info(`[SECURITY_LIST] - Description: ${securityDesc || 'N/A'}`);
-          logger.info(`[SECURITY_LIST] - Market ID: ${marketId || 'N/A'}`);
-
-          securities.push({
-            symbol,
-            securityType: securityType || '',
-            securityDesc: securityDesc || '',
-            marketId: marketId || ''
-          } as SecurityInfo);
-        }
-
-        // Sort securities by symbol for easier consumption
-        securities.sort((a, b) => a.symbol.localeCompare(b.symbol));
-      } else {
-        // Try alternative parsing method for PSX-specific format
-        // Some exchanges may not use standard repeating groups format
-        logger.warn(`[SECURITY_LIST] No securities found with standard parsing, trying alternative method`);
+        // Aggressive parsing of repeating groups
+        // PSX FIX format may have different patterns for repeating groups
         
-        for (const [key, value] of Object.entries(message)) {
-          // Look for keys that might contain symbol information 
-          // in a non-standard format
-          if (key.startsWith('55.') || key.startsWith('55_')) {
-            // Found a potential symbol entry
-            const index = key.split('.')[1] || key.split('_')[1];
-            const symbol = value;
-            const secTypeKey = `167.${index}` || `167_${index}`;
-            const descKey = `107.${index}` || `107_${index}`;
-            const marketIdKey = `1301.${index}` || `1301_${index}`;
-            
-            const securityType = message[secTypeKey] || '';
-            const securityDesc = message[descKey] || '';
-            const marketId = message[marketIdKey] || '';
-            
-            logger.info(`[SECURITY_LIST] Found security via alternative parsing - Symbol: ${symbol}`);
-            
-            securities.push({
-              symbol,
-              securityType,
-              securityDesc,
-              marketId
-            });
-          }
+        // First try standard FIX repeating group format
+        const standardFormatFound = tryStandardFormat(message, securities);
+        
+        // If standard format didn't yield results, try alternative formats
+        if (!standardFormatFound || securities.length === 0) {
+          logger.info(`[SECURITY_LIST] Standard format yielded no results, trying alternative formats`);
+          tryAlternativeFormats(message, securities);
         }
+      } else {
+        // No securities count specified, try to extract them anyway
+        logger.warn(`[SECURITY_LIST] No securities count found in response, trying to extract anyway`);
+        tryAlternativeFormats(message, securities);
       }
 
-      if (securities.length > 0) {
-        logger.info(`[SECURITY_LIST] Successfully extracted ${securities.length} securities`);
+      // Remove duplicate securities that might have been added by different parsing methods
+      const uniqueSecurities = removeDuplicates(securities);
+      
+      if (uniqueSecurities.length > 0) {
+        logger.info(`[SECURITY_LIST] Successfully extracted ${uniqueSecurities.length} unique securities`);
         
         // Group securities by type for logging
-        const securityTypes = securities.reduce((acc, security) => {
+        const securityTypes = uniqueSecurities.reduce((acc, security) => {
           const type = security.securityType || 'UNKNOWN';
           acc[type] = (acc[type] || 0) + 1;
           return acc;
@@ -517,24 +490,256 @@ export function createFixClient(options: FixClientOptions) {
         logger.info(`[SECURITY_LIST] Securities by type: ${JSON.stringify(securityTypes)}`);
         
         // Emit the security list event
-        emitter.emit('securityList', securities);
+        emitter.emit('securityList', uniqueSecurities);
         
         // Log some sample securities for verification
-        const sampleSize = Math.min(5, securities.length);
+        const sampleSize = Math.min(5, uniqueSecurities.length);
         logger.info(`[SECURITY_LIST] Sample of ${sampleSize} securities:`);
         for (let i = 0; i < sampleSize; i++) {
-          logger.info(`[SECURITY_LIST] Sample ${i+1}: ${JSON.stringify(securities[i])}`);
+          logger.info(`[SECURITY_LIST] Sample ${i+1}: ${JSON.stringify(uniqueSecurities[i])}`);
         }
       } else {
         logger.warn(`[SECURITY_LIST] No securities were extracted from the response`);
-        // Emit an empty list to notify frontend that request was processed but no securities were found
-        emitter.emit('securityList', []);
+        // Check if this might be a multi-part response
+        if (message['893'] === 'N') {  // LastFragment = N means more to come
+          logger.info(`[SECURITY_LIST] This appears to be a partial response (LastFragment=N), waiting for more data`);
+        } else {
+          // Emit an empty list to notify frontend that request was processed but no securities were found
+          emitter.emit('securityList', []);
+        }
       }
+      logger.info(`[SECURITY_LIST] ================== END SECURITY LIST ==================`);
     } catch (error) {
       logger.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
       // Even on error, emit an empty array so frontend knows the request completed
       emitter.emit('securityList', []);
     }
+  };
+
+  /**
+   * Try to parse securities using standard FIX repeating group format
+   */
+  const tryStandardFormat = (message: ParsedFixMessage, securities: SecurityInfo[]): boolean => {
+    try {
+      let found = false;
+      // Try to find repeating groups with standard indexing
+      for (let i = 0; i < 1000; i++) {
+        // Try both with and without index notation for first item
+        const symbol = message[`${FieldTag.SYMBOL}.${i}`] || (i === 0 ? message[FieldTag.SYMBOL] : null);
+        if (!symbol) {
+          if (i > 0) found = true; // We found at least one security
+          break;
+        }
+
+        const securityType = message[`${FieldTag.SECURITY_TYPE}.${i}`] || (i === 0 ? message[FieldTag.SECURITY_TYPE] : null);
+        const securityDesc = message[`${FieldTag.SECURITY_DESC}.${i}`] || (i === 0 ? message[FieldTag.SECURITY_DESC] : null);
+        const marketId = message[`${FieldTag.MARKET_ID}.${i}`] || (i === 0 ? message[FieldTag.MARKET_ID] : null);
+
+        logger.info(`[SECURITY_LIST] Found security using standard format at index ${i}:`);
+        logger.info(`[SECURITY_LIST] - Symbol: ${symbol}`);
+        logger.info(`[SECURITY_LIST] - Security Type: ${securityType || 'UNKNOWN'}`);
+        logger.info(`[SECURITY_LIST] - Description: ${securityDesc || 'N/A'}`);
+        logger.info(`[SECURITY_LIST] - Market ID: ${marketId || 'N/A'}`);
+
+        securities.push({
+          symbol,
+          securityType: securityType || '',
+          securityDesc: securityDesc || '',
+          marketId: marketId || ''
+        });
+        found = true;
+      }
+      return found;
+    } catch (error) {
+      logger.error(`[SECURITY_LIST] Error in standard format parsing: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  };
+
+  /**
+   * Try alternative formats to extract securities
+   */
+  const tryAlternativeFormats = (message: ParsedFixMessage, securities: SecurityInfo[]): void => {
+    try {
+      logger.info(`[SECURITY_LIST] Trying alternative parsing methods for securities`);
+      
+      // Method 1: Look for keys that might be symbols (tag 55 is Symbol)
+      for (const [key, value] of Object.entries(message)) {
+        if (key === '55' || key.startsWith('55.') || key.startsWith('55_')) {
+          const index = key.includes('.') ? key.split('.')[1] : key.includes('_') ? key.split('_')[1] : '0';
+          const symbol = value;
+          
+          // Try various tag formats for associated fields
+          const secTypeKey = `167.${index}` || `167_${index}` || '167';
+          const descKey = `107.${index}` || `107_${index}` || '107';
+          const marketIdKey = `1301.${index}` || `1301_${index}` || '1301';
+          
+          const securityType = message[secTypeKey] || '';
+          const securityDesc = message[descKey] || '';
+          const marketId = message[marketIdKey] || '';
+          
+          logger.info(`[SECURITY_LIST] Found security via key pattern method - Symbol: ${symbol}`);
+          
+          securities.push({
+            symbol,
+            securityType,
+            securityDesc,
+            marketId
+          });
+        }
+      }
+      
+      // Method 2: Look for patterns in all keys that might indicate security information
+      // Some FIX implementations use non-standard patterns
+      const symbolPattern = /\.?(\w+)\.?/;
+      let lastSymbol = '';
+      
+      for (const [key, value] of Object.entries(message)) {
+        // Check if this appears to be a symbol field
+        if ((key.includes('55') || key.toLowerCase().includes('symbol')) && 
+            typeof value === 'string' && value.length > 0) {
+          
+          lastSymbol = value;
+          // Look for associated fields within proximity
+          let securityType = '';
+          let securityDesc = '';
+          let marketId = '';
+          
+          // Try to find related fields by numeric proximity or pattern matching
+          const keyNum = parseInt(key.replace(/\D/g, ''), 10);
+          if (!isNaN(keyNum)) {
+            for (const [otherKey, otherValue] of Object.entries(message)) {
+              const otherKeyNum = parseInt(otherKey.replace(/\D/g, ''), 10);
+              
+              // Check if keys are close together which suggests they're related
+              if (!isNaN(otherKeyNum) && Math.abs(keyNum - otherKeyNum) < 20) {
+                if (otherKey.includes('167') || otherKey.toLowerCase().includes('type')) {
+                  securityType = String(otherValue);
+                } else if (otherKey.includes('107') || otherKey.toLowerCase().includes('desc')) {
+                  securityDesc = String(otherValue);
+                } else if (otherKey.includes('1301') || otherKey.toLowerCase().includes('market')) {
+                  marketId = String(otherValue);
+                }
+              }
+            }
+          }
+          
+          logger.info(`[SECURITY_LIST] Found security via pattern matching - Symbol: ${lastSymbol}`);
+          
+          securities.push({
+            symbol: lastSymbol,
+            securityType,
+            securityDesc,
+            marketId
+          });
+        }
+        
+        // If we find a field that looks like a security type, desc, or market
+        // and we have a symbol from a previous iteration, create an entry
+        if (lastSymbol && (
+            key.includes('167') || key.includes('107') || key.includes('1301') ||
+            key.toLowerCase().includes('type') || key.toLowerCase().includes('desc')
+        )) {
+          let found = false;
+          // Check if we already have an entry for this symbol
+          for (const security of securities) {
+            if (security.symbol === lastSymbol) {
+              // Update the existing entry
+              if (key.includes('167') || key.toLowerCase().includes('type')) {
+                security.securityType = String(value);
+              } else if (key.includes('107') || key.toLowerCase().includes('desc')) {
+                security.securityDesc = String(value);
+              } else if (key.includes('1301') || key.toLowerCase().includes('market')) {
+                security.marketId = String(value);
+              }
+              found = true;
+              break;
+            }
+          }
+          
+          // If we didn't find an existing entry, create a new one
+          if (!found) {
+            const newSecurity: SecurityInfo = {
+              symbol: lastSymbol,
+              securityType: '',
+              securityDesc: '',
+              marketId: ''
+            };
+            
+            if (key.includes('167') || key.toLowerCase().includes('type')) {
+              newSecurity.securityType = String(value);
+            } else if (key.includes('107') || key.toLowerCase().includes('desc')) {
+              newSecurity.securityDesc = String(value);
+            } else if (key.includes('1301') || key.toLowerCase().includes('market')) {
+              newSecurity.marketId = String(value);
+            }
+            
+            securities.push(newSecurity);
+          }
+        }
+      }
+      
+      // Method 3: If there's raw data in the message, try to parse it
+      // Some implementations include security list data in raw data fields
+      if (message[FieldTag.RAW_DATA]) {
+        logger.info(`[SECURITY_LIST] Found raw data field, attempting to parse`);
+        try {
+          const rawData = message[FieldTag.RAW_DATA];
+          // Try to parse as securities - this would be implementation specific
+          // Simplified example: assume comma-separated list of symbol:type:desc:market
+          if (typeof rawData === 'string' && rawData.includes(':')) {
+            const items = rawData.split(',');
+            for (const item of items) {
+              const parts = item.split(':');
+              if (parts.length >= 1) {
+                securities.push({
+                  symbol: parts[0],
+                  securityType: parts[1] || '',
+                  securityDesc: parts[2] || '',
+                  marketId: parts[3] || ''
+                });
+              }
+            }
+          }
+        } catch (rawError) {
+          logger.error(`[SECURITY_LIST] Error parsing raw data: ${rawError}`);
+        }
+      }
+    } catch (error) {
+      logger.error(`[SECURITY_LIST] Error in alternative format parsing: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  /**
+   * Remove duplicate securities by symbol
+   */
+  const removeDuplicates = (securities: SecurityInfo[]): SecurityInfo[] => {
+    const uniqueMap = new Map<string, SecurityInfo>();
+    
+    for (const security of securities) {
+      // If we already have this symbol, keep the entry with more information
+      if (uniqueMap.has(security.symbol)) {
+        const existing = uniqueMap.get(security.symbol)!;
+        
+        // Only replace if the new entry has more information
+        const existingInfo = (existing.securityType ? 1 : 0) + 
+                           (existing.securityDesc ? 1 : 0) + 
+                           (existing.marketId ? 1 : 0);
+                           
+        const newInfo = (security.securityType ? 1 : 0) + 
+                      (security.securityDesc ? 1 : 0) + 
+                      (security.marketId ? 1 : 0);
+                      
+        if (newInfo > existingInfo) {
+          uniqueMap.set(security.symbol, security);
+        }
+      } else {
+        uniqueMap.set(security.symbol, security);
+      }
+    }
+    
+    // Sort by symbol for consistency
+    return Array.from(uniqueMap.values()).sort((a, b) => a.symbol.localeCompare(b.symbol));
   };
 
   /**
@@ -1540,13 +1745,72 @@ export function createFixClient(options: FixClientOptions) {
     start,
     stop,
     requestSecurityList: () => {
-      // Request both equity and index securities with a delay between requests
-      sendSecurityListRequestForEquity();
+      logger.info('[SECURITY_LIST] Starting comprehensive security list request');
       
-      // Add a 2-second delay before requesting index securities
+      // Reset any sequence issues
+      msgSeqNum++;
+      
+      // Keep track of request IDs for logging
+      const equityRequestId = uuidv4();
+      const indexRequestId = uuidv4();
+      
+      // Request equity securities first
+      logger.info(`[SECURITY_LIST] Requesting EQUITY securities with request ID: ${equityRequestId}`);
+      // Create message builder with specific settings for equity request
+      const equityMessage = createMessageBuilder()
+        .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(msgSeqNum++)
+        .addField(FieldTag.SECURITY_REQ_ID, equityRequestId)
+        .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
+        .addField(FieldTag.SECURITY_TYPE, 'EQUITY') // Product type EQUITY
+        .addField(FieldTag.MARKET_ID, 'REG'); // Regular market
+
+      const rawEquityMessage = equityMessage.buildMessage();
+      logger.info(`[SECURITY_LIST] Sending equity security list request message: ${rawEquityMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+      if (socket) {
+        socket.write(rawEquityMessage);
+        logger.info('[SECURITY_LIST] Equity security list request sent successfully');
+      } else {
+        logger.error('[SECURITY_LIST] Failed to send equity security list - socket not available');
+      }
+      
+      // Wait 3 seconds then request index securities
       setTimeout(() => {
-        sendSecurityListRequestForIndex();
-      }, 2000);
+        if (!socket || !connected) {
+          logger.error('[SECURITY_LIST] Cannot send index security list request - not connected');
+          return;
+        }
+        
+        logger.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
+        const indexMessage = createMessageBuilder()
+          .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+          .setSenderCompID(options.senderCompId)
+          .setTargetCompID(options.targetCompId)
+          .setMsgSeqNum(msgSeqNum++)
+          .addField(FieldTag.SECURITY_REQ_ID, indexRequestId)
+          .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
+          .addField(FieldTag.SECURITY_TYPE, 'INDEX') // Product type INDEX
+          .addField(FieldTag.MARKET_ID, 'REG'); // Regular market
+
+        const rawIndexMessage = indexMessage.buildMessage();
+        logger.info(`[SECURITY_LIST] Sending index security list request message: ${rawIndexMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+        socket.write(rawIndexMessage);
+        logger.info('[SECURITY_LIST] Index security list request sent successfully');
+        
+        // Set a retry timer for both requests if we don't get a response in 10 seconds
+        setTimeout(() => {
+          // Check if we've received any security list data
+          logger.info('[SECURITY_LIST] Checking if security list data was received');
+          // We could implement a more sophisticated tracker here, but for now just retry
+          logger.info('[SECURITY_LIST] Retrying security list requests');
+          sendSecurityListRequestForEquity();
+          setTimeout(() => {
+            sendSecurityListRequestForIndex();
+          }, 3000);
+        }, 10000);
+      }, 3000);
       
       return client;
     }
