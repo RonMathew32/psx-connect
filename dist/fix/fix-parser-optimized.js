@@ -75,6 +75,7 @@ const parseMarketDataSnapshotToJson = (fixMessage) => {
         }
         // Extract market data entries
         const noMDEntries = parseInt(parsedMessage[constants_1.FieldTag.NO_MD_ENTRIES] || "0", 10);
+        logger_1.default.debug(`Number of market data entries: ${noMDEntries}`);
         // Optimize handling of market data entries
         if (noMDEntries > 0) {
             const entries = [];
@@ -106,6 +107,7 @@ const parseMarketDataSnapshotToJson = (fixMessage) => {
                     price: parseFloat(fieldMap.get(constants_1.FieldTag.MD_ENTRY_PX)?.[i] || parsedMessage[constants_1.FieldTag.MD_ENTRY_PX] || "0"),
                     quantity: parseFloat(fieldMap.get(constants_1.FieldTag.MD_ENTRY_SIZE)?.[i] || parsedMessage[constants_1.FieldTag.MD_ENTRY_SIZE] || "0"),
                 };
+                logger_1.default.debug(`Processing entry ${i}: ${JSON.stringify(entry)}`);
                 // Handle orders if present
                 const noOrders = parseInt(fieldMap.get(constants_1.FieldTag.NO_ORDERS)?.[i] || "0", 10);
                 if (noOrders > 0) {
