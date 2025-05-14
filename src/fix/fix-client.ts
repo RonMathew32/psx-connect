@@ -552,7 +552,7 @@ export function createFixClient(options: FixClientOptions) {
                 .setMsgType(MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(msgSeqNum++)
+                .setMsgSeqNum(securityListSequenceNumber)
                 .addField(FieldTag.SECURITY_REQ_ID, requestId)
                 .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol, no type specified
 
@@ -1078,17 +1078,53 @@ export function createFixClient(options: FixClientOptions) {
 
     // Add a periodic timer to send security list requests
     const startSecurityListUpdates = () => {
-      setInterval(() => {
+      let securityListTimer: NodeJS.Timeout | null = setInterval(() => {
         if (connected && loggedIn) {
           try {
+            // Only log and increment our dedicated sequence number - completely independent of market data
             logger.info(`[SECURITY_LIST] Sending periodic security list request with sequence number: ${securityListSequenceNumber}`);
-            sendSecurityListRequest();
-            securityListSequenceNumber++;
+            
+            // Use our dedicated sequence number for security list requests
+            const requestId = uuidv4();
+            const message = createMessageBuilder()
+              .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+              .setSenderCompID(options.senderCompId)
+              .setTargetCompID(options.targetCompId)
+              .setMsgSeqNum(securityListSequenceNumber)
+              .addField(FieldTag.SECURITY_REQ_ID, requestId)
+              .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
+
+            const rawMessage = message.buildMessage();
+            if (socket) {
+              socket.write(rawMessage);
+              // Increment ONLY the security list sequence number
+              securityListSequenceNumber++;
+              logger.info(`[SECURITY_LIST] Security list request sent. Sequence incremented to: ${securityListSequenceNumber}`);
+            }
           } catch (error) {
             logger.error(`[SECURITY_LIST] Error during periodic request: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
       }, 5000); // Ensure request is sent every 5 seconds
+      
+      // Clear the timer on disconnect or logout
+      emitter.on('disconnected', () => {
+        if (securityListTimer) {
+          clearInterval(securityListTimer);
+          securityListTimer = null;
+        }
+        securityListSequenceNumber = 1;
+        logger.info('[SECURITY_LIST] Timer cleared and sequence number reset on disconnect');
+      });
+      
+      emitter.on('logout', () => {
+        if (securityListTimer) {
+          clearInterval(securityListTimer);
+          securityListTimer = null;
+        }
+        securityListSequenceNumber = 1;
+        logger.info('[SECURITY_LIST] Timer cleared and sequence number reset on logout');
+      });
     };
 
     // Call this function after successful logon
@@ -1492,13 +1528,13 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum++)
+        .setMsgSeqNum(securityListSequenceNumber) // Use securityListSequenceNumber instead of msgSeqNum++
         .addField(FieldTag.SECURITY_REQ_ID, requestId)
         .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info('Sent security list request');
+      logger.info(`Sent security list request with sequence number: ${securityListSequenceNumber}`);
       return requestId;
     } catch (error) {
       logger.error('Error sending security list request:', error);
@@ -2030,7 +2066,7 @@ export function createFixClient(options: FixClientOptions) {
       // Manually set sequence number to 2
       msgSeqNum = 2;
       serverSeqNum = 1;
-      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${securityListSequenceNumber}, serverSeqNum=${serverSeqNum}`);
+      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
 
       // Keep track of request IDs for logging
       const equityRequestId = uuidv4();
