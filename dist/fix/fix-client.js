@@ -273,8 +273,6 @@ function createFixClient(options) {
                     logger_1.default.info(`[TRADING_STATUS] Processing trading session status update`);
                     break;
             }
-            // Emit the raw message
-            emitter.emit('message', parsedMessage);
             // Process specific message types
             switch (messageType) {
                 case constants_1.MessageType.LOGON:
@@ -377,7 +375,7 @@ function createFixClient(options) {
                     });
                 }
             }
-            emitter.emit('marketData', marketDataItems);
+            emitter.emit('marketData', message);
             if (marketDataItems.length > 0) {
                 logger_1.default.info(`[MARKET_DATA] Extracted ${marketDataItems.length} market data items for ${symbol}`);
                 // Check if this is KSE data

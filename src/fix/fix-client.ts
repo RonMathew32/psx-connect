@@ -303,9 +303,6 @@ export function createFixClient(options: FixClientOptions) {
           break;
       }
 
-      // Emit the raw message
-      emitter.emit('message', parsedMessage);
-
       // Process specific message types
       switch (messageType) {
         case MessageType.LOGON:
@@ -414,7 +411,7 @@ export function createFixClient(options: FixClientOptions) {
           });
         }
       }
-      emitter.emit('marketData', marketDataItems);
+      emitter.emit('marketData', message);
 
       if (marketDataItems.length > 0) {
         logger.info(`[MARKET_DATA] Extracted ${marketDataItems.length} market data items for ${symbol}`);
