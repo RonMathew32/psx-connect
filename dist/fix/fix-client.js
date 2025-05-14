@@ -158,6 +158,49 @@ function createFixClient(options) {
         }
     };
     /**
+     * Dispatch incoming FIX messages to the appropriate handler
+     */
+    const dispatchMessage = (parsed) => {
+        const msgType = parsed[constants_1.FieldTag.MSG_TYPE];
+        switch (msgType) {
+            case constants_1.MessageType.LOGON:
+                handleLogon(parsed);
+                break;
+            case constants_1.MessageType.LOGOUT:
+                handleLogout(parsed);
+                break;
+            case constants_1.MessageType.HEARTBEAT:
+                state.testRequestCount = 0;
+                break;
+            case constants_1.MessageType.TEST_REQUEST:
+                sendHeartbeat(parsed[constants_1.FieldTag.TEST_REQ_ID]);
+                break;
+            case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+                handleMarketDataSnapshot(parsed);
+                break;
+            case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+                handleMarketDataIncremental(parsed);
+                break;
+            case constants_1.MessageType.SECURITY_LIST:
+                handleSecurityList(parsed);
+                break;
+            case constants_1.MessageType.TRADING_SESSION_STATUS:
+                handleTradingSessionStatus(parsed);
+                break;
+            case 'f':
+                handleTradingStatus(parsed);
+                break;
+            case constants_1.MessageType.REJECT:
+                handleReject(parsed);
+                break;
+            case 'Y':
+                handleMarketDataRequestReject(parsed);
+                break;
+            default:
+                logger_1.default.info(`Unhandled message type: ${msgType}`);
+        }
+    };
+    /**
      * Process a FIX message
      */
     const processMessage = (message) => {
@@ -180,22 +223,8 @@ function createFixClient(options) {
                     state.msgSeqNum = Math.max(state.msgSeqNum, seqNum + 1);
                 }
             }
-            const msgType = parsed[constants_1.FieldTag.MSG_TYPE];
-            const handlers = {
-                [constants_1.MessageType.LOGON]: handleLogon,
-                [constants_1.MessageType.LOGOUT]: handleLogout,
-                [constants_1.MessageType.HEARTBEAT]: () => state.testRequestCount = 0,
-                [constants_1.MessageType.TEST_REQUEST]: () => sendHeartbeat(parsed[constants_1.FieldTag.TEST_REQ_ID]),
-                [constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH]: handleMarketDataSnapshot,
-                [constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH]: handleMarketDataIncremental,
-                [constants_1.MessageType.SECURITY_LIST]: handleSecurityList,
-                [constants_1.MessageType.TRADING_SESSION_STATUS]: handleTradingSessionStatus,
-                ['f']: handleTradingStatus,
-                [constants_1.MessageType.REJECT]: handleReject,
-                ['Y']: handleMarketDataRequestReject,
-            };
-            const handler = handlers[msgType] || (() => logger_1.default.info(`Unhandled message type: ${msgType}`));
-            handler(parsed);
+            // Dispatch the message to the appropriate handler
+            dispatchMessage(parsed);
         }
         catch (error) {
             logger_1.default.error(`Message processing error: ${error}`);

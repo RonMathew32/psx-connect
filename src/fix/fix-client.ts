@@ -178,6 +178,50 @@ export function createFixClient(options: FixClientOptions): FixClient {
   };
 
   /**
+   * Dispatch incoming FIX messages to the appropriate handler
+   */
+  const dispatchMessage = (parsed: ParsedFixMessage): void => {
+    const msgType = parsed[FieldTag.MSG_TYPE];
+    switch (msgType) {
+      case MessageType.LOGON:
+        handleLogon(parsed);
+        break;
+      case MessageType.LOGOUT:
+        handleLogout(parsed);
+        break;
+      case MessageType.HEARTBEAT:
+        state.testRequestCount = 0;
+        break;
+      case MessageType.TEST_REQUEST:
+        sendHeartbeat(parsed[FieldTag.TEST_REQ_ID]);
+        break;
+      case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+        handleMarketDataSnapshot(parsed);
+        break;
+      case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+        handleMarketDataIncremental(parsed);
+        break;
+      case MessageType.SECURITY_LIST:
+        handleSecurityList(parsed);
+        break;
+      case MessageType.TRADING_SESSION_STATUS:
+        handleTradingSessionStatus(parsed);
+        break;
+      case 'f':
+        handleTradingStatus(parsed);
+        break;
+      case MessageType.REJECT:
+        handleReject(parsed);
+        break;
+      case 'Y':
+        handleMarketDataRequestReject(parsed);
+        break;
+      default:
+        logger.info(`Unhandled message type: ${msgType}`);
+    }
+  };
+
+  /**
    * Process a FIX message
    */
   const processMessage = (message: string): void => {
@@ -203,23 +247,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
         }
       }
 
-      const msgType = parsed[FieldTag.MSG_TYPE];
-      const handlers: Record<string, (msg: ParsedFixMessage) => void> = {
-        [MessageType.LOGON]: handleLogon,
-        [MessageType.LOGOUT]: handleLogout,
-        [MessageType.HEARTBEAT]: () => state.testRequestCount = 0,
-        [MessageType.TEST_REQUEST]: () => sendHeartbeat(parsed[FieldTag.TEST_REQ_ID]),
-        [MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH]: handleMarketDataSnapshot,
-        [MessageType.MARKET_DATA_INCREMENTAL_REFRESH]: handleMarketDataIncremental,
-        [MessageType.SECURITY_LIST]: handleSecurityList,
-        [MessageType.TRADING_SESSION_STATUS]: handleTradingSessionStatus,
-        ['f']: handleTradingStatus,
-        [MessageType.REJECT]: handleReject,
-        ['Y']: handleMarketDataRequestReject,
-      };
-
-      const handler = handlers[msgType] || (() => logger.info(`Unhandled message type: ${msgType}`));
-      handler(parsed);
+      // Dispatch the message to the appropriate handler
+      dispatchMessage(parsed);
     } catch (error) {
       logger.error(`Message processing error: ${error}`);
     }
