@@ -26,6 +26,7 @@ function createFixClient(options) {
     let msgSeqNum = 1;
     let serverSeqNum = 1; // Add tracking of server sequence number
     let logonTimer = null;
+    let sequenceManager;
     /**
      * Reset sequence numbers to a specific value
      * Used when the server expects a specific sequence number

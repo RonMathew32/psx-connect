@@ -7,6 +7,7 @@ import { SOH, MessageType, FieldTag } from './constants';
 import { Socket } from 'net';
 import { v4 as uuidv4 } from 'uuid';
 import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } from '../types';
+import { SequenceManager } from './sequence-manager';
 
 /** 
  * Create a FIX client with the specified options
@@ -23,6 +24,7 @@ export function createFixClient(options: FixClientOptions) {
   let msgSeqNum = 1;
   let serverSeqNum = 1; // Add tracking of server sequence number
   let logonTimer: NodeJS.Timeout | null = null;
+  let sequenceManager: SequenceManager;
 
   /**
    * Reset sequence numbers to a specific value
@@ -512,7 +514,7 @@ export function createFixClient(options: FixClientOptions) {
         const securityTypes = uniqueSecurities.reduce((acc, security) => {
           const type = security.securityType || 'UNKNOWN';
           acc[type] = (acc[type] || 0) + 1;
-          return acc;
+          return acc as Record<string, number>;
         }, {} as Record<string, number>);
 
         logger.info(`[SECURITY_LIST] Securities by type: ${JSON.stringify(securityTypes)}`);
@@ -1009,7 +1011,6 @@ export function createFixClient(options: FixClientOptions) {
       if (testReqId) {
         builder.addField(FieldTag.TEST_REQ_ID, testReqId);
       }
-
       const message = builder.buildMessage();
       sendMessage(message);
     } catch (error) {
@@ -2097,6 +2098,7 @@ export interface FixClient {
   on(event: 'kseData', listener: (data: MarketDataItem[]) => void): this;
   on(event: 'kseTradingStatus', listener: (status: { symbol: string; status: string; timestamp: string; origTime?: string }) => void): this;
   on(event: 'marketDataReject', listener: (reject: { requestId: string; reason: string; text: string | undefined }) => void): this;
+  on(event: 'reject', listener: (reject: { refSeqNum: string; refTagId: string; text: string | undefined; msgType: string }) => void): this;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   sendMarketDataRequest(
@@ -2119,4 +2121,5 @@ export interface FixClient {
   reset(): this;
   requestSecurityList(): this;
 }
+
 
