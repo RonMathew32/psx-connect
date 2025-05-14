@@ -1394,7 +1394,7 @@ function createFixClient(options) {
             }
             logger_1.default.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
             // Manually set sequence number to 2
-            msgSeqNum = 2;
+            securityListSequenceNumber = 2;
             serverSeqNum = 1;
             logger_1.default.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
             const requestId = (0, uuid_1.v4)();
@@ -1422,9 +1422,9 @@ function createFixClient(options) {
             if (socket) {
                 socket.write(rawMessage);
                 // Increment sequence number after sending
-                msgSeqNum++;
+                securityListSequenceNumber++;
                 logger_1.default.info(`[SECURITY_LIST] Equity security list request sent successfully (seq: ${msgSeqNum - 1})`);
-                logger_1.default.info(`[SECURITY_LIST] Sequence number incremented to ${msgSeqNum} for next message`);
+                logger_1.default.info(`[SECURITY_LIST] Sequence number incremented to ${securityListSequenceNumber} for next message`);
                 return requestId;
             }
             else {

@@ -1549,7 +1549,7 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
 
       // Manually set sequence number to 2
-      msgSeqNum = 2;
+      securityListSequenceNumber = 2;
       serverSeqNum = 1;
       logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
 
@@ -1583,9 +1583,9 @@ export function createFixClient(options: FixClientOptions) {
       if (socket) {
         socket.write(rawMessage);
         // Increment sequence number after sending
-        msgSeqNum++;
+        securityListSequenceNumber++;
         logger.info(`[SECURITY_LIST] Equity security list request sent successfully (seq: ${msgSeqNum - 1})`);
-        logger.info(`[SECURITY_LIST] Sequence number incremented to ${msgSeqNum} for next message`);
+        logger.info(`[SECURITY_LIST] Sequence number incremented to ${securityListSequenceNumber} for next message`);
         return requestId;
       } else {
         logger.error(`[SECURITY_LIST] Failed to send equity security list request - socket not available`);
