@@ -116,7 +116,6 @@ export function createFixClient(options: FixClientOptions) {
       // Handle received data
       socket.on('data', (data) => {
         logger.info("--------------------------------");
-        logger.info(`Received FIX MESSAGES data: ${data}`);
         handleData(data);
       });
 
@@ -192,7 +191,7 @@ export function createFixClient(options: FixClientOptions) {
         if (segment.startsWith('8=FIX')) {
           // If we have a previous message, process it
           if (currentMessage) {
-            // processMessage(currentMessage);
+            processMessage(currentMessage);
           }
           // Start a new message
           currentMessage = segment;
@@ -204,7 +203,7 @@ export function createFixClient(options: FixClientOptions) {
       // Process the last message if exists
       if (currentMessage) {
         logger.info(`Processing message: ${currentMessage}`);
-        // processMessage(currentMessage);
+        processMessage(currentMessage);
       }
     } catch (error) {
       logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
@@ -294,59 +293,59 @@ export function createFixClient(options: FixClientOptions) {
       }
 
       // Process specific message types
-      switch (messageType) {
-        case MessageType.LOGON:
-          logger.info(`[LOGON] Handling logon response`);
-          handleLogon(parsedMessage);
-          break;
-        case MessageType.LOGOUT:
-          logger.info(`[LOGOUT] Handling logout message`);
-          handleLogout(parsedMessage);
-          break;
-        case MessageType.HEARTBEAT:
-          logger.debug(`[HEARTBEAT] Received heartbeat`);
-          // Just log and reset the test request counter
-          testRequestCount = 0;
-          break;
-        case MessageType.TEST_REQUEST:
-          logger.info(`[TEST_REQUEST] Responding to test request`);
-          // Respond with heartbeat
-          sendHeartbeat(parsedMessage[FieldTag.TEST_REQ_ID]);
-          break;
-        case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-          logger.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-          handleMarketDataSnapshot(parsedMessage);
-          break;
-        case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-          logger.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-          handleMarketDataIncremental(parsedMessage);
-          break;
-        case MessageType.SECURITY_LIST:
-          logger.info(`[SECURITY_LIST] Handling security list response`);
-          handleSecurityList(parsedMessage);
-          break;
-        case MessageType.TRADING_SESSION_STATUS:
-          logger.info(`[TRADING_STATUS] Handling trading session status update`);
-          // handleTradingSessionStatus(parsedMessage);
-          break;
-        case 'f': // Trading Status - specific PSX format
-          logger.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-          // handleTradingStatus(parsedMessage);
-          break;
-        case MessageType.REJECT:
-          logger.error(`[REJECT] Handling reject message`);
-          handleReject(parsedMessage);
-          break;
-        case 'Y': // Market Data Request Reject
-          logger.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
-          handleMarketDataRequestReject(parsedMessage);
-          break;
-        default:
-          logger.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
-          if (parsedMessage[FieldTag.SYMBOL]) {
-            logger.info(`[UNKNOWN] Symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-          }
-      }
+      // switch (messageType) {
+      //   case MessageType.LOGON:
+      //     logger.info(`[LOGON] Handling logon response`);
+      //     handleLogon(parsedMessage);
+      //     break;
+      //   case MessageType.LOGOUT:
+      //     logger.info(`[LOGOUT] Handling logout message`);
+      //     handleLogout(parsedMessage);
+      //     break;
+      //   case MessageType.HEARTBEAT:
+      //     logger.debug(`[HEARTBEAT] Received heartbeat`);
+      //     // Just log and reset the test request counter
+      //     testRequestCount = 0;
+      //     break;
+      //   case MessageType.TEST_REQUEST:
+      //     logger.info(`[TEST_REQUEST] Responding to test request`);
+      //     // Respond with heartbeat
+      //     sendHeartbeat(parsedMessage[FieldTag.TEST_REQ_ID]);
+      //     break;
+      //   case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+      //     logger.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+      //     handleMarketDataSnapshot(parsedMessage);
+      //     break;
+      //   case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+      //     logger.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+      //     handleMarketDataIncremental(parsedMessage);
+      //     break;
+      //   case MessageType.SECURITY_LIST:
+      //     logger.info(`[SECURITY_LIST] Handling security list response`);
+      //     handleSecurityList(parsedMessage);
+      //     break;
+      //   case MessageType.TRADING_SESSION_STATUS:
+      //     logger.info(`[TRADING_STATUS] Handling trading session status update`);
+      //     // handleTradingSessionStatus(parsedMessage);
+      //     break;
+      //   case 'f': // Trading Status - specific PSX format
+      //     logger.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+      //     // handleTradingStatus(parsedMessage);
+      //     break;
+      //   case MessageType.REJECT:
+      //     logger.error(`[REJECT] Handling reject message`);
+      //     handleReject(parsedMessage);
+      //     break;
+      //   case 'Y': // Market Data Request Reject
+      //     logger.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
+      //     handleMarketDataRequestReject(parsedMessage);
+      //     break;
+      //   default:
+      //     logger.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
+      //     if (parsedMessage[FieldTag.SYMBOL]) {
+      //       logger.info(`[UNKNOWN] Symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+      //     }
+      // }
     } catch (error) {
       logger.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
     }
