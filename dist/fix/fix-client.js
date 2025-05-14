@@ -87,7 +87,8 @@ function createFixClient(options) {
             });
             // Handle received data
             socket.on('data', (data) => {
-                handleData(data);
+                logger_1.default.info(`Received FIX MESSAGES data: ${data}`);
+                // handleData(data);
             });
             socket.on('connect', () => {
                 logger_1.default.info(`Connected to ${options.host}:${options.port}`);

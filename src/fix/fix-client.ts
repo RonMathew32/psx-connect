@@ -96,7 +96,8 @@ export function createFixClient(options: FixClientOptions) {
 
       // Handle received data
       socket.on('data', (data) => {
-        handleData(data);
+        logger.info(`Received FIX MESSAGES data: ${data}`);
+        // handleData(data);
       });
 
       socket.on('connect', () => {
@@ -2104,7 +2105,6 @@ export interface FixClient {
   on(event: 'error', listener: (error: Error) => void): this;
   on(event: 'message', listener: (message: ParsedFixMessage) => void): this;
   on(event: 'marketData', listener: (data: any) => void): this;
-  on(event: 'rawMessage', listener: (data: any) => void): this;
   on(event: 'securityList', listener: (securities: SecurityInfo[]) => void): this;
   on(event: 'tradingSessionStatus', listener: (sessionInfo: TradingSessionInfo) => void): this;
   on(event: 'kseData', listener: (data: MarketDataItem[]) => void): this;
