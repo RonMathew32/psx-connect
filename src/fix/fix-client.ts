@@ -184,36 +184,30 @@ export function createFixClient(options: FixClientOptions) {
       lastActivityTime = Date.now();
       const dataStr = data.toString();
 
-      logger.info(`Received data: ${dataStr.length} bytes`);
+      logger.debug(`Received data: ${dataStr.length} bytes`);
+      const messages = dataStr.split(SOH);
+      let currentMessage = '';
 
-      // // Handle complete messages
-      // receivedData += dataStr;
-      // processMessage(receivedData);
-      // // parseMarketDataSnapshotToJson(receivedData);
-      // receivedData = '';
-
-      // // Split the data into individual FIX messages
-      // const messages = dataStr.split(SOH);
-      // let currentMessage = '';
-
-      // for (const segment of messages) {
-      //   if (segment.startsWith('8=FIX')) {
-      //     // If we have a previous message, process it
-      //     if (currentMessage) {
-      //       processMessage(currentMessage);
-      //     }
-      //     // Start a new message
-      //     currentMessage = segment;
-      //   } else if (currentMessage) {
-      //     // Add to current message
-      //     currentMessage += SOH + segment;
-      //   }
-      // }
-
-      // // Process the last message if exists
-      // if (currentMessage) {
-      //   processMessage(currentMessage);
-      // }
+      for (const segment of messages) {
+        if (segment.startsWith('8=FIX')) {
+        //   // If we have a previous message, process it
+        //   if (currentMessage) {
+        //     processMessage(currentMessage);
+        //   }
+        //   // Start a new message
+        //   currentMessage = segment;
+        // } else if (currentMessage) {
+        //   // Add to current message
+        //   currentMessage += SOH + segment;
+        // }
+        currentMessage += SOH + segment
+      }
+    }
+      // Process the last message if exists
+      if (currentMessage) {
+        logger.info(`Processing message: ${currentMessage}`);
+        // processMessage(currentMessage);
+      }
     } catch (error) {
       logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
     }
