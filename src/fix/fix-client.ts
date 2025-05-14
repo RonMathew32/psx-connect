@@ -48,6 +48,7 @@ export function createFixClient(options: FixClientOptions) {
    * Stop the FIX client and disconnect from the server
    */
   const stop = (): void => {
+    sendLogout(); // Ensure this is correctly called
     disconnect();
   };
 

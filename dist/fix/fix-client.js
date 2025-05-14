@@ -47,6 +47,7 @@ function createFixClient(options) {
      * Stop the FIX client and disconnect from the server
      */
     const stop = () => {
+        sendLogout(); // Ensure this is correctly called
         disconnect();
     };
     /**
