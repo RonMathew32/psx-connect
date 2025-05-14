@@ -184,7 +184,7 @@ export function createFixClient(options: FixClientOptions) {
       lastActivityTime = Date.now();
       const dataStr = data.toString();
 
-      logger.debug(`Received data: ${dataStr.length} bytes`);
+      logger.info(`Received data: ${dataStr.length} bytes`);
 
       // // Handle complete messages
       // receivedData += dataStr;

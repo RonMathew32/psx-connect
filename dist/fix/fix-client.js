@@ -167,7 +167,7 @@ function createFixClient(options) {
         try {
             lastActivityTime = Date.now();
             const dataStr = data.toString();
-            logger_1.default.debug(`Received data: ${dataStr.length} bytes`);
+            logger_1.default.info(`Received data: ${dataStr.length} bytes`);
             // // Handle complete messages
             // receivedData += dataStr;
             // processMessage(receivedData);
