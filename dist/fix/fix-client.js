@@ -212,7 +212,7 @@ function createFixClient(options) {
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
             logger_1.default.info(`Received FIX message: ${message}`);
             logger_1.default.info(`------------------------------------------------------------------------------------------------------------`);
-            // emitter.emit('rawMessage', message);
+            // Parse the raw message
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');
@@ -251,78 +251,69 @@ function createFixClient(options) {
             const messageType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
             const messageTypeName = getMessageTypeName(messageType);
             logger_1.default.info(`Message type: ${messageType} (${messageTypeName})`);
-            // Add message type specific logging
+            // Process specific message types
             switch (messageType) {
                 case constants_1.MessageType.LOGON:
                     logger_1.default.info(`[LOGON] Processing logon message from server`);
+                    handleLogon(parsedMessage);
+                    break;
+                case constants_1.MessageType.LOGOUT:
+                    logger_1.default.info(`[LOGOUT] Handling logout message`);
+                    handleLogout(parsedMessage);
+                    break;
+                case constants_1.MessageType.HEARTBEAT:
+                    logger_1.default.debug(`[HEARTBEAT] Received heartbeat`);
+                    // Just log and reset the test request counter
+                    testRequestCount = 0;
+                    break;
+                case constants_1.MessageType.TEST_REQUEST:
+                    logger_1.default.info(`[TEST_REQUEST] Responding to test request`);
+                    // Respond with heartbeat
+                    sendHeartbeat(parsedMessage[constants_1.FieldTag.TEST_REQ_ID]);
                     break;
                 case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-                    // logger.info(`[MARKET_DATA] Processing market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+                    logger_1.default.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    // Use marketSequenceNumber for market data 
+                    if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
+                        marketDataSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
+                    }
+                    handleMarketDataSnapshot(parsedMessage);
                     break;
                 case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-                    // logger.info(`[MARKET_DATA] Processing market data incremental update for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+                    logger_1.default.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    // Use marketSequenceNumber for market data
+                    if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
+                        marketDataSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
+                    }
+                    handleMarketDataIncremental(parsedMessage);
                     break;
                 case constants_1.MessageType.SECURITY_LIST:
-                    logger_1.default.info(`[SECURITY_LIST] Processing security list response`);
+                    logger_1.default.info(`[SECURITY_LIST] Handling security list response`);
+                    // Use securityListSequenceNumber for security list
+                    handleSecurityList(parsedMessage);
                     break;
                 case constants_1.MessageType.TRADING_SESSION_STATUS:
-                    // logger.info(`[TRADING_STATUS] Processing trading session status update`);
+                    logger_1.default.info(`[TRADING_STATUS] Handling trading session status update`);
+                    handleTradingSessionStatus(parsedMessage);
                     break;
+                case 'f': // Trading Status - specific PSX format
+                    logger_1.default.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    handleTradingStatus(parsedMessage);
+                    break;
+                case constants_1.MessageType.REJECT:
+                    logger_1.default.error(`[REJECT] Handling reject message`);
+                    handleReject(parsedMessage);
+                    break;
+                case 'Y': // Market Data Request Reject
+                    logger_1.default.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
+                    handleMarketDataRequestReject(parsedMessage);
+                    break;
+                default:
+                    logger_1.default.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
+                    if (parsedMessage[constants_1.FieldTag.SYMBOL]) {
+                        logger_1.default.info(`[UNKNOWN] Symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    }
             }
-            // Process specific message types
-            // switch (messageType) {
-            //   case MessageType.LOGON:
-            //     logger.info(`[LOGON] Handling logon response`);
-            //     handleLogon(parsedMessage);
-            //     break;
-            //   case MessageType.LOGOUT:
-            //     logger.info(`[LOGOUT] Handling logout message`);
-            //     handleLogout(parsedMessage);
-            //     break;
-            //   case MessageType.HEARTBEAT:
-            //     logger.debug(`[HEARTBEAT] Received heartbeat`);
-            //     // Just log and reset the test request counter
-            //     testRequestCount = 0;
-            //     break;
-            //   case MessageType.TEST_REQUEST:
-            //     logger.info(`[TEST_REQUEST] Responding to test request`);
-            //     // Respond with heartbeat
-            //     sendHeartbeat(parsedMessage[FieldTag.TEST_REQ_ID]);
-            //     break;
-            //   case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-            //     logger.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-            //     handleMarketDataSnapshot(parsedMessage);
-            //     break;
-            //   case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-            //     logger.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-            //     handleMarketDataIncremental(parsedMessage);
-            //     break;
-            //   case MessageType.SECURITY_LIST:
-            //     logger.info(`[SECURITY_LIST] Handling security list response`);
-            //     handleSecurityList(parsedMessage);
-            //     break;
-            //   case MessageType.TRADING_SESSION_STATUS:
-            //     logger.info(`[TRADING_STATUS] Handling trading session status update`);
-            //     // handleTradingSessionStatus(parsedMessage);
-            //     break;
-            //   case 'f': // Trading Status - specific PSX format
-            //     logger.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-            //     // handleTradingStatus(parsedMessage);
-            //     break;
-            //   case MessageType.REJECT:
-            //     logger.error(`[REJECT] Handling reject message`);
-            //     handleReject(parsedMessage);
-            //     break;
-            //   case 'Y': // Market Data Request Reject
-            //     logger.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
-            //     handleMarketDataRequestReject(parsedMessage);
-            //     break;
-            //   default:
-            //     logger.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
-            //     if (parsedMessage[FieldTag.SYMBOL]) {
-            //       logger.info(`[UNKNOWN] Symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
-            //     }
-            // }
         }
         catch (error) {
             logger_1.default.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
@@ -371,15 +362,23 @@ function createFixClient(options) {
                     });
                 }
             }
-            emitter.emit('marketData', message);
+            // Once we've properly parsed the data, emit it
             if (marketDataItems.length > 0) {
                 logger_1.default.info(`[MARKET_DATA] Extracted ${marketDataItems.length} market data items for ${symbol}`);
+                // Use marketDataSeqNum for tracking
+                logger_1.default.info(`[MARKET_DATA] Emitting market data with sequence number: ${marketDataSeqNum}`);
+                emitter.emit('marketData', marketDataItems);
                 // Check if this is KSE data
                 const isKseData = symbol && (symbol.includes('KSE') || message[constants_1.FieldTag.RAW_DATA] === 'kse');
                 if (isKseData) {
                     logger_1.default.info(`[MARKET_DATA] Received KSE data for ${symbol}: ${JSON.stringify(marketDataItems)}`);
                     emitter.emit('kseData', marketDataItems);
                 }
+            }
+            else {
+                // Even if no items were found, emit the raw message for debugging
+                logger_1.default.info(`[MARKET_DATA] No market data items extracted, emitting raw message`);
+                emitter.emit('marketData', message);
             }
         }
         catch (error) {
@@ -421,6 +420,7 @@ function createFixClient(options) {
             const sendingTime = message[constants_1.FieldTag.SENDING_TIME];
             logger_1.default.info(`[SECURITY_LIST] ================== RECEIVED SECURITY LIST ==================`);
             logger_1.default.info(`[SECURITY_LIST] Message Sequence Number: ${messageSeqNum}`);
+            logger_1.default.info(`[SECURITY_LIST] Security List Sequence Number: ${securityListSequenceNumber}`);
             logger_1.default.info(`[SECURITY_LIST] Sending Time: ${sendingTime}`);
             logger_1.default.info(`[SECURITY_LIST] Request ID: ${reqId}`);
             logger_1.default.info(`[SECURITY_LIST] Security Request Type: ${securityReqType}`);
@@ -470,7 +470,8 @@ function createFixClient(options) {
                     return acc;
                 }, {});
                 logger_1.default.info(`[SECURITY_LIST] Securities by type: ${JSON.stringify(securityTypes)}`);
-                // Emit the security list event
+                // Emit the security list event with the sequence number
+                logger_1.default.info(`[SECURITY_LIST] Emitting security list with sequence number: ${securityListSequenceNumber}`);
                 emitter.emit('securityList', uniqueSecurities);
                 // Log some sample securities for verification
                 const sampleSize = Math.min(5, uniqueSecurities.length);
@@ -507,9 +508,12 @@ function createFixClient(options) {
                             if (socket) {
                                 socket.write(rawRetryMessage);
                                 logger_1.default.info('[SECURITY_LIST] Sent alternative security list request');
+                                // Increment security list sequence number
+                                securityListSequenceNumber++;
+                                logger_1.default.info(`[SECURITY_LIST] Incremented security list sequence number to: ${securityListSequenceNumber}`);
                             }
                         }
-                    }, 5000);
+                    }, 2000);
                 }
             }
             logger_1.default.info(`[SECURITY_LIST] ================== END SECURITY LIST ==================`);
@@ -963,7 +967,9 @@ function createFixClient(options) {
         // (1 for the server's logon acknowledgment, and our next message will be 2)
         if (message[constants_1.FieldTag.RESET_SEQ_NUM_FLAG] === 'Y') {
             msgSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
-            logger_1.default.info(`Reset sequence flag is Y, setting our next sequence number to ${msgSeqNum}`);
+            marketDataSeqNum = 2; // Reset market data sequence
+            securityListSequenceNumber = 2; // Reset security list sequence
+            logger_1.default.info(`Reset sequence flag is Y, setting our next sequence numbers - msgSeqNum: ${msgSeqNum}, marketDataSeqNum: ${marketDataSeqNum}, securityListSequenceNumber: ${securityListSequenceNumber}`);
         }
         else {
             // Otherwise, set our next sequence to be one more than the server's
@@ -979,6 +985,7 @@ function createFixClient(options) {
         logger_1.default.info('[SECURITY_LIST] Login successful. Use sendSecurityListRequestForEquity() with forced sequence numbers to request security lists.');
         // Add a periodic timer to send security list requests
         const startSecurityListUpdates = () => {
+            logger_1.default.info('[SECURITY_LIST] Starting security list updates every 5 seconds');
             let securityListTimer = setInterval(() => {
                 if (connected && loggedIn) {
                     try {
@@ -1024,10 +1031,8 @@ function createFixClient(options) {
                 logger_1.default.info('[SECURITY_LIST] Timer cleared and sequence number reset on logout');
             });
         };
-        // Call this function after successful logon
-        emitter.on('logon', () => {
-            startSecurityListUpdates();
-        });
+        // Start security list updates immediately after logon
+        startSecurityListUpdates();
     };
     /**
      * Check server features to understand its capabilities

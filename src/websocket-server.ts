@@ -4,12 +4,17 @@ import logger from './utils/logger';
 import { MarketDataItem, TradingSessionInfo, SecurityInfo } from './types';
 
 interface WebSocketMessage {
-  type: 'rawMessage' | 'marketData' | 'tradingSessionStatus' | 'securityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status' | 'requestAcknowledged' | 'pong';
-  data?: MarketDataItem[] | string | TradingSessionInfo | any;
+  type: 'marketData' | 'tradingSessionStatus' | 'securityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
+  data?: MarketDataItem[] | TradingSessionInfo | SecurityInfo[] | any;
   message?: string;
   timestamp?: number;
   connected?: boolean;
-  requestType?: string;
+  categorized?: {
+    equities: SecurityInfo[];
+    indices: SecurityInfo[];
+    other: SecurityInfo[];
+  };
+  count?: number;
 }
 
 interface FixConfig {
@@ -42,153 +47,160 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
   const clients = new Set<WebSocket>();
   let fixClient: FixClient | null = null;
   let isFixConnected = false;
-  let reconnectAttempts = 0;
-  const maxReconnectAttempts = 5;
-  const reconnectInterval = 5000;
 
+  // Simple function to broadcast messages to all connected clients
   const broadcast = (message: WebSocketMessage): void => {
     try {
-      if (!message.type) {
-        logger.warn('Skipping broadcast: Message missing type');
-        return;
-      }
       const messageStr = JSON.stringify(message);
-      if (message.type === 'tradingSessionStatus') {
-        logger.info(`Broadcasting trading session status: ${messageStr}`);
-      }
-
       logger.debug(`Broadcasting to ${clients.size} clients: ${messageStr}`);
+      
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(messageStr);
         } else {
-          logger.debug('Removing closed client');
           clients.delete(client);
         }
       });
     } catch (error) {
       logger.error(`Broadcast failed: ${error}`);
-      broadcastError(`Broadcast failed: ${error}`);
     }
   };
 
-  const broadcastError = (errorMessage: string): void => {
-    broadcast({ type: 'error', message: errorMessage, timestamp: Date.now() });
-  };
-
+  // Initialize the FIX client
   const initializeFixClient = (): void => {
     try {
       fixClient = createFixClient(fixConfig);
       setupFixClientListeners();
       fixClient.start();
       isFixConnected = true;
-      reconnectAttempts = 0;
-      logger.info('FIX client initialized and connected successfully');
+      logger.info('FIX client initialized and connected');
       broadcast({ type: 'status', connected: true, timestamp: Date.now() });
-      
-      // Schedule regular security list updates - fetch every 30 minutes
-      // This ensures frontend always has the latest security list data
-      const securityListInterval = 1 * 60 * 1000; // 30 minutes
-      logger.info(`Setting up automatic security list updates every ${securityListInterval/60000} minutes`);
-      
-      // Request initially after 10 seconds to ensure connection is stable
-      setTimeout(() => {
-        if (fixClient && isFixConnected) {
-          logger.info('Performing initial security list request after startup');
-          fixClient.requestSecurityList();
-        }
-      }, 5000);
-      
-      // Then set up recurring requests
-      setInterval(() => {
-        if (fixClient && isFixConnected) {
-          logger.info('Performing scheduled security list request');
-          fixClient.requestSecurityList();
-        }
-      }, securityListInterval);
-      
     } catch (error) {
       logger.error(`FIX client initialization failed: ${error}`);
       isFixConnected = false;
-      broadcastError(`FIX client initialization failed: ${error}`);
-      scheduleReconnect();
+      broadcast({ type: 'error', message: `FIX client initialization failed: ${error}`, timestamp: Date.now() });
     }
   };
 
-  const scheduleReconnect = (): void => {
-    if (reconnectAttempts >= maxReconnectAttempts) {
-      logger.error('Max reconnect attempts reached for FIX client');
-      broadcastError('Max reconnect attempts reached for FIX client');
-      return;
-    }
-
-    reconnectAttempts++;
-    logger.info(`Scheduling FIX client reconnect attempt ${reconnectAttempts} in ${reconnectInterval}ms`);
-    setTimeout(() => {
-      if (fixClient) {
-        fixClient.stop();
-      }
-      initializeFixClient();
-    }, reconnectInterval);
-  };
-
+  // Set up event listeners for the FIX client
   const setupFixClientListeners = (): void => {
     if (!fixClient) return;
 
-    const events: Record<string, (data: any) => WebSocketMessage> = {
-      // rawMessage: (data: string) => {
-      //   return { type: 'rawMessage', data, timestamp: Date.now() };
-      // },
-      marketData: (data: MarketDataItem[]) => {
-        return { type: 'marketData', data, timestamp: Date.now() };
-      },
-      tradingSessionStatus: (data: TradingSessionInfo) => {
-        return { type: 'tradingSessionStatus', data, timestamp: Date.now() };
-      },
-      securityList: (data: SecurityInfo[]) => {
-        return { type: 'securityList', data, timestamp: Date.now() };
-      },
-      kseData: (data: MarketDataItem[]) => {
-        return { type: 'kseData', data, timestamp: Date.now() };
-      },
-      logon: (data: { message: string; timestamp: number }) => {
-        logger.debug(`Transforming logon: ${JSON.stringify(data)}`);
-        return { type: 'logon', message: 'Logged in to FIX server', timestamp: Date.now() };
-      },
-      logout: (data: { message: string; timestamp: number }) => {
-        logger.debug(`Transforming logout: ${JSON.stringify(data)}`);
-        return { type: 'logout', message: 'Logged out from FIX server', timestamp: Date.now() };
-      }
-    };
-
-    Object.entries(events).forEach(([event, transformer]: any) => {
-      fixClient!.on(event, (data: any) => {
-        try {
-          const message = transformer(data);
-          logger.info(`Broadcasting ${event} event: ${JSON.stringify(message)}`);
-          broadcast(message);
-        } catch (error) {
-          logger.error(`Error processing ${event}: ${error}`);
-          broadcastError(`Error processing ${event}: ${error}`);
+    // Market data events
+    fixClient.on('marketData', (data: MarketDataItem[]) => {
+      try {
+        // Ensure we have valid parsed data before broadcasting
+        if (Array.isArray(data) && data.length > 0) {
+          logger.info(`[WEBSOCKET] Broadcasting market data with ${data.length} entries`);
+          broadcast({ type: 'marketData', data, timestamp: Date.now() });
+        } else {
+          // Handle raw message case
+          logger.info(`[WEBSOCKET] Broadcasting raw market data message`);
+          broadcast({ type: 'marketData', data, timestamp: Date.now() });
         }
-      });
+      } catch (error) {
+        logger.error(`[WEBSOCKET] Error processing market data: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+
+    // Trading session status events
+    fixClient.on('tradingSessionStatus', (data: TradingSessionInfo) => {
+      try {
+        // Validate and process data before broadcasting
+        if (data && data.sessionId) {
+          logger.info(`[WEBSOCKET] Broadcasting trading session status: ${JSON.stringify(data)}`);
+          broadcast({ type: 'tradingSessionStatus', data, timestamp: Date.now() });
+        } else {
+          logger.warn(`[WEBSOCKET] Received invalid trading session data: ${JSON.stringify(data)}`);
+        }
+      } catch (error) {
+        logger.error(`[WEBSOCKET] Error processing trading session status: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+
+    // Security list events
+    fixClient.on('securityList', (data: SecurityInfo[]) => {
+      try {
+        // Validate and process security list before broadcasting
+        if (Array.isArray(data)) {
+          logger.info(`[WEBSOCKET] Broadcasting security list with ${data.length} symbols`);
+          
+          // Categorize securities for better frontend handling
+          const categorizedData = {
+            equities: data.filter(s => s.securityType === 'CS' || s.securityType === '4'),
+            indices: data.filter(s => s.securityType === 'MLEG' || s.securityType === '5'),
+            other: data.filter(s => s.securityType !== 'CS' && s.securityType !== '4' && 
+                                   s.securityType !== 'MLEG' && s.securityType !== '5')
+          };
+          
+          broadcast({ 
+            type: 'securityList', 
+            data: data,
+            categorized: categorizedData,
+            count: data.length,
+            timestamp: Date.now() 
+          });
+        } else {
+          logger.warn(`[WEBSOCKET] Received invalid security list data`);
+          broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
+        }
+      } catch (error) {
+        logger.error(`[WEBSOCKET] Error processing security list: ${error instanceof Error ? error.message : String(error)}`);
+        broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
+      }
+    });
+
+    // KSE data events
+    fixClient.on('kseData', (data: MarketDataItem[]) => {
+      try {
+        // Validate and process KSE data before broadcasting
+        if (Array.isArray(data) && data.length > 0) {
+          logger.info(`[WEBSOCKET] Broadcasting KSE data for ${data[0].symbol}`);
+          broadcast({ type: 'kseData', data, timestamp: Date.now() });
+        } else {
+          logger.warn(`[WEBSOCKET] Received empty KSE data`);
+        }
+      } catch (error) {
+        logger.error(`[WEBSOCKET] Error processing KSE data: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+
+    // Connection events
+    fixClient.on('logon', () => {
+      try {
+        logger.info(`[WEBSOCKET] Broadcasting logon event`);
+        broadcast({ type: 'logon', message: 'Logged in to FIX server', timestamp: Date.now() });
+        
+        // After successful login, immediately request security list
+        setTimeout(() => {
+          if (fixClient && isFixConnected) {
+            logger.info(`[WEBSOCKET] Requesting initial security list after logon`);
+            fixClient.sendSecurityListRequest();
+          }
+        }, 1000);
+      } catch (error) {
+        logger.error(`[WEBSOCKET] Error handling logon event: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+
+    fixClient.on('logout', () => {
+      broadcast({ type: 'logout', message: 'Logged out from FIX server', timestamp: Date.now() });
     });
 
     fixClient.on('error', (error: Error) => {
       logger.error(`FIX client error: ${error.message}`);
       isFixConnected = false;
-      broadcastError(`FIX client error: ${error.message}`);
-      scheduleReconnect();
+      broadcast({ type: 'error', message: `FIX client error: ${error.message}`, timestamp: Date.now() });
     });
 
     fixClient.on('disconnected', () => {
       logger.warn('FIX client disconnected');
       isFixConnected = false;
       broadcast({ type: 'status', connected: false, timestamp: Date.now() });
-      scheduleReconnect();
     });
   };
 
+  // Handle WebSocket connections
   wss.on('connection', (ws: WebSocket) => {
     logger.info('New WebSocket client connected');
     clients.add(ws);
@@ -200,131 +212,32 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
       timestamp: Date.now()
     }));
 
-    // Handle incoming messages from clients
-    ws.on('message', (message: string) => {
-      try {
-        const parsedMessage = JSON.parse(message);
-        logger.info(`Received message from client: ${JSON.stringify(parsedMessage)}`);
-        
-        // Handle different message types
-        switch (parsedMessage.type) {
-          case 'requestSecurityList':
-            // Client is requesting security list data
-            logger.info('Client requested security list data');
-            if (fixClient && isFixConnected) {
-              // Request security list data
-              logger.info('Requesting security list data from FIX server');
-              fixClient.requestSecurityList();
-              
-              // Also try individual requests for better reliability
-              setTimeout(() => {
-                if (fixClient && isFixConnected) {
-                  logger.info('Sending direct equity security list request');
-                  fixClient.sendSecurityListRequestForEquity();
-                  
-                  setTimeout(() => {
-                    if (fixClient && isFixConnected) {
-                      logger.info('Sending direct index security list request');
-                      fixClient.sendSecurityListRequestForIndex();
-                    }
-                  }, 3000);
-                }
-              }, 1000);
-              
-              // Acknowledge the request
-              ws.send(JSON.stringify({
-                type: 'requestAcknowledged',
-                message: 'Security list request sent to server',
-                requestType: 'securityList',
-                timestamp: Date.now()
-              }));
-            } else {
-              // FIX client is not connected
-              logger.warn('Cannot request security list data: FIX client not connected');
-              ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Cannot request security list data: FIX server not connected',
-                timestamp: Date.now()
-              }));
-            }
-            break;
-
-          case 'ping':
-            // Simple ping request
-            ws.send(JSON.stringify({
-              type: 'pong',
-              timestamp: Date.now()
-            }));
-            break;
-
-          default:
-            logger.warn(`Unhandled message type: ${parsedMessage.type}`);
-        }
-      } catch (error) {
-        logger.error(`Error processing client message: ${error}`);
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: `Server could not process your request: ${error}`,
-          timestamp: Date.now()
-        }));
-      }
-    });
-
+    // Handle client disconnection
     ws.on('close', () => {
       logger.info('WebSocket client disconnected');
       clients.delete(ws);
     });
 
-    ws.on('error', (error) => {
-      logger.error(`WebSocket client error: ${error}`);
+    ws.on('error', () => {
       clients.delete(ws);
     });
   });
 
-  wss.on('error', (error) => {
-    logger.error(`WebSocket server error: ${error}`);
-    broadcastError(`WebSocket server error: ${error}`);
-  });
-
+  // Start the FIX client
   initializeFixClient();
 
   logger.info(`WebSocket server started on port ${port}`);
 
   return {
     close: (): void => {
-      try {
-        clients.forEach((client) => client.close());
-        clients.clear();
-        wss.close();
-        if (fixClient) {
-          fixClient.stop();
-          fixClient = null;
-        }
-        logger.info('WebSocket server closed successfully');
-      } catch (error) {
-        logger.error(`Error closing WebSocket server: ${error}`);
+      clients.forEach((client) => client.close());
+      clients.clear();
+      wss.close();
+      if (fixClient) {
+        fixClient.stop();
       }
+      logger.info('WebSocket server closed');
     },
-    getClientCount: () => clients.size,
-    isFixConnected: () => isFixConnected,
-    emitToClients: (message: WebSocketMessage) => {
-      broadcast(message);
-    },
-    requestImmediateSecurityList: (): boolean => {
-      if (fixClient && isFixConnected) {
-        logger.info('Manually triggered immediate security list request');
-        fixClient.requestSecurityList();
-        broadcast({
-          type: 'requestAcknowledged',
-          message: 'Manual security list request initiated',
-          requestType: 'securityList',
-          timestamp: Date.now()
-        });
-        return true;
-      } else {
-        logger.warn('Cannot perform manual security list request - not connected');
-        return false;
-      }
-    }
+    isFixConnected: () => isFixConnected
   };
 }
