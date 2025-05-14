@@ -9,12 +9,14 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = __importDefault(require("./utils/logger"));
 const websocket_server_1 = require("./websocket-server");
 const fix_client_1 = require("./fix/fix-client");
+const fixparser_1 = require("fixparser");
 // Load environment variables from .env file if present
 dotenv_1.default.config();
 // Log startup information
 logger_1.default.info('PSX-Connect starting...');
 logger_1.default.info(`Node.js version: ${process.version}`);
 logger_1.default.info(`Operating system: ${process.platform} ${process.arch}`);
+const fixParser = new fixparser_1.FIXParser();
 /**
  * Main application function
  */
@@ -88,7 +90,7 @@ async function main() {
         });
         fixClient.on('message', (message) => {
             // Log the full parsed FIX message
-            logger_1.default.info(`Received message: ${JSON.stringify(message)}`);
+            logger_1.default.info(`Received message: ${fixParser.parse(message)}`);
         });
         fixClient.on('error', (error) => {
             logger_1.default.error(`FIX client error: ${error.message}`);

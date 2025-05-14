@@ -5,6 +5,7 @@ import logger from './utils/logger';
 import { createWebSocketServer } from './websocket-server';
 import { FixClientOptions, MarketDataItem } from './types';
 import { createFixClient } from './fix/fix-client';
+import { FIXParser } from 'fixparser';
 
 // Load environment variables from .env file if present
 dotenv.config();
@@ -13,6 +14,8 @@ dotenv.config();
 logger.info('PSX-Connect starting...');
 logger.info(`Node.js version: ${process.version}`);
 logger.info(`Operating system: ${process.platform} ${process.arch}`);
+
+const fixParser = new FIXParser();
 /**
  * Main application function
  */
@@ -101,7 +104,7 @@ async function main() {
 
     fixClient.on('message', (message) => {
       // Log the full parsed FIX message
-      logger.info(`Received message: ${JSON.stringify(message)}`);
+      logger.info(`Received message: ${fixParser.parse(message)}`);
     });
 
     fixClient.on('error', (error) => {
