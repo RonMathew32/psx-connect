@@ -7,9 +7,10 @@ import { SOH, MessageType, FieldTag } from './constants';
 import { Socket } from 'net';
 import { v4 as uuidv4 } from 'uuid';
 import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } from '../types';
+import { FIXParser } from 'fixparser';
 
-
-/**
+const fixParser = new FIXParser();
+/** 
  * Create a FIX client with the specified options
  */
 export function createFixClient(options: FixClientOptions) {
@@ -238,7 +239,7 @@ export function createFixClient(options: FixClientOptions) {
       // Log the raw message in FIX format (replacing SOH with pipe for readability)
       logger.info(`Received FIX message: ${message}`);
       logger.info(`------------------------------------------------------------------------------------------------------------`);
-      emitter.emit('rawMessage', parseFixMessage(message));
+      emitter.emit('rawMessage', fixParser.parse(message));
       const parsedMessage = parseFixMessage(message);
 
       if (!parsedMessage) {

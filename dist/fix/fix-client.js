@@ -11,6 +11,8 @@ const message_parser_1 = require("./message-parser");
 const constants_1 = require("./constants");
 const net_1 = require("net");
 const uuid_1 = require("uuid");
+const fixparser_1 = require("fixparser");
+const fixParser = new fixparser_1.FIXParser();
 /**
  * Create a FIX client with the specified options
  */
@@ -216,7 +218,7 @@ function createFixClient(options) {
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
             logger_1.default.info(`Received FIX message: ${message}`);
             logger_1.default.info(`------------------------------------------------------------------------------------------------------------`);
-            emitter.emit('rawMessage', (0, message_parser_1.parseFixMessage)(message));
+            emitter.emit('rawMessage', fixParser.parse(message));
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.default.warn('Could not parse FIX message');
