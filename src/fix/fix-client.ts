@@ -1088,7 +1088,7 @@ export function createFixClient(options: FixClientOptions) {
             logger.error(`[SECURITY_LIST] Error during periodic request: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
-      }, 5000); // Send request every 5 seconds
+      }, 5000); // Ensure request is sent every 5 seconds
     };
 
     // Call this function after successful logon
