@@ -111,9 +111,9 @@ function createWebSocketServer(port, fixConfig = {
         if (!fixClient)
             return;
         const events = {
-            rawMessage: (data) => {
-                return { type: 'rawMessage', data, timestamp: Date.now() };
-            },
+            // rawMessage: (data: string) => {
+            //   return { type: 'rawMessage', data, timestamp: Date.now() };
+            // },
             marketData: (data) => {
                 return { type: 'marketData', data, timestamp: Date.now() };
             },

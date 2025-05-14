@@ -136,9 +136,9 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
     if (!fixClient) return;
 
     const events: Record<string, (data: any) => WebSocketMessage> = {
-      rawMessage: (data: string) => {
-        return { type: 'rawMessage', data, timestamp: Date.now() };
-      },
+      // rawMessage: (data: string) => {
+      //   return { type: 'rawMessage', data, timestamp: Date.now() };
+      // },
       marketData: (data: MarketDataItem[]) => {
         return { type: 'marketData', data, timestamp: Date.now() };
       },
