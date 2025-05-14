@@ -68,7 +68,7 @@ function createWebSocketServer(port, fixConfig = {
             broadcast({ type: 'status', connected: true, timestamp: Date.now() });
             // Schedule regular security list updates - fetch every 30 minutes
             // This ensures frontend always has the latest security list data
-            const securityListInterval = 30 * 60 * 1000; // 30 minutes
+            const securityListInterval = 1 * 60 * 1000; // 30 minutes
             logger_1.default.info(`Setting up automatic security list updates every ${securityListInterval / 60000} minutes`);
             // Request initially after 10 seconds to ensure connection is stable
             setTimeout(() => {
