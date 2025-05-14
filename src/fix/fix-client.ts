@@ -18,15 +18,11 @@ export function createFixClient(options: FixClientOptions) {
   let loggedIn = false;
   let heartbeatTimer: NodeJS.Timeout | null = null;
   let reconnectTimer: NodeJS.Timeout | null = null;
-  let messageSequenceNumber = 1;
-  let receivedData = '';
   let lastActivityTime = 0;
   let testRequestCount = 0;
-  let lastSentTime = new Date();
   let msgSeqNum = 1;
   let serverSeqNum = 1; // Add tracking of server sequence number
   let logonTimer: NodeJS.Timeout | null = null;
-  let messageBuilder = createMessageBuilder();
 
   /**
    * Reset sequence numbers to a specific value
@@ -94,12 +90,6 @@ export function createFixClient(options: FixClientOptions) {
         scheduleReconnect();
       });
 
-      // Handle received data
-      socket.on('data', (data) => {
-        logger.info(`Received FIX MESSAGES data: ${data}`);
-        // handleData(data);
-      });
-
       socket.on('connect', () => {
         logger.info(`Connected to ${options.host}:${options.port}`);
         connected = true;
@@ -121,6 +111,13 @@ export function createFixClient(options: FixClientOptions) {
         }, 500);
 
         emitter.emit('connected');
+      });
+
+      // Handle received data
+      socket.on('data', (data) => {
+        logger.info("--------------------------------");
+        logger.info(`Received FIX MESSAGES data: ${data}`);
+        handleData(data);
       });
 
       // Connect to the server
@@ -195,28 +192,28 @@ export function createFixClient(options: FixClientOptions) {
       // // parseMarketDataSnapshotToJson(receivedData);
       // receivedData = '';
 
-      // Split the data into individual FIX messages
-      const messages = dataStr.split(SOH);
-      let currentMessage = '';
+      // // Split the data into individual FIX messages
+      // const messages = dataStr.split(SOH);
+      // let currentMessage = '';
 
-      for (const segment of messages) {
-        if (segment.startsWith('8=FIX')) {
-          // If we have a previous message, process it
-          if (currentMessage) {
-            processMessage(currentMessage);
-          }
-          // Start a new message
-          currentMessage = segment;
-        } else if (currentMessage) {
-          // Add to current message
-          currentMessage += SOH + segment;
-        }
-      }
+      // for (const segment of messages) {
+      //   if (segment.startsWith('8=FIX')) {
+      //     // If we have a previous message, process it
+      //     if (currentMessage) {
+      //       processMessage(currentMessage);
+      //     }
+      //     // Start a new message
+      //     currentMessage = segment;
+      //   } else if (currentMessage) {
+      //     // Add to current message
+      //     currentMessage += SOH + segment;
+      //   }
+      // }
 
-      // Process the last message if exists
-      if (currentMessage) {
-        processMessage(currentMessage);
-      }
+      // // Process the last message if exists
+      // if (currentMessage) {
+      //   processMessage(currentMessage);
+      // }
     } catch (error) {
       logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -1045,7 +1042,6 @@ export function createFixClient(options: FixClientOptions) {
 
       // Send the message
       socket.write(message);
-      lastSentTime = new Date();
     } catch (error) {
       logger.error(`Error sending message: ${error instanceof Error ? error.message : String(error)}`);
       // On send error, try to reconnect

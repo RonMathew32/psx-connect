@@ -21,15 +21,11 @@ function createFixClient(options) {
     let loggedIn = false;
     let heartbeatTimer = null;
     let reconnectTimer = null;
-    let messageSequenceNumber = 1;
-    let receivedData = '';
     let lastActivityTime = 0;
     let testRequestCount = 0;
-    let lastSentTime = new Date();
     let msgSeqNum = 1;
     let serverSeqNum = 1; // Add tracking of server sequence number
     let logonTimer = null;
-    let messageBuilder = (0, message_builder_1.createMessageBuilder)();
     /**
      * Reset sequence numbers to a specific value
      * Used when the server expects a specific sequence number
@@ -85,11 +81,6 @@ function createFixClient(options) {
                 emitter.emit('disconnected');
                 scheduleReconnect();
             });
-            // Handle received data
-            socket.on('data', (data) => {
-                logger_1.default.info(`Received FIX MESSAGES data: ${data}`);
-                // handleData(data);
-            });
             socket.on('connect', () => {
                 logger_1.default.info(`Connected to ${options.host}:${options.port}`);
                 connected = true;
@@ -109,6 +100,12 @@ function createFixClient(options) {
                     }
                 }, 500);
                 emitter.emit('connected');
+            });
+            // Handle received data
+            socket.on('data', (data) => {
+                logger_1.default.info("--------------------------------");
+                logger_1.default.info(`Received FIX MESSAGES data: ${data}`);
+                handleData(data);
             });
             // Connect to the server
             logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
@@ -176,27 +173,26 @@ function createFixClient(options) {
             // processMessage(receivedData);
             // // parseMarketDataSnapshotToJson(receivedData);
             // receivedData = '';
-            // Split the data into individual FIX messages
-            const messages = dataStr.split(constants_1.SOH);
-            let currentMessage = '';
-            for (const segment of messages) {
-                if (segment.startsWith('8=FIX')) {
-                    // If we have a previous message, process it
-                    if (currentMessage) {
-                        processMessage(currentMessage);
-                    }
-                    // Start a new message
-                    currentMessage = segment;
-                }
-                else if (currentMessage) {
-                    // Add to current message
-                    currentMessage += constants_1.SOH + segment;
-                }
-            }
-            // Process the last message if exists
-            if (currentMessage) {
-                processMessage(currentMessage);
-            }
+            // // Split the data into individual FIX messages
+            // const messages = dataStr.split(SOH);
+            // let currentMessage = '';
+            // for (const segment of messages) {
+            //   if (segment.startsWith('8=FIX')) {
+            //     // If we have a previous message, process it
+            //     if (currentMessage) {
+            //       processMessage(currentMessage);
+            //     }
+            //     // Start a new message
+            //     currentMessage = segment;
+            //   } else if (currentMessage) {
+            //     // Add to current message
+            //     currentMessage += SOH + segment;
+            //   }
+            // }
+            // // Process the last message if exists
+            // if (currentMessage) {
+            //   processMessage(currentMessage);
+            // }
         }
         catch (error) {
             logger_1.default.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
@@ -949,7 +945,6 @@ function createFixClient(options) {
             logger_1.default.debug(`Current server sequence: ${serverSeqNum}`);
             // Send the message
             socket.write(message);
-            lastSentTime = new Date();
         }
         catch (error) {
             logger_1.default.error(`Error sending message: ${error instanceof Error ? error.message : String(error)}`);
