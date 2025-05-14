@@ -172,16 +172,15 @@ function createFixClient(options) {
             let currentMessage = '';
             for (const segment of messages) {
                 if (segment.startsWith('8=FIX')) {
-                    //   // If we have a previous message, process it
-                    //   if (currentMessage) {
-                    //     processMessage(currentMessage);
-                    //   }
-                    //   // Start a new message
-                    //   currentMessage = segment;
-                    // } else if (currentMessage) {
-                    //   // Add to current message
-                    //   currentMessage += SOH + segment;
-                    // }
+                    // If we have a previous message, process it
+                    if (currentMessage) {
+                        // processMessage(currentMessage);
+                    }
+                    // Start a new message
+                    currentMessage = segment;
+                }
+                else if (currentMessage) {
+                    // Add to current message
                     currentMessage += constants_1.SOH + segment;
                 }
             }

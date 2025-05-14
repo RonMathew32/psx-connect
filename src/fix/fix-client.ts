@@ -190,19 +190,17 @@ export function createFixClient(options: FixClientOptions) {
 
       for (const segment of messages) {
         if (segment.startsWith('8=FIX')) {
-        //   // If we have a previous message, process it
-        //   if (currentMessage) {
-        //     processMessage(currentMessage);
-        //   }
-        //   // Start a new message
-        //   currentMessage = segment;
-        // } else if (currentMessage) {
-        //   // Add to current message
-        //   currentMessage += SOH + segment;
-        // }
-        currentMessage += SOH + segment
+          // If we have a previous message, process it
+          if (currentMessage) {
+            // processMessage(currentMessage);
+          }
+          // Start a new message
+          currentMessage = segment;
+        } else if (currentMessage) {
+          // Add to current message
+          currentMessage += SOH + segment;
+        }
       }
-    }
       // Process the last message if exists
       if (currentMessage) {
         logger.info(`Processing message: ${currentMessage}`);
@@ -241,14 +239,14 @@ export function createFixClient(options: FixClientOptions) {
       // Track server's sequence number if available
       if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
         const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
-        
+
         // Special handling for logout and reject messages with sequence errors
         const msgType = parsedMessage[FieldTag.MSG_TYPE];
         const text = parsedMessage[FieldTag.TEXT] || '';
-        
+
         // Check if this is a sequence error message
         const isSequenceError = text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence');
-        
+
         if ((msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) && isSequenceError) {
           // For sequence errors, don't update our sequence counter
           // This will be handled in the handleLogout or handleReject methods
@@ -257,7 +255,7 @@ export function createFixClient(options: FixClientOptions) {
           // For normal messages, track the server's sequence
           serverSeqNum = incomingSeqNum;
           logger.info(`Server sequence number updated to: ${serverSeqNum}`);
-          
+
           // Only update our outgoing sequence if this isn't a duplicate message
           // or a resend of an old message (possDup flag not set)
           if (!parsedMessage[FieldTag.POSS_DUP_FLAG] || parsedMessage[FieldTag.POSS_DUP_FLAG] !== 'Y') {
@@ -454,7 +452,7 @@ export function createFixClient(options: FixClientOptions) {
       const securityType = message[FieldTag.SECURITY_TYPE];
       const marketId = message[FieldTag.MARKET_ID];
       const totalNoRelatedSym = message[FieldTag.TOT_NO_RELATED_SYM]; // Now using the constant
-      
+
       // Debug information - add more fields
       const messageSeqNum = message[FieldTag.MSG_SEQ_NUM];
       const sendingTime = message[FieldTag.SENDING_TIME];
@@ -490,10 +488,10 @@ export function createFixClient(options: FixClientOptions) {
       if (noSecurities > 0) {
         // Aggressive parsing of repeating groups
         // PSX FIX format may have different patterns for repeating groups
-        
+
         // First try standard FIX repeating group format
         const standardFormatFound = tryStandardFormat(message, securities);
-        
+
         // If standard format didn't yield results, try alternative formats
         if (!standardFormatFound || securities.length === 0) {
           logger.info(`[SECURITY_LIST] Standard format yielded no results, trying alternative formats`);
@@ -507,27 +505,27 @@ export function createFixClient(options: FixClientOptions) {
 
       // Remove duplicate securities that might have been added by different parsing methods
       const uniqueSecurities = removeDuplicates(securities);
-      
+
       if (uniqueSecurities.length > 0) {
         logger.info(`[SECURITY_LIST] Successfully extracted ${uniqueSecurities.length} unique securities`);
-        
+
         // Group securities by type for logging
         const securityTypes = uniqueSecurities.reduce((acc, security) => {
           const type = security.securityType || 'UNKNOWN';
           acc[type] = (acc[type] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
-        
+
         logger.info(`[SECURITY_LIST] Securities by type: ${JSON.stringify(securityTypes)}`);
-        
+
         // Emit the security list event
         emitter.emit('securityList', uniqueSecurities);
-        
+
         // Log some sample securities for verification
         const sampleSize = Math.min(5, uniqueSecurities.length);
         logger.info(`[SECURITY_LIST] Sample of ${sampleSize} securities:`);
         for (let i = 0; i < sampleSize; i++) {
-          logger.info(`[SECURITY_LIST] Sample ${i+1}: ${JSON.stringify(uniqueSecurities[i])}`);
+          logger.info(`[SECURITY_LIST] Sample ${i + 1}: ${JSON.stringify(uniqueSecurities[i])}`);
         }
       } else {
         logger.warn(`[SECURITY_LIST] No securities were extracted from the response`);
@@ -538,12 +536,12 @@ export function createFixClient(options: FixClientOptions) {
           // Still emit an event even if no securities were found, so the frontend knows a response was received
           logger.info('[SECURITY_LIST] Emitting empty security list to frontend');
           emitter.emit('securityList', []);
-          
+
           // Try one more time with a different request after a delay
           setTimeout(() => {
             if (connected && loggedIn) {
               logger.info('[SECURITY_LIST] Retrying security list request with alternative format');
-              
+
               // Try with different format that might work with this server
               const requestId = uuidv4();
               const retryMessage = createMessageBuilder()
@@ -553,7 +551,7 @@ export function createFixClient(options: FixClientOptions) {
                 .setMsgSeqNum(msgSeqNum++)
                 .addField(FieldTag.SECURITY_REQ_ID, requestId)
                 .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol, no type specified
-                
+
               // Sometimes not specifying the security type works better
               const rawRetryMessage = retryMessage.buildMessage();
               if (socket) {
@@ -618,24 +616,24 @@ export function createFixClient(options: FixClientOptions) {
   const tryAlternativeFormats = (message: ParsedFixMessage, securities: SecurityInfo[]): void => {
     try {
       logger.info(`[SECURITY_LIST] Trying alternative parsing methods for securities`);
-      
+
       // Method 1: Look for keys that might be symbols (tag 55 is Symbol)
       for (const [key, value] of Object.entries(message)) {
         if (key === '55' || key.startsWith('55.') || key.startsWith('55_')) {
           const index = key.includes('.') ? key.split('.')[1] : key.includes('_') ? key.split('_')[1] : '0';
           const symbol = value;
-          
+
           // Try various tag formats for associated fields
           const secTypeKey = `167.${index}` || `167_${index}` || '167';
           const descKey = `107.${index}` || `107_${index}` || '107';
           const marketIdKey = `1301.${index}` || `1301_${index}` || '1301';
-          
+
           const securityType = message[secTypeKey] || '';
           const securityDesc = message[descKey] || '';
           const marketId = message[marketIdKey] || '';
-          
+
           logger.info(`[SECURITY_LIST] Found security via key pattern method - Symbol: ${symbol}`);
-          
+
           securities.push({
             symbol,
             securityType,
@@ -644,29 +642,29 @@ export function createFixClient(options: FixClientOptions) {
           });
         }
       }
-      
+
       // Method 2: Look for patterns in all keys that might indicate security information
       // Some FIX implementations use non-standard patterns
       const symbolPattern = /\.?(\w+)\.?/;
       let lastSymbol = '';
-      
+
       for (const [key, value] of Object.entries(message)) {
         // Check if this appears to be a symbol field
-        if ((key.includes('55') || key.toLowerCase().includes('symbol')) && 
-            typeof value === 'string' && value.length > 0) {
-          
+        if ((key.includes('55') || key.toLowerCase().includes('symbol')) &&
+          typeof value === 'string' && value.length > 0) {
+
           lastSymbol = value;
           // Look for associated fields within proximity
           let securityType = '';
           let securityDesc = '';
           let marketId = '';
-          
+
           // Try to find related fields by numeric proximity or pattern matching
           const keyNum = parseInt(key.replace(/\D/g, ''), 10);
           if (!isNaN(keyNum)) {
             for (const [otherKey, otherValue] of Object.entries(message)) {
               const otherKeyNum = parseInt(otherKey.replace(/\D/g, ''), 10);
-              
+
               // Check if keys are close together which suggests they're related
               if (!isNaN(otherKeyNum) && Math.abs(keyNum - otherKeyNum) < 20) {
                 if (otherKey.includes('167') || otherKey.toLowerCase().includes('type')) {
@@ -679,9 +677,9 @@ export function createFixClient(options: FixClientOptions) {
               }
             }
           }
-          
+
           logger.info(`[SECURITY_LIST] Found security via pattern matching - Symbol: ${lastSymbol}`);
-          
+
           securities.push({
             symbol: lastSymbol,
             securityType,
@@ -689,12 +687,12 @@ export function createFixClient(options: FixClientOptions) {
             marketId
           });
         }
-        
+
         // If we find a field that looks like a security type, desc, or market
         // and we have a symbol from a previous iteration, create an entry
         if (lastSymbol && (
-            key.includes('167') || key.includes('107') || key.includes('1301') ||
-            key.toLowerCase().includes('type') || key.toLowerCase().includes('desc')
+          key.includes('167') || key.includes('107') || key.includes('1301') ||
+          key.toLowerCase().includes('type') || key.toLowerCase().includes('desc')
         )) {
           let found = false;
           // Check if we already have an entry for this symbol
@@ -712,7 +710,7 @@ export function createFixClient(options: FixClientOptions) {
               break;
             }
           }
-          
+
           // If we didn't find an existing entry, create a new one
           if (!found) {
             const newSecurity: SecurityInfo = {
@@ -721,7 +719,7 @@ export function createFixClient(options: FixClientOptions) {
               securityDesc: '',
               marketId: ''
             };
-            
+
             if (key.includes('167') || key.toLowerCase().includes('type')) {
               newSecurity.securityType = String(value);
             } else if (key.includes('107') || key.toLowerCase().includes('desc')) {
@@ -729,12 +727,12 @@ export function createFixClient(options: FixClientOptions) {
             } else if (key.includes('1301') || key.toLowerCase().includes('market')) {
               newSecurity.marketId = String(value);
             }
-            
+
             securities.push(newSecurity);
           }
         }
       }
-      
+
       // Method 3: If there's raw data in the message, try to parse it
       // Some implementations include security list data in raw data fields
       if (message[FieldTag.RAW_DATA]) {
@@ -771,21 +769,21 @@ export function createFixClient(options: FixClientOptions) {
    */
   const removeDuplicates = (securities: SecurityInfo[]): SecurityInfo[] => {
     const uniqueMap = new Map<string, SecurityInfo>();
-    
+
     for (const security of securities) {
       // If we already have this symbol, keep the entry with more information
       if (uniqueMap.has(security.symbol)) {
         const existing = uniqueMap.get(security.symbol)!;
-        
+
         // Only replace if the new entry has more information
-        const existingInfo = (existing.securityType ? 1 : 0) + 
-                           (existing.securityDesc ? 1 : 0) + 
-                           (existing.marketId ? 1 : 0);
-                           
-        const newInfo = (security.securityType ? 1 : 0) + 
-                      (security.securityDesc ? 1 : 0) + 
-                      (security.marketId ? 1 : 0);
-                      
+        const existingInfo = (existing.securityType ? 1 : 0) +
+          (existing.securityDesc ? 1 : 0) +
+          (existing.marketId ? 1 : 0);
+
+        const newInfo = (security.securityType ? 1 : 0) +
+          (security.securityDesc ? 1 : 0) +
+          (security.marketId ? 1 : 0);
+
         if (newInfo > existingInfo) {
           uniqueMap.set(security.symbol, security);
         }
@@ -793,7 +791,7 @@ export function createFixClient(options: FixClientOptions) {
         uniqueMap.set(security.symbol, security);
       }
     }
-    
+
     // Sort by symbol for consistency
     return Array.from(uniqueMap.values()).sort((a, b) => a.symbol.localeCompare(b.symbol));
   };
@@ -1052,7 +1050,7 @@ export function createFixClient(options: FixClientOptions) {
 
     // Get server's sequence number
     serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
-    
+
     // If reset sequence number flag is Y, we should reset our sequence counter to 2
     // (1 for the server's logon acknowledgment, and our next message will be 2)
     if (message[FieldTag.RESET_SEQ_NUM_FLAG] === 'Y') {
@@ -1062,15 +1060,15 @@ export function createFixClient(options: FixClientOptions) {
       // Otherwise, set our next sequence to be one more than the server's
       msgSeqNum = serverSeqNum + 1;
     }
-    
+
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
-    
+
     // Emit event so client can handle login success
     emitter.emit('logon', message);
-    
+
     // Note: We're removing automatic security list requests after login
     // because we need to control sequence numbers manually
     logger.info('[SECURITY_LIST] Login successful. Use sendSecurityListRequestForEquity() with forced sequence numbers to request security lists.');
@@ -1274,44 +1272,44 @@ export function createFixClient(options: FixClientOptions) {
     // Check if this is a sequence number related logout
     if (text && (text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence'))) {
       logger.warn(`Received logout due to sequence number issue: ${text}`);
-      
+
       // Try to parse the expected sequence number from the message
       const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
       if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
         const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
         if (!isNaN(expectedSeqNum)) {
           logger.info(`Server expects sequence number: ${expectedSeqNum}`);
-          
+
           // Perform a full disconnect and reconnect with sequence reset
           if (socket) {
             logger.info('Disconnecting due to sequence number error');
             socket.destroy();
             socket = null;
           }
-          
+
           // Wait a moment before reconnecting
           setTimeout(() => {
             // Reset sequence numbers to what the server expects
             msgSeqNum = expectedSeqNum;
             serverSeqNum = expectedSeqNum - 1;
-            
+
             logger.info(`Reconnecting with adjusted sequence numbers: msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
             connect();
           }, 2000);
         } else {
           // If we can't parse the expected sequence number, do a full reset
           logger.info('Cannot parse expected sequence number, performing full reset');
-          
+
           if (socket) {
             socket.destroy();
             socket = null;
           }
-          
+
           setTimeout(() => {
             // Reset sequence numbers
             msgSeqNum = 1;
             serverSeqNum = 1;
-            
+
             logger.info('Reconnecting with fully reset sequence numbers');
             connect();
           }, 2000);
@@ -1319,17 +1317,17 @@ export function createFixClient(options: FixClientOptions) {
       } else {
         // No match found, do a full reset
         logger.info('No expected sequence number found in message, performing full reset');
-        
+
         if (socket) {
           socket.destroy();
           socket = null;
         }
-        
+
         setTimeout(() => {
           // Reset sequence numbers
           msgSeqNum = 1;
           serverSeqNum = 1;
-          
+
           logger.info('Reconnecting with fully reset sequence numbers');
           connect();
         }, 2000);
@@ -1522,9 +1520,9 @@ export function createFixClient(options: FixClientOptions) {
         logger.error('[SECURITY_LIST] Cannot send equity security list request: not connected or not logged in');
         return null;
       }
-      
+
       logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
-      
+
       // Manually set sequence number to 2
       msgSeqNum = 2;
       serverSeqNum = 1;
@@ -1540,14 +1538,14 @@ export function createFixClient(options: FixClientOptions) {
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(msgSeqNum);
-      
+
       // Add required fields in same order as fn-psx
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
       message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
       message.addField('55', 'NA'); // Symbol = NA as used in fn-psx
       message.addField('460', '4'); // Product = EQUITY (4)
       message.addField('336', 'REG'); // TradingSessionID = REG
-      
+
       // These are not needed and may cause issues
       // message.addField('453', '1'); // NoPartyIDs = 1
       // message.addField('448', options.senderCompId); // PartyID
@@ -1556,7 +1554,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       logger.info(`[SECURITY_LIST] Raw equity security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      
+
       if (socket) {
         socket.write(rawMessage);
         // Increment sequence number after sending
@@ -1583,9 +1581,9 @@ export function createFixClient(options: FixClientOptions) {
         logger.error('[SECURITY_LIST] Cannot send index security list request: not connected or not logged in');
         return null;
       }
-      
+
       logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
-      
+
       // Manually set sequence number to 2
       msgSeqNum = 2;
       serverSeqNum = 1;
@@ -1601,7 +1599,7 @@ export function createFixClient(options: FixClientOptions) {
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(msgSeqNum);
-      
+
       // Add required fields in same order as fn-psx
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
       message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
@@ -1611,21 +1609,21 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       logger.info(`[SECURITY_LIST] Raw index security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-      
+
       if (socket) {
         socket.write(rawMessage);
         // Increment sequence number after sending
         msgSeqNum++;
         logger.info(`[SECURITY_LIST] Index security list request sent successfully (seq: ${msgSeqNum - 1})`);
         logger.info(`[SECURITY_LIST] Sequence number incremented to ${msgSeqNum} for next message`);
-        
+
         // Also start index market data updates
         setTimeout(() => {
           if (loggedIn) {
             startIndexUpdates();
           }
         }, 5000);
-        
+
         return requestId;
       } else {
         logger.error(`[SECURITY_LIST] Failed to send index security list request - socket not available`);
@@ -1756,7 +1754,7 @@ export function createFixClient(options: FixClientOptions) {
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(msgSeqNum); // Use sequence number 1
-      
+
       // Then add body fields in the order used by fn-psx
       builder.addField(FieldTag.ENCRYPT_METHOD, '0');
       builder.addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
@@ -1769,7 +1767,7 @@ export function createFixClient(options: FixClientOptions) {
       const message = builder.buildMessage();
       logger.info(`Sending Logon Message with sequence number ${msgSeqNum}: ${message.replace(new RegExp(SOH, 'g'), '|')}`);
       sendMessage(message);
-      
+
       // Now increment sequence number for next message
       msgSeqNum++;
       logger.info(`Incremented sequence number to ${msgSeqNum} for next message after logon`);
@@ -1868,38 +1866,38 @@ export function createFixClient(options: FixClientOptions) {
       logger.error(`Reject reason (Tag ${refTagId}): ${text || 'No reason provided'}`);
 
       // If it's a sequence number issue, reset the connection
-      const isSequenceError = refTagId === '34' || 
-                             text?.includes('MsgSeqNum') || 
-                             text?.includes('too large') || 
-                             text?.includes('sequence');
-      
+      const isSequenceError = refTagId === '34' ||
+        text?.includes('MsgSeqNum') ||
+        text?.includes('too large') ||
+        text?.includes('sequence');
+
       if (isSequenceError) {
         logger.info('Sequence number mismatch detected, handling sequence reset...');
-        
+
         // If text contains specific sequence number information, try to parse it
         const expectedSeqNumMatch = text?.match(/expected ['"]?(\d+)['"]?/);
         if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
           const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
           if (!isNaN(expectedSeqNum)) {
             logger.info(`Server expects sequence number: ${expectedSeqNum}`);
-            
+
             // If the expected sequence is less than our current, we need to reset
             if (expectedSeqNum < msgSeqNum) {
               logger.info(`Our sequence (${msgSeqNum}) is greater than expected (${expectedSeqNum}), resetting connection`);
-              
+
               // Perform a full disconnect and reconnect
               if (socket) {
                 logger.info('Closing socket and resetting sequence numbers');
                 socket.destroy();
                 socket = null;
               }
-              
+
               // Wait a moment before reconnecting
               setTimeout(() => {
                 // Reset sequence numbers
                 msgSeqNum = expectedSeqNum;
                 serverSeqNum = expectedSeqNum - 1;
-                
+
                 logger.info(`Reconnecting with adjusted sequence numbers: msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
                 connect();
               }, 2000);
@@ -1908,7 +1906,7 @@ export function createFixClient(options: FixClientOptions) {
               logger.info(`Our sequence (${msgSeqNum}) is less than expected (${expectedSeqNum}), adjusting sequence`);
               msgSeqNum = expectedSeqNum;
               logger.info(`Adjusted sequence number to ${msgSeqNum}`);
-              
+
               // Send a heartbeat with the correct sequence number to sync
               sendHeartbeat('');
             }
@@ -1916,20 +1914,20 @@ export function createFixClient(options: FixClientOptions) {
         } else {
           // If we can't determine the expected sequence, do a full reset
           logger.info('Cannot determine expected sequence number, performing full reset');
-          
+
           // Perform a full disconnect and reconnect
           if (socket) {
             logger.info('Closing socket and resetting sequence numbers to 1');
             socket.destroy();
             socket = null;
           }
-          
+
           // Wait a moment before reconnecting
           setTimeout(() => {
             // Reset sequence numbers
             msgSeqNum = 1;
             serverSeqNum = 1;
-            
+
             logger.info('Reconnecting with reset sequence numbers = 1');
             connect();
           }, 2000);
@@ -1981,37 +1979,37 @@ export function createFixClient(options: FixClientOptions) {
       }
       connected = false;
       loggedIn = false;
-      
+
       // Clear any timers
       clearTimers();
-      
+
       // Reset sequence numbers
       msgSeqNum = 1;
       serverSeqNum = 1;
-      
+
       logger.info('[RESET] Connection and sequence numbers reset to initial state');
-      
+
       // Wait a moment and reconnect
       setTimeout(() => {
         logger.info('[RESET] Reconnecting after reset');
         connect();
       }, 3000);
-      
+
       return client;
     },
     requestSecurityList: () => {
       logger.info('[SECURITY_LIST] Starting comprehensive security list request');
-      
+
       logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
-      
+
       // Manually set sequence number to 2
       msgSeqNum = 2;
       serverSeqNum = 1;
       logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
-      
+
       // Keep track of request IDs for logging
       const equityRequestId = uuidv4();
-      
+
       // Request equity securities first
       logger.info(`[SECURITY_LIST] Requesting EQUITY securities with request ID: ${equityRequestId}`);
       // Create message builder with specific settings for equity request
@@ -2032,19 +2030,19 @@ export function createFixClient(options: FixClientOptions) {
         socket.write(rawEquityMessage);
         msgSeqNum++; // Increment sequence number
         logger.info(`[SECURITY_LIST] Equity security list request sent successfully. Next sequence: ${msgSeqNum}`);
-        
+
         // Wait for response before requesting index securities
         setTimeout(() => {
           if (!socket || !connected) {
             logger.error('[SECURITY_LIST] Cannot send index security list request - not connected');
             return;
           }
-          
+
           // Manually set sequence number to 2 again for index request
           msgSeqNum = 2;
           serverSeqNum = 1;
           logger.info(`[SECURITY_LIST] Manually reset sequence numbers to msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum} for index request`);
-          
+
           const indexRequestId = uuidv4();
           logger.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
           const indexMessage = createMessageBuilder()
@@ -2063,7 +2061,7 @@ export function createFixClient(options: FixClientOptions) {
           socket.write(rawIndexMessage);
           msgSeqNum++; // Increment sequence number
           logger.info(`[SECURITY_LIST] Index security list request sent successfully. Next sequence: ${msgSeqNum}`);
-          
+
           // Set a retry timer for both requests if we don't get a response in 10 seconds
           setTimeout(() => {
             // Check if we've received any security list data
@@ -2079,7 +2077,7 @@ export function createFixClient(options: FixClientOptions) {
       } else {
         logger.error('[SECURITY_LIST] Failed to send equity security list - socket not available');
       }
-      
+
       return client;
     }
   };
