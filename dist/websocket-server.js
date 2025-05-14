@@ -76,7 +76,7 @@ function createWebSocketServer(port, fixConfig = {
                     logger_1.default.info('Performing initial security list request after startup');
                     fixClient.requestSecurityList();
                 }
-            }, 10000);
+            }, 5000);
             // Then set up recurring requests
             setInterval(() => {
                 if (fixClient && isFixConnected) {
