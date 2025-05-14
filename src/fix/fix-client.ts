@@ -202,7 +202,7 @@ export function createFixClient(options: FixClientOptions) {
       }
       // Process the last message if exists
       if (currentMessage) {
-        logger.info(`Processing message: ${currentMessage}`);
+        // logger.info(`Processing message: ${currentMessage}`);
         processMessage(currentMessage);
       }
     } catch (error) {

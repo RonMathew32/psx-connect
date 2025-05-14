@@ -185,7 +185,7 @@ function createFixClient(options) {
             }
             // Process the last message if exists
             if (currentMessage) {
-                logger_1.default.info(`Processing message: ${currentMessage}`);
+                // logger.info(`Processing message: ${currentMessage}`);
                 processMessage(currentMessage);
             }
         }
