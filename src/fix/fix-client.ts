@@ -26,6 +26,7 @@ export function createFixClient(options: FixClientOptions) {
   let logonTimer: NodeJS.Timeout | null = null;
   let sequenceManager: SequenceManager;
   let marketDataSeqNum = 1; // Separate sequence number for market data
+  let securityListSequenceNumber = 1; // Initialize securityListSequenceNumber
 
   /**
    * Reset sequence numbers to a specific value
@@ -1079,10 +1080,15 @@ export function createFixClient(options: FixClientOptions) {
     const startSecurityListUpdates = () => {
       setInterval(() => {
         if (connected && loggedIn) {
-          logger.info('[SECURITY_LIST] Sending periodic security list request');
-          sendSecurityListRequest();
+          try {
+            logger.info(`[SECURITY_LIST] Sending periodic security list request with sequence number: ${securityListSequenceNumber}`);
+            sendSecurityListRequest();
+            securityListSequenceNumber++;
+          } catch (error) {
+            logger.error(`[SECURITY_LIST] Error during periodic request: ${error instanceof Error ? error.message : String(error)}`);
+          }
         }
-      }, 10000); // Send request every 10 seconds
+      }, 5000); // Send request every 5 seconds
     };
 
     // Call this function after successful logon
@@ -1361,6 +1367,8 @@ export function createFixClient(options: FixClientOptions) {
     }
 
     logger.info('Logged out from FIX server');
+    securityListSequenceNumber = 1; // Reset securityListSequenceNumber on logout
+    logger.info('[SECURITY_LIST] Sequence number reset on logout');
   };
 
   /**

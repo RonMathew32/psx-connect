@@ -28,6 +28,7 @@ function createFixClient(options) {
     let logonTimer = null;
     let sequenceManager;
     let marketDataSeqNum = 1; // Separate sequence number for market data
+    let securityListSequenceNumber = 1; // Initialize securityListSequenceNumber
     /**
      * Reset sequence numbers to a specific value
      * Used when the server expects a specific sequence number
@@ -980,10 +981,16 @@ function createFixClient(options) {
         const startSecurityListUpdates = () => {
             setInterval(() => {
                 if (connected && loggedIn) {
-                    logger_1.default.info('[SECURITY_LIST] Sending periodic security list request');
-                    sendSecurityListRequest();
+                    try {
+                        logger_1.default.info(`[SECURITY_LIST] Sending periodic security list request with sequence number: ${securityListSequenceNumber}`);
+                        sendSecurityListRequest();
+                        securityListSequenceNumber++;
+                    }
+                    catch (error) {
+                        logger_1.default.error(`[SECURITY_LIST] Error during periodic request: ${error instanceof Error ? error.message : String(error)}`);
+                    }
                 }
-            }, 10000); // Send request every 10 seconds
+            }, 5000); // Send request every 5 seconds
         };
         // Call this function after successful logon
         emitter.on('logon', () => {
@@ -1225,6 +1232,8 @@ function createFixClient(options) {
             heartbeatTimer = null;
         }
         logger_1.default.info('Logged out from FIX server');
+        securityListSequenceNumber = 1; // Reset securityListSequenceNumber on logout
+        logger_1.default.info('[SECURITY_LIST] Sequence number reset on logout');
     };
     /**
      * Start the heartbeat monitoring process
