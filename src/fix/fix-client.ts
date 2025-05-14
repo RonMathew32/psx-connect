@@ -25,6 +25,7 @@ export function createFixClient(options: FixClientOptions) {
   let serverSeqNum = 1; // Add tracking of server sequence number
   let logonTimer: NodeJS.Timeout | null = null;
   let sequenceManager: SequenceManager;
+  let marketDataSeqNum = 1; // Separate sequence number for market data
 
   /**
    * Reset sequence numbers to a specific value
@@ -1073,6 +1074,21 @@ export function createFixClient(options: FixClientOptions) {
     // Note: We're removing automatic security list requests after login
     // because we need to control sequence numbers manually
     logger.info('[SECURITY_LIST] Login successful. Use sendSecurityListRequestForEquity() with forced sequence numbers to request security lists.');
+
+    // Add a periodic timer to send security list requests
+    const startSecurityListUpdates = () => {
+      setInterval(() => {
+        if (connected && loggedIn) {
+          logger.info('[SECURITY_LIST] Sending periodic security list request');
+          sendSecurityListRequest();
+        }
+      }, 10000); // Send request every 10 seconds
+    };
+
+    // Call this function after successful logon
+    emitter.on('logon', () => {
+      startSecurityListUpdates();
+    });
   };
 
   /**
@@ -1417,7 +1433,7 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.MARKET_DATA_REQUEST)
         .setSenderCompID('realtime')
         .setTargetCompID('NMDUFISQ0001')
-        .setMsgSeqNum(msgSeqNum++)
+        .setMsgSeqNum(marketDataSeqNum++) // Use marketDataSeqNum
         .addField(FieldTag.MD_REQ_ID, requestId)
         .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
         .addField(FieldTag.MARKET_DEPTH, '0')
