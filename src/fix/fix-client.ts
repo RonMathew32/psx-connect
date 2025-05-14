@@ -284,16 +284,16 @@ export function createFixClient(options: FixClientOptions) {
           logger.info(`[LOGON] Processing logon message from server`);
           break;
         case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-          logger.info(`[MARKET_DATA] Processing market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          // logger.info(`[MARKET_DATA] Processing market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           break;
         case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-          logger.info(`[MARKET_DATA] Processing market data incremental update for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          // logger.info(`[MARKET_DATA] Processing market data incremental update for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           break;
         case MessageType.SECURITY_LIST:
           logger.info(`[SECURITY_LIST] Processing security list response`);
           break;
         case MessageType.TRADING_SESSION_STATUS:
-          logger.info(`[TRADING_STATUS] Processing trading session status update`);
+          // logger.info(`[TRADING_STATUS] Processing trading session status update`);
           break;
       }
 
@@ -2025,12 +2025,12 @@ export function createFixClient(options: FixClientOptions) {
     requestSecurityList: () => {
       logger.info('[SECURITY_LIST] Starting comprehensive security list request');
 
-      logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
+      logger.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${securityListSequenceNumber}`);
 
       // Manually set sequence number to 2
       msgSeqNum = 2;
       serverSeqNum = 1;
-      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
+      logger.info(`[SECURITY_LIST] Manually set msgSeqNum=${securityListSequenceNumber}, serverSeqNum=${serverSeqNum}`);
 
       // Keep track of request IDs for logging
       const equityRequestId = uuidv4();
@@ -2042,7 +2042,7 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(msgSeqNum)
+        .setMsgSeqNum(securityListSequenceNumber)
         .addField(FieldTag.SECURITY_REQ_ID, equityRequestId)
         .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
         .addField('55', 'NA') // Symbol = NA as used in fn-psx
@@ -2053,52 +2053,52 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`[SECURITY_LIST] Sending equity security list request message: ${rawEquityMessage.replace(new RegExp(SOH, 'g'), '|')}`);
       if (socket) {
         socket.write(rawEquityMessage);
-        msgSeqNum++; // Increment sequence number
+        securityListSequenceNumber++; // Increment sequence number
         logger.info(`[SECURITY_LIST] Equity security list request sent successfully. Next sequence: ${msgSeqNum}`);
 
         // Wait for response before requesting index securities
-        setTimeout(() => {
-          if (!socket || !connected) {
-            logger.error('[SECURITY_LIST] Cannot send index security list request - not connected');
-            return;
-          }
+        // setTimeout(() => {
+        //   if (!socket || !connected) {
+        //     logger.error('[SECURITY_LIST] Cannot send index security list request - not connected');
+        //     return;
+        //   }
 
-          // Manually set sequence number to 2 again for index request
-          msgSeqNum = 2;
-          serverSeqNum = 1;
-          logger.info(`[SECURITY_LIST] Manually reset sequence numbers to msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum} for index request`);
+        //   // Manually set sequence number to 2 again for index request
+        //   securityListSequenceNumber = 2;
+        //   serverSeqNum = 1;
+        //   logger.info(`[SECURITY_LIST] Manually reset sequence numbers to msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum} for index request`);
 
-          const indexRequestId = uuidv4();
-          logger.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
-          const indexMessage = createMessageBuilder()
-            .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-            .setSenderCompID(options.senderCompId)
-            .setTargetCompID(options.targetCompId)
-            .setMsgSeqNum(msgSeqNum)
-            .addField(FieldTag.SECURITY_REQ_ID, indexRequestId)
-            .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
-            .addField('55', 'NA') // Symbol = NA as used in fn-psx
-            .addField('460', '5') // Product = INDEX (5)
-            .addField('336', 'REG'); // TradingSessionID = REG
+        //   const indexRequestId = uuidv4();
+        //   logger.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
+        //   const indexMessage = createMessageBuilder()
+        //     .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+        //     .setSenderCompID(options.senderCompId)
+        //     .setTargetCompID(options.targetCompId)
+        //     .setMsgSeqNum(securityListSequenceNumber)
+        //     .addField(FieldTag.SECURITY_REQ_ID, indexRequestId)
+        //     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
+        //     .addField('55', 'NA') // Symbol = NA as used in fn-psx
+        //     .addField('460', '5') // Product = INDEX (5)
+        //     .addField('336', 'REG'); // TradingSessionID = REG
 
-          const rawIndexMessage = indexMessage.buildMessage();
-          logger.info(`[SECURITY_LIST] Sending index security list request message: ${rawIndexMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-          socket.write(rawIndexMessage);
-          msgSeqNum++; // Increment sequence number
-          logger.info(`[SECURITY_LIST] Index security list request sent successfully. Next sequence: ${msgSeqNum}`);
+        //   const rawIndexMessage = indexMessage.buildMessage();
+        //   logger.info(`[SECURITY_LIST] Sending index security list request message: ${rawIndexMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+        //   socket.write(rawIndexMessage);
+        //   securityListSequenceNumber++; // Increment sequence number
+        //   logger.info(`[SECURITY_LIST] Index security list request sent successfully. Next sequence: ${securityListSequenceNumber}`);
 
-          // Set a retry timer for both requests if we don't get a response in 10 seconds
-          setTimeout(() => {
-            // Check if we've received any security list data
-            logger.info('[SECURITY_LIST] Checking if security list data was received');
-            // We could implement a more sophisticated tracker here, but for now just retry
-            logger.info('[SECURITY_LIST] Retrying security list requests');
-            sendSecurityListRequestForEquity();
-            setTimeout(() => {
-              sendSecurityListRequestForIndex();
-            }, 3000);
-          }, 10000);
-        }, 5000); // Increased from 3000 to 5000 ms to allow more time for server processing
+        //   // Set a retry timer for both requests if we don't get a response in 10 seconds
+        //   // setTimeout(() => {
+        //   //   // Check if we've received any security list data
+        //   //   logger.info('[SECURITY_LIST] Checking if security list data was received');
+        //   //   // We could implement a more sophisticated tracker here, but for now just retry
+        //   //   logger.info('[SECURITY_LIST] Retrying security list requests');
+        //   //   sendSecurityListRequestForEquity();
+        //   //   setTimeout(() => {
+        //   //     sendSecurityListRequestForIndex();
+        //   //   }, 3000);
+        //   // }, 10000);
+        // }, 5000); // Increased from 3000 to 5000 ms to allow more time for server processing
       } else {
         logger.error('[SECURITY_LIST] Failed to send equity security list - socket not available');
       }

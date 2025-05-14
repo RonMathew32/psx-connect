@@ -257,16 +257,16 @@ function createFixClient(options) {
                     logger_1.default.info(`[LOGON] Processing logon message from server`);
                     break;
                 case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-                    logger_1.default.info(`[MARKET_DATA] Processing market data snapshot for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    // logger.info(`[MARKET_DATA] Processing market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
                     break;
                 case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-                    logger_1.default.info(`[MARKET_DATA] Processing market data incremental update for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
+                    // logger.info(`[MARKET_DATA] Processing market data incremental update for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
                     break;
                 case constants_1.MessageType.SECURITY_LIST:
                     logger_1.default.info(`[SECURITY_LIST] Processing security list response`);
                     break;
                 case constants_1.MessageType.TRADING_SESSION_STATUS:
-                    logger_1.default.info(`[TRADING_STATUS] Processing trading session status update`);
+                    // logger.info(`[TRADING_STATUS] Processing trading session status update`);
                     break;
             }
             // Process specific message types
@@ -1815,11 +1815,11 @@ function createFixClient(options) {
         },
         requestSecurityList: () => {
             logger_1.default.info('[SECURITY_LIST] Starting comprehensive security list request');
-            logger_1.default.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${msgSeqNum}`);
+            logger_1.default.info(`[SECURITY_LIST] Current sequence number BEFORE reset: ${securityListSequenceNumber}`);
             // Manually set sequence number to 2
             msgSeqNum = 2;
             serverSeqNum = 1;
-            logger_1.default.info(`[SECURITY_LIST] Manually set msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum}`);
+            logger_1.default.info(`[SECURITY_LIST] Manually set msgSeqNum=${securityListSequenceNumber}, serverSeqNum=${serverSeqNum}`);
             // Keep track of request IDs for logging
             const equityRequestId = (0, uuid_1.v4)();
             // Request equity securities first
@@ -1829,7 +1829,7 @@ function createFixClient(options) {
                 .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(msgSeqNum)
+                .setMsgSeqNum(securityListSequenceNumber)
                 .addField(constants_1.FieldTag.SECURITY_REQ_ID, equityRequestId)
                 .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
                 .addField('55', 'NA') // Symbol = NA as used in fn-psx
@@ -1839,47 +1839,47 @@ function createFixClient(options) {
             logger_1.default.info(`[SECURITY_LIST] Sending equity security list request message: ${rawEquityMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             if (socket) {
                 socket.write(rawEquityMessage);
-                msgSeqNum++; // Increment sequence number
+                securityListSequenceNumber++; // Increment sequence number
                 logger_1.default.info(`[SECURITY_LIST] Equity security list request sent successfully. Next sequence: ${msgSeqNum}`);
                 // Wait for response before requesting index securities
-                setTimeout(() => {
-                    if (!socket || !connected) {
-                        logger_1.default.error('[SECURITY_LIST] Cannot send index security list request - not connected');
-                        return;
-                    }
-                    // Manually set sequence number to 2 again for index request
-                    msgSeqNum = 2;
-                    serverSeqNum = 1;
-                    logger_1.default.info(`[SECURITY_LIST] Manually reset sequence numbers to msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum} for index request`);
-                    const indexRequestId = (0, uuid_1.v4)();
-                    logger_1.default.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
-                    const indexMessage = (0, message_builder_1.createMessageBuilder)()
-                        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
-                        .setSenderCompID(options.senderCompId)
-                        .setTargetCompID(options.targetCompId)
-                        .setMsgSeqNum(msgSeqNum)
-                        .addField(constants_1.FieldTag.SECURITY_REQ_ID, indexRequestId)
-                        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
-                        .addField('55', 'NA') // Symbol = NA as used in fn-psx
-                        .addField('460', '5') // Product = INDEX (5)
-                        .addField('336', 'REG'); // TradingSessionID = REG
-                    const rawIndexMessage = indexMessage.buildMessage();
-                    logger_1.default.info(`[SECURITY_LIST] Sending index security list request message: ${rawIndexMessage.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
-                    socket.write(rawIndexMessage);
-                    msgSeqNum++; // Increment sequence number
-                    logger_1.default.info(`[SECURITY_LIST] Index security list request sent successfully. Next sequence: ${msgSeqNum}`);
-                    // Set a retry timer for both requests if we don't get a response in 10 seconds
-                    setTimeout(() => {
-                        // Check if we've received any security list data
-                        logger_1.default.info('[SECURITY_LIST] Checking if security list data was received');
-                        // We could implement a more sophisticated tracker here, but for now just retry
-                        logger_1.default.info('[SECURITY_LIST] Retrying security list requests');
-                        sendSecurityListRequestForEquity();
-                        setTimeout(() => {
-                            sendSecurityListRequestForIndex();
-                        }, 3000);
-                    }, 10000);
-                }, 5000); // Increased from 3000 to 5000 ms to allow more time for server processing
+                // setTimeout(() => {
+                //   if (!socket || !connected) {
+                //     logger.error('[SECURITY_LIST] Cannot send index security list request - not connected');
+                //     return;
+                //   }
+                //   // Manually set sequence number to 2 again for index request
+                //   securityListSequenceNumber = 2;
+                //   serverSeqNum = 1;
+                //   logger.info(`[SECURITY_LIST] Manually reset sequence numbers to msgSeqNum=${msgSeqNum}, serverSeqNum=${serverSeqNum} for index request`);
+                //   const indexRequestId = uuidv4();
+                //   logger.info(`[SECURITY_LIST] Requesting INDEX securities with request ID: ${indexRequestId}`);
+                //   const indexMessage = createMessageBuilder()
+                //     .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+                //     .setSenderCompID(options.senderCompId)
+                //     .setTargetCompID(options.targetCompId)
+                //     .setMsgSeqNum(securityListSequenceNumber)
+                //     .addField(FieldTag.SECURITY_REQ_ID, indexRequestId)
+                //     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // 0 = Symbol
+                //     .addField('55', 'NA') // Symbol = NA as used in fn-psx
+                //     .addField('460', '5') // Product = INDEX (5)
+                //     .addField('336', 'REG'); // TradingSessionID = REG
+                //   const rawIndexMessage = indexMessage.buildMessage();
+                //   logger.info(`[SECURITY_LIST] Sending index security list request message: ${rawIndexMessage.replace(new RegExp(SOH, 'g'), '|')}`);
+                //   socket.write(rawIndexMessage);
+                //   securityListSequenceNumber++; // Increment sequence number
+                //   logger.info(`[SECURITY_LIST] Index security list request sent successfully. Next sequence: ${securityListSequenceNumber}`);
+                //   // Set a retry timer for both requests if we don't get a response in 10 seconds
+                //   // setTimeout(() => {
+                //   //   // Check if we've received any security list data
+                //   //   logger.info('[SECURITY_LIST] Checking if security list data was received');
+                //   //   // We could implement a more sophisticated tracker here, but for now just retry
+                //   //   logger.info('[SECURITY_LIST] Retrying security list requests');
+                //   //   sendSecurityListRequestForEquity();
+                //   //   setTimeout(() => {
+                //   //     sendSecurityListRequestForIndex();
+                //   //   }, 3000);
+                //   // }, 10000);
+                // }, 5000); // Increased from 3000 to 5000 ms to allow more time for server processing
             }
             else {
                 logger_1.default.error('[SECURITY_LIST] Failed to send equity security list - socket not available');
