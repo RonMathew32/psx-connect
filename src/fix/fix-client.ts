@@ -7,10 +7,9 @@ import { SOH, MessageType, FieldTag } from './constants';
 import { Socket } from 'net';
 import { v4 as uuidv4 } from 'uuid';
 import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } from '../types';
-import { FIXParser } from 'fixparser';
+import { FIXParser, LicenseManager } from 'fixparser';
 
-const fixParser = new FIXParser();
-/** 
+const fixParser = new FIXParser();/** 
  * Create a FIX client with the specified options
  */
 export function createFixClient(options: FixClientOptions) {
@@ -59,6 +58,8 @@ export function createFixClient(options: FixClientOptions) {
    * Connect to the FIX server
    */
   const connect = async (): Promise<void> => {
+  await LicenseManager.setLicenseKey("FIXParser_QjtkyzBGvFLS0tLS1CRUdJTiBQR1AgU0lHTkVEIE1FU1NBR0UtLS0tLQpIYXNoOiBTSEE1MTIKCjguMy4zfHJvbm1hdGhldzMyQGdtYWlsLmNvbXwxNzc0MzEwNDAwMDAwfGZyZWUKLS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0tLS0KCndyc0VBUllLQUcwRmdtZmhFUEFKa0NKdzNPZllUc1RKUlJRQUFBQUFBQndBSUhOaGJIUkFibTkwWVhScApiMjV6TG05d1pXNXdaM0JxY3k1dmNtZk1YcDJFcldQbTIwLy9waGRRa3RaT2t3SmtmWHpBNE9pbDNmWDEKTFljQkhCWWhCQ1ZnV0NnSklOdG1YK2VaZ2lKdzNPZllUc1RKQUFCbjBRRCtLRjFIeXZyL0FYZWhTOHV4CjlLZVdjTHdnVTlLNS9jN2hXYTdjckdHNnRxWUJBSWNTcG9hNzgyVVBWdm52YzZNb24wNFJ4bS84eFpucwpzNHBONmdPZ3JVRUIKPUhFTkQKLS0tLS1FTkQgUEdQIFNJR05BVFVSRS0tLS0tCg==");
+
     if (socket && connected) {
       logger.warn('Already connected');
       return;

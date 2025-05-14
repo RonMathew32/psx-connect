@@ -12,8 +12,7 @@ const constants_1 = require("./constants");
 const net_1 = require("net");
 const uuid_1 = require("uuid");
 const fixparser_1 = require("fixparser");
-const fixParser = new fixparser_1.FIXParser();
-/**
+const fixParser = new fixparser_1.FIXParser(); /**
  * Create a FIX client with the specified options
  */
 function createFixClient(options) {
@@ -58,6 +57,7 @@ function createFixClient(options) {
      * Connect to the FIX server
      */
     const connect = async () => {
+        await fixparser_1.LicenseManager.setLicenseKey("FIXParser_QjtkyzBGvFLS0tLS1CRUdJTiBQR1AgU0lHTkVEIE1FU1NBR0UtLS0tLQpIYXNoOiBTSEE1MTIKCjguMy4zfHJvbm1hdGhldzMyQGdtYWlsLmNvbXwxNzc0MzEwNDAwMDAwfGZyZWUKLS0tLS1CRUdJTiBQR1AgU0lHTkFUVVJFLS0tLS0KCndyc0VBUllLQUcwRmdtZmhFUEFKa0NKdzNPZllUc1RKUlJRQUFBQUFBQndBSUhOaGJIUkFibTkwWVhScApiMjV6TG05d1pXNXdaM0JxY3k1dmNtZk1YcDJFcldQbTIwLy9waGRRa3RaT2t3SmtmWHpBNE9pbDNmWDEKTFljQkhCWWhCQ1ZnV0NnSklOdG1YK2VaZ2lKdzNPZllUc1RKQUFCbjBRRCtLRjFIeXZyL0FYZWhTOHV4CjlLZVdjTHdnVTlLNS9jN2hXYTdjckdHNnRxWUJBSWNTcG9hNzgyVVBWdm52YzZNb24wNFJ4bS84eFpucwpzNHBONmdPZ3JVRUIKPUhFTkQKLS0tLS1FTkQgUEdQIFNJR05BVFVSRS0tLS0tCg==");
         if (socket && connected) {
             logger_1.default.warn('Already connected');
             return;
