@@ -1067,6 +1067,10 @@ export function createFixClient(options: FixClientOptions) {
     } else {
       // Otherwise, set our next sequence to be one more than the server's
       msgSeqNum = serverSeqNum + 1;
+      // Ensure security list sequence number is also aligned
+      securityListSequenceNumber = msgSeqNum;
+      marketDataSeqNum = msgSeqNum;
+      logger.info(`Using server's sequence, setting all sequence numbers to: ${msgSeqNum}`);
     }
 
     logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${msgSeqNum}`);
@@ -1120,8 +1124,8 @@ export function createFixClient(options: FixClientOptions) {
           clearInterval(securityListTimer);
           securityListTimer = null;
         }
-        securityListSequenceNumber = 1;
-        logger.info('[SECURITY_LIST] Timer cleared and sequence number reset on disconnect');
+        securityListSequenceNumber = msgSeqNum; // Update to current msgSeqNum instead of resetting to 1
+        logger.info(`[SECURITY_LIST] Timer cleared and sequence number reset to ${securityListSequenceNumber} on disconnect`);
       });
       
       emitter.on('logout', () => {
@@ -1129,8 +1133,8 @@ export function createFixClient(options: FixClientOptions) {
           clearInterval(securityListTimer);
           securityListTimer = null;
         }
-        securityListSequenceNumber = 1;
-        logger.info('[SECURITY_LIST] Timer cleared and sequence number reset on logout');
+        securityListSequenceNumber = msgSeqNum; // Update to current msgSeqNum instead of resetting to 1
+        logger.info(`[SECURITY_LIST] Timer cleared and sequence number reset to ${securityListSequenceNumber} on logout`);
       });
     };
 

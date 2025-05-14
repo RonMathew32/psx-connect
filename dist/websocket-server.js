@@ -149,13 +149,10 @@ function createWebSocketServer(port, fixConfig = {
             try {
                 logger_1.default.info(`[WEBSOCKET] Broadcasting logon event`);
                 broadcast({ type: 'logon', message: 'Logged in to FIX server', timestamp: Date.now() });
-                // After successful login, immediately request security list
-                setTimeout(() => {
-                    if (fixClient && isFixConnected) {
-                        logger_1.default.info(`[WEBSOCKET] Requesting initial security list after logon`);
-                        fixClient.sendSecurityListRequest();
-                    }
-                }, 1000);
+                // After successful login, wait for the security list timer to kick in
+                // The FIX client will automatically start sending security list requests
+                // with the correct sequence number
+                logger_1.default.info(`[WEBSOCKET] FIX client logged in, automatic security list requests will start shortly`);
             }
             catch (error) {
                 logger_1.default.error(`[WEBSOCKET] Error handling logon event: ${error instanceof Error ? error.message : String(error)}`);
