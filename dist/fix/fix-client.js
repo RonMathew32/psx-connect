@@ -434,6 +434,8 @@ function createFixClient(options) {
             logger_1.default.info(`[SECURITY_LIST] Product Type: ${productType}`);
             logger_1.default.info(`[SECURITY_LIST] Market ID: ${marketId}`);
             logger_1.default.info(`[SECURITY_LIST] Total Related Symbols: ${totalNoRelatedSym || 'Not specified'}`);
+            // Log full raw FIX message for debugging
+            logger_1.default.info(`[SECURITY_LIST] RAW FIX MESSAGE: ${message.raw?.replace(new RegExp(constants_1.SOH, 'g'), '|')}`);
             // Check message for debug purposes
             const msgType = message[constants_1.FieldTag.MSG_TYPE];
             if (msgType !== 'y') {
@@ -487,17 +489,20 @@ function createFixClient(options) {
                 // Emit the appropriate event
                 if (isEquityResponse) {
                     logger_1.default.info(`[SECURITY_LIST] Identified as EQUITY security list response`);
+                    logger_1.default.info(`[SECURITY_LIST] EQUITY SECURITY LIST: ${JSON.stringify(uniqueSecurities.slice(0, 3))}`);
                     logger_1.default.info(`[SECURITY_LIST] Emitting equitySecurityList event with ${uniqueSecurities.length} securities`);
                     emitter.emit('equitySecurityList', uniqueSecurities);
                 }
                 else if (isIndexResponse) {
                     logger_1.default.info(`[SECURITY_LIST] Identified as INDEX security list response`);
+                    logger_1.default.info(`[SECURITY_LIST] INDEX SECURITY LIST: ${JSON.stringify(uniqueSecurities.slice(0, 3))}`);
                     logger_1.default.info(`[SECURITY_LIST] Emitting indexSecurityList event with ${uniqueSecurities.length} securities`);
                     emitter.emit('indexSecurityList', uniqueSecurities);
                 }
                 else {
                     // If we can't determine the type, emit the generic event
                     logger_1.default.info(`[SECURITY_LIST] Could not determine security list type, emitting generic securityList event`);
+                    logger_1.default.info(`[SECURITY_LIST] GENERIC SECURITY LIST: ${JSON.stringify(uniqueSecurities.slice(0, 3))}`);
                     logger_1.default.info(`[SECURITY_LIST] Emitting securityList event with ${uniqueSecurities.length} securities`);
                     emitter.emit('securityList', uniqueSecurities);
                 }
