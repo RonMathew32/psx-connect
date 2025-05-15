@@ -115,6 +115,7 @@ export function createFixClient(options: FixClientOptions) {
       // Handle received data
       socket.on('data', (data) => {
         logger.info("--------------------------------");
+        logger.info(data);
         // handleData(data);
       });
 

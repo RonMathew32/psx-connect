@@ -92,6 +92,7 @@ function createFixClient(options) {
             // Handle received data
             socket.on('data', (data) => {
                 logger_1.default.info("--------------------------------");
+                logger_1.default.info(data);
                 // handleData(data);
             });
             // Connect to the server
