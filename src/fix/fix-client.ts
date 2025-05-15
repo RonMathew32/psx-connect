@@ -9,15 +9,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } from '../types';
 import { SequenceManager } from './sequence-manager';
 import { 
-  createLogonMessage, 
-  createLogoutMessage, 
   createHeartbeatMessage,
   createTestRequestMessage,
-  createTradingSessionStatusRequest,
   createEquitySecurityListRequest,
-  createIndexSecurityListRequest,
-  createMarketDataRequest,
-  createIndexMarketDataRequest,
   getMessageTypeName
 } from './message-helpers';
 import {
@@ -26,8 +20,6 @@ import {
   handleSecurityList,
   handleTradingSessionStatus,
   handleReject,
-  handleLogout,
-  handleLogon,
   handleMarketDataRequestReject,
   handleTradingStatus
 } from './message-handlers';
@@ -48,68 +40,41 @@ export function createFixClient(options: FixClientOptions) {
   let msgSeqNum = 1;
   let serverSeqNum = 1;
   
-  // Create sequence manager
   const sequenceManager = new SequenceManager();
   
-  // Track if we've made certain requests to avoid duplicates
   let requestedEquitySecurities = false;
-  let requestedIndexSecurities = false;
-  let indexMarketDataInterval: NodeJS.Timeout | null = null;
   
-  // Store received securities
   const securityCache = {
     EQUITY: [] as SecurityInfo[],
     INDEX: [] as SecurityInfo[]
   };
   
-  // Track current index values
-  const indexValues: Record<string, { price?: number, timestamp?: string }> = {};
-
-  /**
-   * Reset sequence numbers to a specific value
-   * Used when the server expects a specific sequence number
-   */
   const forceResetSequenceNumber = (newSeq: number = 2): void => {
     sequenceManager.forceReset(newSeq);
   };
 
-  /**
-   * Start the FIX client and connect to the server
-   */
   const start = (): void => {
     connect();
   };
 
-  /**
-   * Stop the FIX client and disconnect from the server
-   */
   const stop = (): void => {
-    sendLogout(); // Ensure this is correctly called
+    sendLogout();
     disconnect();
   };
 
-  /**
-   * Connect to the FIX server
-   */
   const connect = async (): Promise<void> => {
-
     if (socket && connected) {
       logger.warn('Already connected');
       return;
     }
 
     try {
-      // Create socket with specific configuration - matching fn-psx
       socket = new Socket();
-
-      // Apply socket settings exactly like fn-psx
       socket.setKeepAlive(true);
       socket.setNoDelay(true);
 
-      // Set connection timeout 
       socket.setTimeout(options.connectTimeoutMs || 30000);
 
-      // Setup event handlers
       socket.on('timeout', () => {
         logger.error('Connection timed out');
         socket?.destroy();
@@ -132,13 +97,9 @@ export function createFixClient(options: FixClientOptions) {
       socket.on('connect', () => {
         logger.info(`Connected to ${options.host}:${options.port}`);
         connected = true;
-
-        // Clear any existing timeout to prevent duplicate logon attempts
         if (logonTimer) {
           clearTimeout(logonTimer);
         }
-
-        // Send logon message after a short delay - exactly like fn-psx
         logonTimer = setTimeout(() => {
           try {
             logger.info('Sending logon message...');
@@ -148,14 +109,13 @@ export function createFixClient(options: FixClientOptions) {
             disconnect();
           }
         }, 500);
-
         emitter.emit('connected');
       });
 
       // Handle received data
       socket.on('data', (data) => {
         logger.info("--------------------------------");
-        handleData(data);
+        // handleData(data);
       });
 
       // Connect to the server
@@ -167,9 +127,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Disconnect from the FIX server
-   */
   const disconnect = (): Promise<void> => {
     return new Promise((resolve) => {
       clearTimers();
@@ -186,9 +143,6 @@ export function createFixClient(options: FixClientOptions) {
     });
   };
 
-  /**
-   * Schedule a reconnection attempt
-   */
   const scheduleReconnect = (): void => {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
@@ -200,9 +154,6 @@ export function createFixClient(options: FixClientOptions) {
     }, 5000);
   };
 
-  /**
-   * Clear all timers
-   */
   const clearTimers = (): void => {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
@@ -214,9 +165,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Handle incoming data from the socket
-   */
   const handleData = (data: Buffer): void => {
     try {
       lastActivityTime = Date.now();
@@ -249,9 +197,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Process a FIX message
-   */
   const processMessage = (message: string): void => {
     try {
       const segments = message.split(SOH);
@@ -385,9 +330,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
   
-  /**
-   * Handle sequence number errors by resetting or adjusting sequence numbers
-   */
   const handleSequenceError = (expectedSeqNum?: number): void => {
     if (expectedSeqNum !== undefined) {
       logger.info(`Server expects sequence number: ${expectedSeqNum}`);
@@ -426,9 +368,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a heartbeat message
-   */
   const sendHeartbeat = (testReqId: string): void => {
     if (!connected) return;
 
@@ -450,17 +389,10 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a security status request to check if a symbol is valid
-   */
   const sendSecurityStatusRequest = (symbol: string): string | null => {
-    // Implementation as needed
     return null;
   };
 
-  /**
-   * Send a FIX message to the server
-   */
   const sendMessage = (message: string): void => {
     if (!socket || !connected) {
       logger.warn('Cannot send message, not connected');
@@ -482,9 +414,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Handle a logon message from the server
-   */
   const handleLogon = (message: ParsedFixMessage, sequenceManager: SequenceManager, emitter: EventEmitter): void => {
     loggedIn = true;
 
@@ -537,45 +466,6 @@ export function createFixClient(options: FixClientOptions) {
     }, 2000);
   };
 
-  /**
-   * Check server features to understand its capabilities
-   */
-  const checkServerFeatures = (): void => {
-    try {
-      if (!socket || !connected) {
-        return;
-      }
-
-      logger.info('Checking server features and capabilities...');
-
-      // 1. First try a simple test request to see if basic message flow works
-      const testMessage = createTestRequestMessage(
-        {
-          senderCompId: options.senderCompId,
-          targetCompId: options.targetCompId,
-          username: options.username,
-          password: options.password,
-          heartbeatIntervalSecs: options.heartbeatIntervalSecs
-        }, 
-        sequenceManager
-      );
-
-      socket.write(testMessage);
-      logger.info(`Sent test request`);
-
-      // 2. Check if the server supports security status request
-      // This can help identify what endpoint types are available
-      setTimeout(() => {
-        sendSecurityStatusRequest('KSE100');
-      }, 2000);
-    } catch (error) {
-      logger.error('Error checking server features:', error);
-    }
-  };
-
-  /**
-   * Send a market data request
-   */
   const sendMarketDataRequest = (
     symbols: string[],
     entryTypes: string[] = ['0', '1'], // Default: 0 = Bid, 1 = Offer
@@ -628,9 +518,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a security list request
-   */
   const sendSecurityListRequest = (): string | null => {
     try {
       if (!socket || !connected) {
@@ -657,9 +544,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a trading session status request for REG market
-   */
   const sendTradingSessionStatusRequest = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
@@ -687,9 +571,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a security list request for REG and FUT markets (EQUITY)
-   */
   const sendSecurityListRequestForEquity = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
@@ -728,9 +609,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
   
-  /**
-   * Send a security list request for REG market (INDEX)
-   */
   const sendSecurityListRequestForIndex = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
@@ -772,9 +650,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a market data request for index values
-   */
   const sendIndexMarketDataRequest = (symbols: string[]): string | null => {
     try {
       if (!socket || !connected) {
@@ -799,7 +674,6 @@ export function createFixClient(options: FixClientOptions) {
         builder.addField(FieldTag.SYMBOL, symbol);
       }
 
-      // Add entry types (3 = Index Value)
       builder.addField(FieldTag.NO_MD_ENTRY_TYPES, '1');
       builder.addField(FieldTag.MD_ENTRY_TYPE, '3');
 
@@ -813,9 +687,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a market data subscription request for symbol data
-   */
   const sendSymbolMarketDataSubscription = (symbols: string[]): string | null => {
     try {
       if (!socket || !connected) {
@@ -856,17 +727,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  // Start index data updates every 20 seconds
-  const startIndexUpdates = () => {
-    const indexSymbols = ['KSE100', 'KMI30'];
-    indexMarketDataInterval = setInterval(() => {
-      sendIndexMarketDataRequest(indexSymbols);
-    }, 20000);
-  };
-
-  /**
-   * Handle a logout message from the server
-   */
   const handleLogout = (message: ParsedFixMessage, emitter: EventEmitter): { isSequenceError: boolean, expectedSeqNum?: number } => {
     loggedIn = false;
 
@@ -940,15 +800,11 @@ export function createFixClient(options: FixClientOptions) {
         return { isSequenceError: true };
       }
     } else {
-      // Emit logout event for normal logouts
       emitter.emit('logout', message);
       return { isSequenceError: false };
     }
   };
 
-  /**
-   * Start the heartbeat monitoring process
-   */
   const startHeartbeatMonitoring = (): void => {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
@@ -995,9 +851,6 @@ export function createFixClient(options: FixClientOptions) {
     }, heartbeatInterval);
   };
 
-  /**
-   * Send a logout message to the server
-   */
   const sendLogout = (text?: string): void => {
     if (!connected) {
       logger.warn('Cannot send logout, not connected');
@@ -1029,9 +882,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  /**
-   * Send a logon message to the server
-   */
   const sendLogon = (): void => {
     logger.info('Sending logon message...');
     if (!connected) {
@@ -1073,7 +923,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-  // Return the public API
   const client = {
     on: (event: string, listener: (...args: any[]) => void) => {
       emitter.on(event, listener);
@@ -1109,7 +958,6 @@ export function createFixClient(options: FixClientOptions) {
       return sequenceManager.getAll();
     },
     reset: () => {
-      // Disconnect completely
       logger.info('[RESET] Performing complete reset with disconnection and reconnection');
       if (socket) {
         socket.destroy();
@@ -1117,16 +965,9 @@ export function createFixClient(options: FixClientOptions) {
       }
       connected = false;
       loggedIn = false;
-
-      // Clear any timers
       clearTimers();
-
-      // Reset sequence numbers
       sequenceManager.resetAll();
-
       logger.info('[RESET] Connection and sequence numbers reset to initial state');
-
-      // Wait a moment and reconnect
       setTimeout(() => {
         logger.info('[RESET] Reconnecting after reset');
         connect();
@@ -1143,6 +984,7 @@ export function createFixClient(options: FixClientOptions) {
       return client;
     }
   };
+
   return client;
 }
 
