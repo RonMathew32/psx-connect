@@ -128,6 +128,52 @@ function createWebSocketServer(port, fixConfig = {
                 broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
             }
         });
+        // Equity security list events
+        fixClient.on('equitySecurityList', (data) => {
+            try {
+                // Validate and process security list before broadcasting
+                if (Array.isArray(data)) {
+                    logger_1.default.info(`[WEBSOCKET] Broadcasting equity security list with ${data.length} symbols`);
+                    broadcast({
+                        type: 'equitySecurityList',
+                        data: data,
+                        count: data.length,
+                        timestamp: Date.now()
+                    });
+                }
+                else {
+                    logger_1.default.warn(`[WEBSOCKET] Received invalid equity security list data`);
+                    broadcast({ type: 'equitySecurityList', data: [], count: 0, timestamp: Date.now() });
+                }
+            }
+            catch (error) {
+                logger_1.default.error(`[WEBSOCKET] Error processing equity security list: ${error instanceof Error ? error.message : String(error)}`);
+                broadcast({ type: 'equitySecurityList', data: [], count: 0, timestamp: Date.now() });
+            }
+        });
+        // Index security list events
+        fixClient.on('indexSecurityList', (data) => {
+            try {
+                // Validate and process security list before broadcasting
+                if (Array.isArray(data)) {
+                    logger_1.default.info(`[WEBSOCKET] Broadcasting index security list with ${data.length} symbols`);
+                    broadcast({
+                        type: 'indexSecurityList',
+                        data: data,
+                        count: data.length,
+                        timestamp: Date.now()
+                    });
+                }
+                else {
+                    logger_1.default.warn(`[WEBSOCKET] Received invalid index security list data`);
+                    broadcast({ type: 'indexSecurityList', data: [], count: 0, timestamp: Date.now() });
+                }
+            }
+            catch (error) {
+                logger_1.default.error(`[WEBSOCKET] Error processing index security list: ${error instanceof Error ? error.message : String(error)}`);
+                broadcast({ type: 'indexSecurityList', data: [], count: 0, timestamp: Date.now() });
+            }
+        });
         // KSE data events
         fixClient.on('kseData', (data) => {
             try {
@@ -149,10 +195,21 @@ function createWebSocketServer(port, fixConfig = {
             try {
                 logger_1.default.info(`[WEBSOCKET] Broadcasting logon event`);
                 broadcast({ type: 'logon', message: 'Logged in to FIX server', timestamp: Date.now() });
-                // After successful login, wait for the security list timer to kick in
-                // The FIX client will automatically start sending security list requests
-                // with the correct sequence number
-                logger_1.default.info(`[WEBSOCKET] FIX client logged in, automatic security list requests will start shortly`);
+                // After successful login, request security lists with proper sequencing
+                // First request equity securities
+                setTimeout(() => {
+                    logger_1.default.info(`[WEBSOCKET] Requesting equity security list after logon`);
+                    if (fixClient) {
+                        fixClient.sendSecurityListRequestForEquity();
+                    }
+                    // Then request index securities after a delay to allow the first request to complete
+                    setTimeout(() => {
+                        logger_1.default.info(`[WEBSOCKET] Requesting index security list after equity list`);
+                        if (fixClient) {
+                            fixClient.sendSecurityListRequestForIndex();
+                        }
+                    }, 5000); // 5 second delay between equity and index requests
+                }, 2000); // 2 second delay after logon
             }
             catch (error) {
                 logger_1.default.error(`[WEBSOCKET] Error handling logon event: ${error instanceof Error ? error.message : String(error)}`);
