@@ -57,7 +57,7 @@ export async function runImprovedClient() {
       logger.info('[EXAMPLE] Requesting security lists');
       
       // Request security lists - this now automatically handles sequence numbers
-      client.requestSecurityList();
+      client.requestAllSecurities();
     }, 3000);
   });
   

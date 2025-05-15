@@ -642,18 +642,29 @@ function createFixClient(options) {
             socket.destroy();
             socket = null;
         }
+        
         // Reset managers
         sessionManager.disconnected();
-        sequenceManager.resetAll(1);
+        
+        // Reset sequence numbers but maintain distinct streams
+        // Instead of resetting all to 1, we need to properly set each stream
+        sequenceManager.resetRegularSequence(1, 0); // Regular messages get 1
+        sequenceManager.resetMarketDataSequence(1, 0); // MarketData gets 1
+        sequenceManager.resetSecurityListSequence(2, 0); // SecurityList gets 2
+        
+        logger_1.default.info('Reset sequence numbers: Regular=1, MarketData=1, SecurityList=2');
+        
         // Cancel any active market data requests
         if (marketDataHandler && marketDataHandler.hasActiveRequests()) {
             marketDataHandler.cancelAllRequests();
         }
+        
         // Wait a moment and reconnect
         setTimeout(() => {
             logger_1.default.info('Reconnecting after reset');
             connect();
         }, 3000);
+        
         return client;
     };
     // Set up session manager event handlers
@@ -696,7 +707,27 @@ function createFixClient(options) {
         start,
         stop,
         setSequenceNumber: (newSeq) => {
-            sequenceManager.resetAll(newSeq);
+            // Instead of resetting all streams to the same value,
+            // maintain the separation between SecurityList and MarketData
+            sequenceManager.resetRegularSequence(newSeq, 0);  // Regular messages
+            sequenceManager.resetMarketDataSequence(newSeq, 0); // MarketData uses same value
+            sequenceManager.resetSecurityListSequence(newSeq + 1, 0); // SecurityList uses newSeq+1 to be different
+            
+            logger_1.default.info(`Manually set sequence numbers: Regular=${newSeq}, MarketData=${newSeq}, SecurityList=${newSeq+1}`);
+            return client;
+        },
+        setSecurityListSequenceNumbers: (outgoingSeq, incomingSeq = 0) => {
+            // Set only the SecurityList sequence numbers
+            // This is useful when you need to use different sequence numbers for SecurityList
+            sequenceManager.resetSecurityListSequence(outgoingSeq, incomingSeq);
+            logger_1.default.info(`Manually set SecurityList sequence numbers: outgoing=${outgoingSeq}, incoming=${incomingSeq}`);
+            return client;
+        },
+        setMarketDataSequenceNumbers: (outgoingSeq, incomingSeq = 0) => {
+            // Set only the MarketData sequence numbers
+            // This ensures MarketData uses different sequence numbers than SecurityList
+            sequenceManager.resetMarketDataSequence(outgoingSeq, incomingSeq);
+            logger_1.default.info(`Manually set MarketData sequence numbers: outgoing=${outgoingSeq}, incoming=${incomingSeq}`);
             return client;
         },
         reset,

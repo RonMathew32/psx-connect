@@ -51,7 +51,7 @@ async function runImprovedClient() {
         setTimeout(() => {
             logger_1.default.info('[EXAMPLE] Requesting security lists');
             // Request security lists - this now automatically handles sequence numbers
-            client.requestSecurityList();
+            client.requestAllSecurities();
         }, 3000);
     });
     client.on('securityList', (securities) => {

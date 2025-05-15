@@ -48,7 +48,7 @@ function createWebSocketServer(port, fixConfig = {
         try {
             fixClient = (0, fix_client_1.createFixClient)(fixConfig);
             setupFixClientListeners();
-            fixClient.start();
+            fixClient?.start();
             isFixConnected = true;
             logger_1.default.info('FIX client initialized and connected');
             broadcast({ type: 'status', connected: true, timestamp: Date.now() });

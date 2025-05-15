@@ -32,8 +32,12 @@ class SecurityListHandler {
         this.receivedSecurities.set(SecurityListType.EQUITY, []);
         this.receivedSecurities.set(SecurityListType.INDEX, []);
         this.receivedSecurities.set(SecurityListType.BOND, []);
-        // Make sure security list sequence numbers are correctly initialized
-        this.sequenceManager.resetSecurityListSequence(1, 0);
+        
+        // IMPORTANT: Make sure security list sequence numbers are correctly initialized
+        // Using a different starting sequence number than MarketData to avoid any clashes
+        // This ensures SecurityList and MarketData don't share sequence numbers
+        this.sequenceManager.resetSecurityListSequence(2, 0);
+        logger_1.default.info(`[SECURITY_LIST] Initialized with dedicated sequence stream starting at 2/0`);
     }
     /**
      * Send a security list request for equities
@@ -126,14 +130,19 @@ class SecurityListHandler {
      */
     requestAllSecurities() {
         // Make sure we're starting with clean security list sequence numbers
-        this.sequenceManager.resetSecurityListSequence(1, 0);
+        // Use 2 as the starting sequence number to ensure no overlap with MarketData
+        this.sequenceManager.resetSecurityListSequence(2, 0);
+        logger_1.default.info(`[SECURITY_LIST] Reset security list sequence to dedicated stream (2/0) before requesting all securities`);
+        
         // First request equities
         const equityRequestId = this.requestEquitySecurities();
         logger_1.default.info(`[SECURITY_LIST] Started comprehensive security list request, equity ID: ${equityRequestId}`);
+        
         // Set up a timer to request index securities after a delay
         setTimeout(() => {
             const indexRequestId = this.requestIndexSecurities();
             logger_1.default.info(`[SECURITY_LIST] Continuing comprehensive security list request, index ID: ${indexRequestId}`);
+            
             // Set up a retry timer if no responses within 10 seconds
             setTimeout(() => {
                 // Check if we still have pending requests

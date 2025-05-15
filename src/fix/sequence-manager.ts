@@ -1,290 +1,159 @@
-/**
- * Sequence number manager for FIX protocol
- * 
- * This class manages sequence numbers for FIX protocol messages, providing
- * tracking of multiple separate sequence number streams for different message types.
- */
-
 import logger from '../utils/logger';
 
-export enum SequenceStream {
-  REGULAR = 'REGULAR',
-  SECURITY_LIST = 'SECURITY_LIST',
-  MARKET_DATA = 'MARKET_DATA'
-}
-
-export interface SequenceManagerOptions {
-  // Allow customizing initial sequence numbers
-  initialRegularSeqNum?: number;
-  initialSecurityListSeqNum?: number;
-  initialMarketDataSeqNum?: number;
-}
-
+/**
+ * Manages sequence numbers for FIX protocol communication
+ */
 export class SequenceManager {
-  // Separate sequence counters for each stream
-  private regularOutgoingSeqNum: number = 1;
-  private regularIncomingSeqNum: number = 0;
-  
-  private securityListOutgoingSeqNum: number = 1;
-  private securityListIncomingSeqNum: number = 0;
-  
-  private marketDataOutgoingSeqNum: number = 1;
-  private marketDataIncomingSeqNum: number = 0;
-  
-  // Track which stream is currently active
-  private currentStream: SequenceStream = SequenceStream.REGULAR;
-  
-  constructor(options?: SequenceManagerOptions) {
-    this.regularOutgoingSeqNum = options?.initialRegularSeqNum ?? 1;
-    this.securityListOutgoingSeqNum = options?.initialSecurityListSeqNum ?? 1;
-    this.marketDataOutgoingSeqNum = options?.initialMarketDataSeqNum ?? 1;
-    
-    logger.info(`[SEQUENCE] Initialized with multiple streams:`);
-    logger.info(`[SEQUENCE] - Regular: outgoing=${this.regularOutgoingSeqNum}, incoming=${this.regularIncomingSeqNum}`);
-    logger.info(`[SEQUENCE] - Security List: outgoing=${this.securityListOutgoingSeqNum}, incoming=${this.securityListIncomingSeqNum}`);
-    logger.info(`[SEQUENCE] - Market Data: outgoing=${this.marketDataOutgoingSeqNum}, incoming=${this.marketDataIncomingSeqNum}`);
+  private msgSeqNum = 1;
+  private serverSeqNum = 1;
+  private marketDataSeqNum = 1;
+  private securityListSeqNum = 2; // Initialize with different number for security list
+
+  /**
+   * Reset sequence numbers to a specific value
+   * Used when the server expects a specific sequence number
+   */
+  public forceReset(newSeq: number = 2): void {
+    const oldMain = this.msgSeqNum;
+    this.msgSeqNum = newSeq;
+    this.serverSeqNum = newSeq - 1;
+    // Ensure security list always has a different sequence number than market data
+    this.securityListSeqNum = newSeq + 1;
+    this.marketDataSeqNum = newSeq;
+    logger.info(`[SEQUENCE] Forced reset of sequence numbers from ${oldMain} to ${this.msgSeqNum} (server: ${this.serverSeqNum})`);
+    logger.info(`[SEQUENCE] Security list sequence set to ${this.securityListSeqNum}, market data sequence set to ${this.marketDataSeqNum}`);
+  }
+
+  /**
+   * Get the next main sequence number and increment it
+   */
+  public getNextAndIncrement(): number {
+    return this.msgSeqNum++;
   }
   
   /**
-   * Get the next outgoing sequence number for the current stream
+   * Get the next market data sequence number and increment it
    */
-  public getNextOutgoingSeqNum(): number {
-    switch (this.currentStream) {
-      case SequenceStream.SECURITY_LIST:
-        logger.debug(`[SEQUENCE] Getting security list sequence number: ${this.securityListOutgoingSeqNum}`);
-        return this.securityListOutgoingSeqNum;
-      case SequenceStream.MARKET_DATA:
-        logger.debug(`[SEQUENCE] Getting market data sequence number: ${this.marketDataOutgoingSeqNum}`);
-        return this.marketDataOutgoingSeqNum;
-      case SequenceStream.REGULAR:
-      default:
-        logger.debug(`[SEQUENCE] Getting regular sequence number: ${this.regularOutgoingSeqNum}`);
-        return this.regularOutgoingSeqNum;
+  public getNextMarketDataAndIncrement(): number {
+    return this.marketDataSeqNum++;
+  }
+  
+  /**
+   * Get the next security list sequence number and increment it
+   */
+  public getNextSecurityListAndIncrement(): number {
+    return this.securityListSeqNum++;
+  }
+  
+  /**
+   * Get the current main sequence number
+   */
+  public getMainSeqNum(): number {
+    return this.msgSeqNum;
+  }
+  
+  /**
+   * Get the current server sequence number
+   */
+  public getServerSeqNum(): number {
+    return this.serverSeqNum;
+  }
+  
+  /**
+   * Get the current market data sequence number
+   */
+  public getMarketDataSeqNum(): number {
+    return this.marketDataSeqNum;
+  }
+  
+  /**
+   * Get the current security list sequence number
+   */
+  public getSecurityListSeqNum(): number {
+    return this.securityListSeqNum;
+  }
+  
+  /**
+   * Set the market data sequence number
+   */
+  public setMarketDataSeqNum(seqNum: number): void {
+    const oldSeq = this.marketDataSeqNum;
+    this.marketDataSeqNum = seqNum;
+    logger.info(`[SEQUENCE] Set market data sequence number: ${oldSeq} -> ${this.marketDataSeqNum}`);
+  }
+
+  /**
+   * Set the security list sequence number
+   */
+  public setSecurityListSeqNum(seqNum: number): void {
+    const oldSeq = this.securityListSeqNum;
+    this.securityListSeqNum = seqNum;
+    logger.info(`[SEQUENCE] Set security list sequence number: ${oldSeq} -> ${this.securityListSeqNum}`);
+  }
+
+  /**
+   * Handle sequence number setup after logon
+   */
+  public setupAfterLogon(serverSeqNumParam: number, resetFlag: boolean): void {
+    this.serverSeqNum = serverSeqNumParam;
+    
+    // If reset sequence number flag is Y, we should reset our sequence counter to 2
+    // (1 for the server's logon acknowledgment, and our next message will be 2)
+    if (resetFlag) {
+      this.msgSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
+      // IMPORTANT: Keep SecurityList and MarketData sequence numbers separate
+      this.securityListSeqNum = 3; // SecurityList starts at 3 (different from MarketData)
+      this.marketDataSeqNum = 2; // MarketData starts at 2
+      logger.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, MarketData=${this.marketDataSeqNum}`);
+    } else {
+      // Otherwise, set our next sequence to be one more than the server's
+      this.msgSeqNum = this.serverSeqNum + 1;
+      // Ensure SecurityList and MarketData sequence numbers are distinct
+      this.securityListSeqNum = this.msgSeqNum + 1;
+      this.marketDataSeqNum = this.msgSeqNum;
+      logger.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, MarketData=${this.marketDataSeqNum}`);
     }
   }
-  
+
   /**
-   * Increment the outgoing sequence number for the current stream and return the new value
+   * Update server sequence number based on incoming message
+   * Returns true if the sequence was updated
    */
-  public incrementOutgoingSeqNum(): number {
-    switch (this.currentStream) {
-      case SequenceStream.SECURITY_LIST:
-        this.securityListOutgoingSeqNum++;
-        logger.debug(`[SEQUENCE] Incremented security list outgoing sequence number to: ${this.securityListOutgoingSeqNum}`);
-        return this.securityListOutgoingSeqNum;
-      case SequenceStream.MARKET_DATA:
-        this.marketDataOutgoingSeqNum++;
-        logger.debug(`[SEQUENCE] Incremented market data outgoing sequence number to: ${this.marketDataOutgoingSeqNum}`);
-        return this.marketDataOutgoingSeqNum;
-      case SequenceStream.REGULAR:
-      default:
-        this.regularOutgoingSeqNum++;
-        logger.debug(`[SEQUENCE] Incremented regular outgoing sequence number to: ${this.regularOutgoingSeqNum}`);
-        return this.regularOutgoingSeqNum;
+  public updateServerSequence(incomingSeqNum: number): boolean {
+    // For normal messages, track the server's sequence
+    this.serverSeqNum = incomingSeqNum;
+    logger.info(`Server sequence number updated to: ${this.serverSeqNum}`);
+
+    // Our next message should be one more than what the server expects
+    // The server expects our next message to have a sequence number of serverSeqNum + 1
+    if (this.msgSeqNum <= this.serverSeqNum) {
+      this.msgSeqNum = this.serverSeqNum + 1;
+      logger.info(`Updated our next sequence number to: ${this.msgSeqNum}`);
+      return true;
     }
+    return false;
   }
-  
+
   /**
-   * Update the incoming sequence number for the current stream
+   * Reset all sequence numbers to initial values
    */
-  public updateIncomingSeqNum(seqNum: number): void {
-    switch (this.currentStream) {
-      case SequenceStream.SECURITY_LIST:
-        if (seqNum > this.securityListIncomingSeqNum) {
-          const oldSeq = this.securityListIncomingSeqNum;
-          this.securityListIncomingSeqNum = seqNum;
-          logger.debug(`[SEQUENCE] Updated security list incoming sequence number: ${oldSeq} -> ${this.securityListIncomingSeqNum}`);
-        } else if (seqNum < this.securityListIncomingSeqNum) {
-          logger.warn(`[SEQUENCE] Received out-of-order security list sequence number: ${seqNum} (current: ${this.securityListIncomingSeqNum})`);
-        }
-        break;
-      case SequenceStream.MARKET_DATA:
-        if (seqNum > this.marketDataIncomingSeqNum) {
-          const oldSeq = this.marketDataIncomingSeqNum;
-          this.marketDataIncomingSeqNum = seqNum;
-          logger.debug(`[SEQUENCE] Updated market data incoming sequence number: ${oldSeq} -> ${this.marketDataIncomingSeqNum}`);
-        } else if (seqNum < this.marketDataIncomingSeqNum) {
-          logger.warn(`[SEQUENCE] Received out-of-order market data sequence number: ${seqNum} (current: ${this.marketDataIncomingSeqNum})`);
-        }
-        break;
-      case SequenceStream.REGULAR:
-      default:
-        if (seqNum > this.regularIncomingSeqNum) {
-          const oldSeq = this.regularIncomingSeqNum;
-          this.regularIncomingSeqNum = seqNum;
-          logger.debug(`[SEQUENCE] Updated regular incoming sequence number: ${oldSeq} -> ${this.regularIncomingSeqNum}`);
-        } else if (seqNum < this.regularIncomingSeqNum) {
-          logger.warn(`[SEQUENCE] Received out-of-order regular sequence number: ${seqNum} (current: ${this.regularIncomingSeqNum})`);
-        }
-        break;
-    }
+  public resetAll(): void {
+    this.msgSeqNum = 1;
+    this.serverSeqNum = 1;
+    this.marketDataSeqNum = 1;
+    this.securityListSeqNum = 2; // SecurityList uses a different sequence number
+    logger.info('[SEQUENCE] All sequence numbers reset to initial values');
   }
-  
+
   /**
-   * Switch to a specific sequence number stream
+   * Get all sequence numbers
    */
-  public switchToStream(stream: SequenceStream): void {
-    const oldStream = this.currentStream;
-    this.currentStream = stream;
-    logger.info(`[SEQUENCE] Switched from ${oldStream} stream to ${stream} stream`);
-    
-    // Log the current sequence numbers for the new stream
-    switch (stream) {
-      case SequenceStream.SECURITY_LIST:
-        logger.info(`[SEQUENCE] Security list sequence numbers: outgoing=${this.securityListOutgoingSeqNum}, incoming=${this.securityListIncomingSeqNum}`);
-        break;
-      case SequenceStream.MARKET_DATA:
-        logger.info(`[SEQUENCE] Market data sequence numbers: outgoing=${this.marketDataOutgoingSeqNum}, incoming=${this.marketDataIncomingSeqNum}`);
-        break;
-      case SequenceStream.REGULAR:
-      default:
-        logger.info(`[SEQUENCE] Regular sequence numbers: outgoing=${this.regularOutgoingSeqNum}, incoming=${this.regularIncomingSeqNum}`);
-        break;
-    }
-  }
-  
-  /**
-   * Check if a received sequence number is valid for the current stream
-   */
-  public isValidIncomingSeqNum(seqNum: number): boolean {
-    switch (this.currentStream) {
-      case SequenceStream.SECURITY_LIST:
-        return seqNum >= this.securityListIncomingSeqNum;
-      case SequenceStream.MARKET_DATA:
-        return seqNum >= this.marketDataIncomingSeqNum;
-      case SequenceStream.REGULAR:
-      default:
-        return seqNum >= this.regularIncomingSeqNum;
-    }
-  }
-  
-  /**
-   * Reset all sequence numbers (for all streams)
-   */
-  public resetAll(seqNum: number = 1): void {
-    const oldRegOutgoing = this.regularOutgoingSeqNum;
-    const oldRegIncoming = this.regularIncomingSeqNum;
-    const oldSlOutgoing = this.securityListOutgoingSeqNum;
-    const oldSlIncoming = this.securityListIncomingSeqNum;
-    const oldMdOutgoing = this.marketDataOutgoingSeqNum;
-    const oldMdIncoming = this.marketDataIncomingSeqNum;
-    
-    this.regularOutgoingSeqNum = seqNum;
-    this.regularIncomingSeqNum = 0;
-    this.securityListOutgoingSeqNum = seqNum;
-    this.securityListIncomingSeqNum = 0;
-    this.marketDataOutgoingSeqNum = seqNum;
-    this.marketDataIncomingSeqNum = 0;
-    
-    logger.info(`[SEQUENCE] Reset ALL sequence numbers to ${seqNum} (incoming=0)`);
-    logger.info(`[SEQUENCE] - Regular: ${oldRegOutgoing}/${oldRegIncoming} -> ${this.regularOutgoingSeqNum}/${this.regularIncomingSeqNum}`);
-    logger.info(`[SEQUENCE] - Security List: ${oldSlOutgoing}/${oldSlIncoming} -> ${this.securityListOutgoingSeqNum}/${this.securityListIncomingSeqNum}`);
-    logger.info(`[SEQUENCE] - Market Data: ${oldMdOutgoing}/${oldMdIncoming} -> ${this.marketDataOutgoingSeqNum}/${this.marketDataIncomingSeqNum}`);
-  }
-  
-  /**
-   * Reset sequence numbers for the regular stream only
-   */
-  public resetRegularSequence(outgoingSeqNum: number = 1, incomingSeqNum: number = 0): void {
-    const oldOutgoing = this.regularOutgoingSeqNum;
-    const oldIncoming = this.regularIncomingSeqNum;
-    
-    this.regularOutgoingSeqNum = outgoingSeqNum;
-    this.regularIncomingSeqNum = incomingSeqNum;
-    
-    logger.info(`[SEQUENCE] Reset regular sequence numbers: outgoing ${oldOutgoing}->${this.regularOutgoingSeqNum}, incoming ${oldIncoming}->${this.regularIncomingSeqNum}`);
-  }
-  
-  /**
-   * Reset sequence numbers for the security list stream only
-   */
-  public resetSecurityListSequence(outgoingSeqNum: number = 1, incomingSeqNum: number = 0): void {
-    const oldOutgoing = this.securityListOutgoingSeqNum;
-    const oldIncoming = this.securityListIncomingSeqNum;
-    
-    this.securityListOutgoingSeqNum = outgoingSeqNum;
-    this.securityListIncomingSeqNum = incomingSeqNum;
-    
-    logger.info(`[SEQUENCE] Reset security list sequence numbers: outgoing ${oldOutgoing}->${this.securityListOutgoingSeqNum}, incoming ${oldIncoming}->${this.securityListIncomingSeqNum}`);
-  }
-  
-  /**
-   * Reset sequence numbers for the market data stream only
-   */
-  public resetMarketDataSequence(outgoingSeqNum: number = 1, incomingSeqNum: number = 0): void {
-    const oldOutgoing = this.marketDataOutgoingSeqNum;
-    const oldIncoming = this.marketDataIncomingSeqNum;
-    
-    this.marketDataOutgoingSeqNum = outgoingSeqNum;
-    this.marketDataIncomingSeqNum = incomingSeqNum;
-    
-    logger.info(`[SEQUENCE] Reset market data sequence numbers: outgoing ${oldOutgoing}->${this.marketDataOutgoingSeqNum}, incoming ${oldIncoming}->${this.marketDataIncomingSeqNum}`);
-  }
-  
-  /**
-   * Reset sequence numbers after logon - all streams start at 1
-   */
-  public resetAfterLogon(): void {
-    this.resetAll(1);
-    logger.info('[SEQUENCE] Reset all sequence numbers to 1 after logon');
-  }
-  
-  /**
-   * Set outgoing sequence number for current stream
-   */
-  public setOutgoingSeqNum(seqNum: number): void {
-    switch (this.currentStream) {
-      case SequenceStream.SECURITY_LIST:
-        const oldSlSeq = this.securityListOutgoingSeqNum;
-        this.securityListOutgoingSeqNum = seqNum;
-        logger.info(`[SEQUENCE] Manually set security list outgoing sequence number: ${oldSlSeq} -> ${this.securityListOutgoingSeqNum}`);
-        break;
-      case SequenceStream.MARKET_DATA:
-        const oldMdSeq = this.marketDataOutgoingSeqNum;
-        this.marketDataOutgoingSeqNum = seqNum;
-        logger.info(`[SEQUENCE] Manually set market data outgoing sequence number: ${oldMdSeq} -> ${this.marketDataOutgoingSeqNum}`);
-        break;
-      case SequenceStream.REGULAR:
-      default:
-        const oldRegSeq = this.regularOutgoingSeqNum;
-        this.regularOutgoingSeqNum = seqNum;
-        logger.info(`[SEQUENCE] Manually set regular outgoing sequence number: ${oldRegSeq} -> ${this.regularOutgoingSeqNum}`);
-        break;
-    }
-  }
-  
-  /**
-   * Get the current stream type
-   */
-  public getCurrentStream(): SequenceStream {
-    return this.currentStream;
-  }
-  
-  /**
-   * Get the state of all sequence number streams
-   */
-  public getState(): { 
-    regular: { outgoing: number; incoming: number; }, 
-    securityList: { outgoing: number; incoming: number; },
-    marketData: { outgoing: number; incoming: number; },
-    currentStream: SequenceStream 
-  } {
+  public getAll(): { main: number; server: number; marketData: number; securityList: number } {
     return {
-      regular: {
-        outgoing: this.regularOutgoingSeqNum,
-        incoming: this.regularIncomingSeqNum
-      },
-      securityList: {
-        outgoing: this.securityListOutgoingSeqNum,
-        incoming: this.securityListIncomingSeqNum
-      },
-      marketData: {
-        outgoing: this.marketDataOutgoingSeqNum,
-        incoming: this.marketDataIncomingSeqNum
-      },
-      currentStream: this.currentStream
+      main: this.msgSeqNum,
+      server: this.serverSeqNum,
+      marketData: this.marketDataSeqNum,
+      securityList: this.securityListSeqNum
     };
   }
-}
-
-export default SequenceManager; 
+} 

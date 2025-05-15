@@ -21,8 +21,12 @@ class MarketDataHandler {
         this.config = config;
         this.sequenceManager = sequenceManager;
         this.socketWrite = socketWrite;
-        // Make sure market data sequence numbers are correctly initialized
+        
+        // IMPORTANT: Make sure market data sequence numbers are correctly initialized
+        // Using 1 as the starting sequence number (different from SecurityList's 2)
+        // This ensures MarketData and SecurityList don't share sequence numbers
         this.sequenceManager.resetMarketDataSequence(1, 0);
+        logger_1.default.info(`[MARKET_DATA] Initialized with dedicated sequence stream starting at 1/0`);
     }
     /**
      * Send a market data request for the specified symbols
@@ -296,7 +300,8 @@ class MarketDataHandler {
      * Reset market data sequence numbers
      */
     resetSequenceNumbers() {
-        logger_1.default.info('[MARKET_DATA] Resetting market data sequence numbers to 1/0');
+        logger_1.default.info('[MARKET_DATA] Resetting market data sequence numbers to 1/0 (distinct from SecurityList)');
+        // Keep using 1 as the starting sequence number for MarketData (SecurityList uses 2)
         this.sequenceManager.resetMarketDataSequence(1, 0);
     }
     /**
