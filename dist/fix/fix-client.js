@@ -415,6 +415,7 @@ function createFixClient(options) {
      * Handle a security list message
      */
     const handleSecurityList = (message) => {
+        logger_1.default.info('handleSecurityList', message);
         try {
             const reqId = message[constants_1.FieldTag.SECURITY_REQ_ID];
             const securityReqType = message[constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE];

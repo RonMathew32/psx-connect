@@ -454,6 +454,8 @@ export function createFixClient(options: FixClientOptions) {
    * Handle a security list message
    */
   const handleSecurityList = (message: ParsedFixMessage): void => {
+    logger.info('handleSecurityList', message);
+    
     try {
       const reqId = message[FieldTag.SECURITY_REQ_ID];
       const securityReqType = message[FieldTag.SECURITY_LIST_REQUEST_TYPE];
