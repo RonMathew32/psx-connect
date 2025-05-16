@@ -198,6 +198,9 @@ function createFixClient(options) {
         // Reset all sequence numbers when scheduling a reconnect
         logger_1.default.info('[CONNECTION] Resetting all sequence numbers before reconnect');
         sequenceManager.resetAll();
+        // Log the specific sequence numbers after reset
+        const seqNumbers = sequenceManager.getAll();
+        logger_1.default.info(`[CONNECTION] Sequence numbers after reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
         // Reset the requestedEquitySecurities flag so we'll request them again
         requestedEquitySecurities = false;
         logger_1.default.info('[CONNECTION] Scheduling reconnect in 5 seconds');
@@ -753,7 +756,7 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
-            // Use security list sequence number which now starts at 2 for PSX
+            // Use security list sequence number which starts at 2 for PSX
             const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
             logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
             // Create message manually instead of using helper to control sequence number
@@ -792,19 +795,19 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
-            // Use security list sequence number which now starts at 3 for PSX
+            // Get the next security list sequence number after it's been incremented for equity
             const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
             logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
-            // Create message in the format used by fn-psx project
+            // Create message in the format used by PSX
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
                 .setMsgSeqNum(securityListSeqNum);
-            // Add required fields in same order as fn-psx
+            // Add required fields in same order as PSX format
             message.addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId);
             message.addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
-            message.addField('55', 'NA'); // Symbol = NA as used in fn-psx
+            message.addField('55', 'NA'); // Symbol = NA 
             message.addField('460', '5'); // Product = INDEX (5)
             message.addField('336', 'REG'); // TradingSessionID = REG
             const rawMessage = message.buildMessage();
@@ -910,6 +913,10 @@ function createFixClient(options) {
         // Reset sequence numbers on any logout
         logger_1.default.info('[SESSION:LOGOUT] Resetting all sequence numbers due to logout');
         sequenceManager.resetAll();
+        logger_1.default.info(`[SESSION:LOGOUT] After reset, sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+        // Also reset the requestedEquitySecurities flag so we can request them again after reconnect
+        requestedEquitySecurities = false;
+        logger_1.default.info('[SESSION:LOGOUT] Reset requestedEquitySecurities flag');
         // Check if this is a sequence number related logout
         if (text && (text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence'))) {
             logger_1.default.warn(`[SESSION:LOGOUT] Received logout due to sequence number issue: ${text}`);
@@ -1234,6 +1241,7 @@ function createFixClient(options) {
             // Reset sequence manager to initial state
             sequenceManager.resetAll();
             logger_1.default.info(`[RESET] All sequence numbers reset to initial values: ${JSON.stringify(sequenceManager.getAll())}`);
+            logger_1.default.info(`[RESET] Verifying SecurityList sequence number is set to 2: ${sequenceManager.getSecurityListSeqNum()}`);
             // Reset flag for requested securities
             requestedEquitySecurities = false;
             logger_1.default.info('[RESET] Reset securities request flag');

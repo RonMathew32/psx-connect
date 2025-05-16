@@ -168,9 +168,9 @@ export class SequenceManager {
       // Otherwise, set our next sequence to be one more than the server's
       this.mainSeqNum = this.serverSeqNum + 1;
       // Use correct starting values but ensure they're aligned if main sequence is higher
-      this.securityListSeqNum = Math.max(2, this.mainSeqNum);
-      this.tradingStatusSeqNum = Math.max(2, this.mainSeqNum);
-      this.marketDataSeqNum = Math.max(1, this.mainSeqNum);
+      this.securityListSeqNum = 2; // Always start securityList at 2 after logon
+      this.tradingStatusSeqNum = 2; // Always start tradingStatus at 2 after logon
+      this.marketDataSeqNum = 1; // Always start marketData at 1 after logon
       logger.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.mainSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
     }
   }
