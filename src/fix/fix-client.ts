@@ -3,7 +3,7 @@ import logger from '../utils/logger';
 import { EventEmitter } from 'events';
 import { createMessageBuilder } from './message-builder';
 import { parseFixMessage, ParsedFixMessage } from './message-parser';
-import { SOH, MessageType, FieldTag } from './constants';
+import { SOH, MessageType, FieldTag, DEFAULT_CONNECTION } from './constants';
 import { Socket } from 'net';
 import { v4 as uuidv4 } from 'uuid';
 import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } from '../types';
@@ -543,26 +543,33 @@ export function createFixClient(options: FixClientOptions) {
 
   const handleSequenceError = (expectedSeqNum?: number): void => {
     if (expectedSeqNum !== undefined) {
-      logger.info(`Server expects sequence number: ${expectedSeqNum}`);
+      logger.info(`[SEQUENCE:ERROR] Server expects sequence number: ${expectedSeqNum}`);
       
       // Perform a full disconnect and reconnect with sequence reset
       if (socket) {
-        logger.info('Disconnecting due to sequence number error');
+        logger.info('[SEQUENCE:ERROR] Disconnecting due to sequence number error');
         socket.destroy();
         socket = null;
       }
       
       // Wait a moment before reconnecting
       setTimeout(() => {
-        // Reset sequence numbers to what the server expects
+        // Reset sequence numbers to what the server expects for PKF-50 compliance
+        logger.info(`[SEQUENCE:ERROR] Setting sequence numbers for reconnect:`);
+        
+        // For PKF-50, maintain the specialized sequence numbers
         sequenceManager.forceReset(expectedSeqNum);
         
-        logger.info(`Reconnecting with adjusted sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+        // Log all sequence numbers after reset for verification
+        const seqNumbers = sequenceManager.getAll();
+        logger.info(`[SEQUENCE:ERROR] After reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
+        
+        logger.info(`[SEQUENCE:ERROR] Reconnecting with adjusted sequence numbers`);
         connect();
       }, 2000);
-        } else {
+    } else {
       // If we can't parse the expected sequence number, do a full reset
-      logger.info('Cannot determine expected sequence number, performing full reset');
+      logger.info('[SEQUENCE:ERROR] Cannot determine expected sequence number, performing full reset');
       
       if (socket) {
         socket.destroy();
@@ -570,10 +577,14 @@ export function createFixClient(options: FixClientOptions) {
       }
       
       setTimeout(() => {
-        // Reset sequence numbers
+        // Reset all sequence numbers to defaults per PKF-50
         sequenceManager.resetAll();
         
-        logger.info('Reconnecting with fully reset sequence numbers');
+        // Log all sequence numbers after reset for verification
+        const seqNumbers = sequenceManager.getAll();
+        logger.info(`[SEQUENCE:ERROR] After full reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
+        
+        logger.info('[SEQUENCE:ERROR] Reconnecting with fully reset sequence numbers');
         connect();
       }, 2000);
     }
@@ -720,7 +731,7 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[MARKET_DATA:REQUEST] Creating market data request for symbols: ${symbols.join(', ')}`);
       
-      // Use market data sequence number instead of main sequence number
+      // Use market data sequence number instead of main sequence number - starts at 1 per PKF-50
       const marketDataSeqNum = sequenceManager.getNextMarketDataAndIncrement();
       logger.info(`[SEQUENCE] Using market data sequence number: ${marketDataSeqNum}`);
       
@@ -734,12 +745,12 @@ export function createFixClient(options: FixClientOptions) {
         .addField(FieldTag.MARKET_DEPTH, '0')
         .addField(FieldTag.MD_UPDATE_TYPE, '0');
 
-      // Add PartyID group (required by PSX)
+      // Add PartyID group (required by PKF-50)
       builder
-        .addField('453', '1') // NoPartyIDs = 1
-        .addField('448', options.partyId || options.senderCompId) // PartyID (use partyId or senderCompId)
-        .addField('447', 'D') // PartyIDSource = D (custom)
-        .addField('452', '3'); // PartyRole = 3 (instead of 2)
+        .addField(FieldTag.NO_PARTY_IDS, '1') // NoPartyIDs = 1
+        .addField(FieldTag.PARTY_ID, options.partyId || options.senderCompId) // PartyID (use partyId or senderCompId)
+        .addField(FieldTag.PARTY_ID_SOURCE, 'D') // PartyIDSource = D (proprietary/custom)
+        .addField(FieldTag.PARTY_ROLE, '3'); // PartyRole = 3 (client ID)
 
       // Add symbols
       builder.addField(FieldTag.NO_RELATED_SYM, symbols.length.toString());
@@ -821,7 +832,7 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
       
-      // Use trading status sequence number for trading session status requests
+      // Use trading status sequence number for trading session status requests - starts at 2 per PKF-50
       const tradingStatusSeqNum = sequenceManager.getNextTradingStatusAndIncrement();
       logger.info(`[SEQUENCE] Using trading status sequence number: ${tradingStatusSeqNum}`);
       
@@ -831,7 +842,7 @@ export function createFixClient(options: FixClientOptions) {
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(tradingStatusSeqNum)
         .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
-        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
+        .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot per PKF-50
         .addField(FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
 
       const rawMessage = message.buildMessage();
@@ -859,21 +870,22 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
       
-      // Use security list sequence number which starts at 2 for PSX
+      // Use security list sequence number which starts at 2 for PKF-50
       const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
       logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
       
-      // Create message manually instead of using helper to control sequence number
+      // Create message with the correct fields for PKF-50
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(securityListSeqNum);
 
-      // Add required fields for equity security list request
+      // Add required fields for equity security list request according to PKF-50
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
       message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
-      message.addField('336', 'REG'); // TradingSessionID = REG (Regular market)
+      message.addField(FieldTag.PRODUCT, '4'); // 4 = EQUITY per PKF-50
+      message.addField(FieldTag.TRADING_SESSION_ID, 'REG'); // REG = Regular market session
 
       const rawMessage = message.buildMessage();
 
@@ -907,19 +919,19 @@ export function createFixClient(options: FixClientOptions) {
       const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
       logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
 
-      // Create message in the format used by PSX
+      // Create message in the format specified by PKF-50
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(securityListSeqNum);
 
-      // Add required fields in same order as PSX format
+      // Add required fields in the order specified by PKF-50
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
       message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
-      message.addField('55', 'NA'); // Symbol = NA 
-      message.addField('460', '5'); // Product = INDEX (5)
-      message.addField('336', 'REG'); // TradingSessionID = REG
+      message.addField(FieldTag.SYMBOL, 'NA'); // Symbol = NA for all indices
+      message.addField(FieldTag.PRODUCT, '5'); // 5 = INDEX per PKF-50
+      message.addField(FieldTag.TRADING_SESSION_ID, 'REG'); // REG = Regular market session
 
       const rawMessage = message.buildMessage();
 
@@ -1224,14 +1236,14 @@ export function createFixClient(options: FixClientOptions) {
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(sequenceManager.getNextAndIncrement()); // Use sequence number 1
 
-      // Then add body fields in the order used by fn-psx
-      builder.addField(FieldTag.ENCRYPT_METHOD, '0');
+      // Add body fields in the order specified by PKF-50
+      builder.addField(FieldTag.ENCRYPT_METHOD, DEFAULT_CONNECTION.ENCRYPT_METHOD);
       builder.addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-      builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always use Y to reset sequence numbers
+      builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, DEFAULT_CONNECTION.RESET_SEQ_NUM); // Always use Y to reset sequence numbers
       builder.addField(FieldTag.USERNAME, options.username);
       builder.addField(FieldTag.PASSWORD, options.password);
-      builder.addField(FieldTag.DEFAULT_APPL_VER_ID, '9');
-      builder.addField('1408', 'FIX5.00_PSX_1.00'); // DefaultCstmApplVerID
+      builder.addField(FieldTag.DEFAULT_APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
+      builder.addField(FieldTag.DEFAULT_CSTM_APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID);
 
       const message = builder.buildMessage();
       logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);

@@ -27,7 +27,8 @@ export enum MessageType {
   SECURITY_LIST_REQUEST = 'x',
   SECURITY_LIST = 'y',
   TRADING_SESSION_STATUS_REQUEST = 'g',
-  TRADING_SESSION_STATUS = 'h'
+  TRADING_SESSION_STATUS = 'h',
+  MARKET_DATA_REQUEST_REJECT = 'Y'  // Added PKF-50 specific
 }
 
 /**
@@ -93,7 +94,13 @@ export enum FieldTag {
   NO_ORDERS = '73',
   ORDER_QTY = '38',
   ORDER_ID = '37',
-  NO_SECURITIES = '393'  // Number of securities in a security list response, same as TOT_NO_RELATED_SYM
+  NO_SECURITIES = '393',  // Number of securities in a security list response, same as TOT_NO_RELATED_SYM
+  PRODUCT = '460',        // Added for PKF-50
+  DEFAULT_CSTM_APPL_VER_ID = '1408',  // Added for PKF-50
+  NO_PARTY_IDS = '453',   // Added for PKF-50
+  PARTY_ID = '448',       // Added for PKF-50
+  PARTY_ID_SOURCE = '447', // Added for PKF-50
+  PARTY_ROLE = '452'      // Added for PKF-50
 }
 
 // Subscription Request Types
@@ -140,10 +147,25 @@ export enum SecurityType {
   BOND = 'BOND'
 }
 
+// PKF-50 Specific Product Types
+export enum ProductType {
+  EQUITY = '4',
+  INDEX = '5'
+}
+
+// PKF-50 Specific Party Roles
+export enum PartyRole {
+  EXECUTING_FIRM = '1',
+  CLEARING_FIRM = '2',
+  CLIENT_ID = '3'
+}
+
 // Default connection parameters
 export const DEFAULT_CONNECTION = {
   VERSION: 'FIXT.1.1',
   ENCRYPT_METHOD: '0',
   HEARTBEAT_INTERVAL: '30',
-  RESET_SEQ_NUM: 'Y'
+  RESET_SEQ_NUM: 'Y',
+  DEFAULT_APPL_VER_ID: '9',
+  DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
 }; 

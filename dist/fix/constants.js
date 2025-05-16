@@ -3,7 +3,7 @@
  * FIX protocol constants
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_CONNECTION = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
+exports.DEFAULT_CONNECTION = exports.PartyRole = exports.ProductType = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
 // Standard FIX delimiter - SOH (Start of Header) character (ASCII 1)
 exports.SOH = String.fromCharCode(1);
 /**
@@ -30,6 +30,7 @@ var MessageType;
     MessageType["SECURITY_LIST"] = "y";
     MessageType["TRADING_SESSION_STATUS_REQUEST"] = "g";
     MessageType["TRADING_SESSION_STATUS"] = "h";
+    MessageType["MARKET_DATA_REQUEST_REJECT"] = "Y"; // Added PKF-50 specific
 })(MessageType || (exports.MessageType = MessageType = {}));
 /**
  * FIX field tags
@@ -95,7 +96,13 @@ var FieldTag;
     FieldTag["NO_ORDERS"] = "73";
     FieldTag["ORDER_QTY"] = "38";
     FieldTag["ORDER_ID"] = "37";
-    FieldTag["NO_SECURITIES"] = "393"; // Number of securities in a security list response, same as TOT_NO_RELATED_SYM
+    FieldTag["NO_SECURITIES"] = "393";
+    FieldTag["PRODUCT"] = "460";
+    FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1408";
+    FieldTag["NO_PARTY_IDS"] = "453";
+    FieldTag["PARTY_ID"] = "448";
+    FieldTag["PARTY_ID_SOURCE"] = "447";
+    FieldTag["PARTY_ROLE"] = "452"; // Added for PKF-50
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;
@@ -141,10 +148,25 @@ var SecurityType;
     SecurityType["OPTION"] = "OPT";
     SecurityType["BOND"] = "BOND";
 })(SecurityType || (exports.SecurityType = SecurityType = {}));
+// PKF-50 Specific Product Types
+var ProductType;
+(function (ProductType) {
+    ProductType["EQUITY"] = "4";
+    ProductType["INDEX"] = "5";
+})(ProductType || (exports.ProductType = ProductType = {}));
+// PKF-50 Specific Party Roles
+var PartyRole;
+(function (PartyRole) {
+    PartyRole["EXECUTING_FIRM"] = "1";
+    PartyRole["CLEARING_FIRM"] = "2";
+    PartyRole["CLIENT_ID"] = "3";
+})(PartyRole || (exports.PartyRole = PartyRole = {}));
 // Default connection parameters
 exports.DEFAULT_CONNECTION = {
     VERSION: 'FIXT.1.1',
     ENCRYPT_METHOD: '0',
     HEARTBEAT_INTERVAL: '30',
-    RESET_SEQ_NUM: 'Y'
+    RESET_SEQ_NUM: 'Y',
+    DEFAULT_APPL_VER_ID: '9',
+    DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
 };
