@@ -268,7 +268,8 @@ export function createFixClient(options: FixClientOptions) {
           // If we have a previous message, process it
           if (currentMessage) {
             try {
-            processMessage(currentMessage);
+            // processMessage(currentMessage);
+            logger.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
               messageCount++;
             } catch (err: any) {
               logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
@@ -284,7 +285,8 @@ export function createFixClient(options: FixClientOptions) {
       // Process the last message if exists
       if (currentMessage) {
         try {
-        processMessage(currentMessage);
+          logger.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
+        // processMessage(currentMessage);
           messageCount++;
         } catch (err: any) {
           logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
@@ -625,32 +627,32 @@ export function createFixClient(options: FixClientOptions) {
 
     try {
       // Extract message type for categorization
-      const segments = message.split(SOH);
-      const msgTypeField = segments.find(s => s.startsWith('35='));
-      const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
-      const msgTypeName = getMessageTypeName(msgType);
+      // const segments = message.split(SOH);
+      // const msgTypeField = segments.find(s => s.startsWith('35='));
+      // const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
+      // const msgTypeName = getMessageTypeName(msgType);
       
-      // Get symbol if it exists for better logging
-      const symbolField = segments.find(s => s.startsWith('55='));
-      const symbol = symbolField ? symbolField.substring(3) : '';
+      // // Get symbol if it exists for better logging
+      // const symbolField = segments.find(s => s.startsWith('55='));
+      // const symbol = symbolField ? symbolField.substring(3) : '';
       
-      // Classify message
-      let messageCategory = 'UNKNOWN';
-      if (msgType === MessageType.MARKET_DATA_REQUEST) {
-        messageCategory = 'MARKET_DATA';
-      } else if (msgType === MessageType.SECURITY_LIST_REQUEST) {
-        messageCategory = 'SECURITY_LIST';
-      } else if (msgType === MessageType.TRADING_SESSION_STATUS_REQUEST) {
-        messageCategory = 'TRADING_STATUS';
-      } else if (msgType === MessageType.LOGON || msgType === MessageType.LOGOUT) {
-        messageCategory = 'SESSION';
-      } else if (msgType === MessageType.HEARTBEAT || msgType === MessageType.TEST_REQUEST) {
-        messageCategory = 'HEARTBEAT';
-      }
+      // // Classify message
+      // let messageCategory = 'UNKNOWN';
+      // if (msgType === MessageType.MARKET_DATA_REQUEST) {
+      //   messageCategory = 'MARKET_DATA';
+      // } else if (msgType === MessageType.SECURITY_LIST_REQUEST) {
+      //   messageCategory = 'SECURITY_LIST';
+      // } else if (msgType === MessageType.TRADING_SESSION_STATUS_REQUEST) {
+      //   messageCategory = 'TRADING_STATUS';
+      // } else if (msgType === MessageType.LOGON || msgType === MessageType.LOGOUT) {
+      //   messageCategory = 'SESSION';
+      // } else if (msgType === MessageType.HEARTBEAT || msgType === MessageType.TEST_REQUEST) {
+      //   messageCategory = 'HEARTBEAT';
+      // }
       
-      // Log with category and type for clear identification
-      logger.info(`[${messageCategory}:OUTGOING] Sending FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`);
-      logger.info(`----------------------------OUTGOING MESSAGE-----------------------------`);
+      // // Log with category and type for clear identification
+      // logger.info(`[${messageCategory}:OUTGOING] Sending FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`);
+      // logger.info(`----------------------------OUTGOING MESSAGE-----------------------------`);
       logger.info(message);
       logger.debug(`Current sequence numbers: main=${sequenceManager.getMainSeqNum()}, server=${sequenceManager.getServerSeqNum()}`);
 
@@ -693,28 +695,28 @@ export function createFixClient(options: FixClientOptions) {
     logger.info('[SESSION:LOGON] Login successful. Use explicit security list requests after logon.');
 
     // Add a timer to schedule security list requests after a short delay
-    setTimeout(() => {
-      if (connected && loggedIn) {
-        logger.info('[SESSION:LOGON] Requesting trading session status after login');
-        sendTradingSessionStatusRequest();
+    // setTimeout(() => {
+    //   if (connected && loggedIn) {
+    //     logger.info('[SESSION:LOGON] Requesting trading session status after login');
+    //     sendTradingSessionStatusRequest();
         
-        // Request equity securities after a delay
-        setTimeout(() => {
-          if (connected && loggedIn) {
-            logger.info('[SESSION:LOGON] Requesting equity security list after login');
-            sendSecurityListRequestForEquity();
+    //     // Request equity securities after a delay
+    //     setTimeout(() => {
+    //       if (connected && loggedIn) {
+    //         logger.info('[SESSION:LOGON] Requesting equity security list after login');
+    //         sendSecurityListRequestForEquity();
         
-            // Request index securities after a further delay
-            setTimeout(() => {
-              if (connected && loggedIn) {
-                logger.info('[SESSION:LOGON] Requesting index security list after login');
-                sendSecurityListRequestForIndex();
-              }
-            }, 3000);
-          }
-        }, 3000);
-      }
-    }, 2000);
+    //         // Request index securities after a further delay
+    //         setTimeout(() => {
+    //           if (connected && loggedIn) {
+    //             logger.info('[SESSION:LOGON] Requesting index security list after login');
+    //             sendSecurityListRequestForIndex();
+    //           }
+    //         }, 3000);
+    //       }
+    //     }, 3000);
+    //   }
+    // }, 2000);
   };
 
   const sendMarketDataRequest = (
