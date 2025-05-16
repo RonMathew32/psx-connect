@@ -686,6 +686,8 @@ export function createFixClient(options: FixClientOptions) {
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
+    sendTradingSessionStatusRequest();
+    sendSecurityListRequestForEquity();
 
     // Emit event so client can handle login success
     emitter.emit('logon', message);

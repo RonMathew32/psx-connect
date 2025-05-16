@@ -604,6 +604,8 @@ function createFixClient(options) {
         logger_1.default.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
+        sendTradingSessionStatusRequest();
+        sendSecurityListRequestForEquity();
         // Emit event so client can handle login success
         emitter.emit('logon', message);
         // Note: We're removing automatic security list requests after login
