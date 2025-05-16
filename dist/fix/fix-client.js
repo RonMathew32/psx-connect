@@ -625,11 +625,14 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[MARKET_DATA:REQUEST] Creating market data request for symbols: ${symbols.join(', ')}`);
+            // Use market data sequence number instead of main sequence number
+            const marketDataSeqNum = sequenceManager.getNextMarketDataAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using market data sequence number: ${marketDataSeqNum}`);
             const builder = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+                .setMsgSeqNum(marketDataSeqNum)
                 .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
                 .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
@@ -670,7 +673,7 @@ function createFixClient(options) {
             const entryTypeLabels = entryTypes.map(t => entryTypeNames[t] || t).join(', ');
             const subTypeLabel = subTypes[subscriptionType] || subscriptionType;
             logger_1.default.info(`[MARKET_DATA:REQUEST] Sent ${subTypeLabel} request with ID: ${requestId}`);
-            logger_1.default.info(`[MARKET_DATA:REQUEST] Symbols: ${symbols.join(', ')} | Entry types: ${entryTypeLabels}`);
+            logger_1.default.info(`[MARKET_DATA:REQUEST] Symbols: ${symbols.join(', ')} | Entry types: ${entryTypeLabels} | Using sequence: ${marketDataSeqNum}`);
             return requestId;
         }
         catch (error) {
@@ -705,25 +708,30 @@ function createFixClient(options) {
     const sendTradingSessionStatusRequest = () => {
         try {
             if (!socket || !connected || !loggedIn) {
-                logger_1.default.error('Cannot send trading session status request: not connected or not logged in');
+                logger_1.default.error('[TRADING_STATUS:REQUEST] Cannot send trading session status request: not connected or not logged in');
                 return null;
             }
             const requestId = (0, uuid_1.v4)();
+            logger_1.default.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
+            // Use security list sequence number for trading session status too
+            // since it's more related to securities than market data
+            const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+                .setMsgSeqNum(securityListSeqNum)
                 .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
                 .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info(`Sent trading session status request for REG market with ID: ${requestId}`);
+            logger_1.default.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using sequence: ${securityListSeqNum}`);
             return requestId;
         }
         catch (error) {
-            logger_1.default.error('Error sending trading session status request:', error);
+            logger_1.default.error('[TRADING_STATUS:REQUEST] Error sending trading session status request:', error);
             return null;
         }
     };
@@ -737,18 +745,27 @@ function createFixClient(options) {
                 logger_1.default.info('[SECURITY_LIST:EQUITY] Equity securities already requested, skipping duplicate request');
                 return null;
             }
-            const { message, requestId } = (0, message_helpers_1.createEquitySecurityListRequest)({
-                senderCompId: options.senderCompId,
-                targetCompId: options.targetCompId,
-                username: options.username,
-                password: options.password,
-                heartbeatIntervalSecs: options.heartbeatIntervalSecs
-            }, sequenceManager);
+            const requestId = (0, uuid_1.v4)();
+            logger_1.default.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
+            // Use security list sequence number instead of main sequence number
+            const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
+            // Create message manually instead of using helper to control sequence number
+            const message = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(securityListSeqNum);
+            // Add required fields for equity security list request
+            message.addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId);
+            message.addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
+            message.addField('336', 'REG'); // TradingSessionID = REG (Regular market)
+            const rawMessage = message.buildMessage();
             if (socket) {
-                socket.write(message);
+                socket.write(rawMessage);
                 requestedEquitySecurities = true;
                 logger_1.default.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);
-                logger_1.default.info(`[SECURITY_LIST:EQUITY] Product: EQUITY | Market: REG+FUT`);
+                logger_1.default.info(`[SECURITY_LIST:EQUITY] Product: EQUITY | Market: REG | Using sequence: ${securityListSeqNum}`);
                 return requestId;
             }
             else {
@@ -769,12 +786,15 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
+            // Use security list sequence number instead of main sequence number
+            const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
             // Create message in the format used by fn-psx project
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement());
+                .setMsgSeqNum(securityListSeqNum);
             // Add required fields in same order as fn-psx
             message.addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId);
             message.addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
@@ -785,7 +805,7 @@ function createFixClient(options) {
             if (socket) {
                 socket.write(rawMessage);
                 logger_1.default.info(`[SECURITY_LIST:INDEX] Request sent successfully with ID: ${requestId}`);
-                logger_1.default.info(`[SECURITY_LIST:INDEX] Product: INDEX | Market: REG | Next sequence: ${sequenceManager.getMainSeqNum()}`);
+                logger_1.default.info(`[SECURITY_LIST:INDEX] Product: INDEX | Market: REG | Using sequence: ${securityListSeqNum}`);
                 return requestId;
             }
             else {
@@ -806,11 +826,14 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[MARKET_DATA:INDEX] Creating request for indices: ${symbols.join(', ')}`);
+            // Use market data sequence number instead of main sequence number
+            const marketDataSeqNum = sequenceManager.getNextMarketDataAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using market data sequence number: ${marketDataSeqNum}`);
             const builder = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+                .setMsgSeqNum(marketDataSeqNum)
                 .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
                 .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
@@ -825,7 +848,7 @@ function createFixClient(options) {
             const rawMessage = builder.buildMessage();
             socket.write(rawMessage);
             logger_1.default.info(`[MARKET_DATA:INDEX] Sent SNAPSHOT request with ID: ${requestId}`);
-            logger_1.default.info(`[MARKET_DATA:INDEX] Indices: ${symbols.join(', ')} | Entry type: INDEX_VALUE`);
+            logger_1.default.info(`[MARKET_DATA:INDEX] Indices: ${symbols.join(', ')} | Entry type: INDEX_VALUE | Using sequence: ${marketDataSeqNum}`);
             return requestId;
         }
         catch (error) {
@@ -841,11 +864,14 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[MARKET_DATA:SYMBOL] Creating subscription for symbols: ${symbols.join(', ')}`);
+            // Use market data sequence number instead of main sequence number
+            const marketDataSeqNum = sequenceManager.getNextMarketDataAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using market data sequence number: ${marketDataSeqNum}`);
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+                .setMsgSeqNum(marketDataSeqNum)
                 .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '1') // 1 = Snapshot + Updates
                 .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
@@ -863,7 +889,7 @@ function createFixClient(options) {
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
             logger_1.default.info(`[MARKET_DATA:SYMBOL] Sent SNAPSHOT+UPDATES subscription with ID: ${requestId}`);
-            logger_1.default.info(`[MARKET_DATA:SYMBOL] Symbols: ${symbols.join(', ')} | Entry types: BID, OFFER, TRADE`);
+            logger_1.default.info(`[MARKET_DATA:SYMBOL] Symbols: ${symbols.join(', ')} | Entry types: BID, OFFER, TRADE | Using sequence: ${marketDataSeqNum}`);
             return requestId;
         }
         catch (error) {
