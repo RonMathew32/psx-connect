@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import logger from './utils/logger';
 import { createWebSocketServer } from './websocket-server';
 import { FixClientOptions } from './types';
-import { createFixClient } from './fix/fix-client';
+import { createFixClient } from './fix/fix';
 
 dotenv.config();
 
