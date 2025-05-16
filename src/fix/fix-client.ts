@@ -173,7 +173,7 @@ export function createFixClient(options: FixClientOptions) {
         logger.info(`[DATA:PROCESSING] Starting message processing...`);
         let processingResult = false;
         try {
-          handleData(data);
+        handleData(data);
           processingResult = true;
         } catch (error: any) {
           logger.error(`[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`);
@@ -264,7 +264,7 @@ export function createFixClient(options: FixClientOptions) {
           // If we have a previous message, process it
           if (currentMessage) {
             try {
-              processMessage(currentMessage);
+            processMessage(currentMessage);
               messageCount++;
             } catch (err: any) {
               logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
@@ -280,7 +280,7 @@ export function createFixClient(options: FixClientOptions) {
       // Process the last message if exists
       if (currentMessage) {
         try {
-          processMessage(currentMessage);
+        processMessage(currentMessage);
           messageCount++;
         } catch (err: any) {
           logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
@@ -488,7 +488,7 @@ export function createFixClient(options: FixClientOptions) {
             }
             
             logger.info('[REJECT] Processing complete');
-          } catch (error) {
+    } catch (error) {
             logger.error(`[REJECT] Error processing reject message: ${error instanceof Error ? error.message : String(error)}`);
           }
           break;
@@ -556,7 +556,7 @@ export function createFixClient(options: FixClientOptions) {
         logger.info(`Reconnecting with adjusted sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         connect();
       }, 2000);
-      } else {
+        } else {
       // If we can't parse the expected sequence number, do a full reset
       logger.info('Cannot determine expected sequence number, performing full reset');
       
@@ -701,19 +701,19 @@ export function createFixClient(options: FixClientOptions) {
         setTimeout(() => {
           if (connected && loggedIn) {
             logger.info('[SESSION:LOGON] Requesting equity security list after login');
-            sendSecurityListRequestForEquity();
-            
+        sendSecurityListRequestForEquity();
+        
             // Request index securities after a further delay
-            setTimeout(() => {
-              if (connected && loggedIn) {
+        setTimeout(() => {
+          if (connected && loggedIn) {
                 logger.info('[SESSION:LOGON] Requesting index security list after login');
-                sendSecurityListRequestForIndex();
-              }
-            }, 3000);
+            sendSecurityListRequestForIndex();
           }
         }, 3000);
       }
-    }, 2000);
+        }, 3000);
+      }
+      }, 2000);
   };
 
   const sendMarketDataRequest = (
@@ -831,23 +831,22 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
       
-      // Use security list sequence number for trading session status too
-      // since it's more related to securities than market data
-      const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
-      logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
+      // Use trading status sequence number for trading session status requests
+      const tradingStatusSeqNum = sequenceManager.getNextTradingStatusAndIncrement();
+      logger.info(`[SEQUENCE] Using trading status sequence number: ${tradingStatusSeqNum}`);
       
       const message = createMessageBuilder()
         .setMsgType(MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(securityListSeqNum)
+        .setMsgSeqNum(tradingStatusSeqNum)
         .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
         .addField(FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using sequence: ${securityListSeqNum}`);
+      logger.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using sequence: ${tradingStatusSeqNum}`);
       return requestId;
     } catch (error) {
       logger.error('[TRADING_STATUS:REQUEST] Error sending trading session status request:', error);
@@ -870,7 +869,7 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
       
-      // Use security list sequence number instead of main sequence number
+      // Use security list sequence number which now starts at 2 for PSX
       const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
       logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
       
@@ -880,14 +879,14 @@ export function createFixClient(options: FixClientOptions) {
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(securityListSeqNum);
-      
+
       // Add required fields for equity security list request
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
       message.addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
       message.addField('336', 'REG'); // TradingSessionID = REG (Regular market)
-      
+
       const rawMessage = message.buildMessage();
-      
+
       if (socket) {
         socket.write(rawMessage);
         requestedEquitySecurities = true;
@@ -914,7 +913,7 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
       
-      // Use security list sequence number instead of main sequence number
+      // Use security list sequence number which now starts at 3 for PSX
       const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
       logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
 
@@ -933,7 +932,7 @@ export function createFixClient(options: FixClientOptions) {
       message.addField('336', 'REG'); // TradingSessionID = REG
 
       const rawMessage = message.buildMessage();
-      
+
       if (socket) {
         socket.write(rawMessage);
         logger.info(`[SECURITY_LIST:INDEX] Request sent successfully with ID: ${requestId}`);
@@ -1165,9 +1164,9 @@ export function createFixClient(options: FixClientOptions) {
             sequenceManager
           );
           sendMessage(message);
-        } catch (error) {
+    } catch (error) {
           logger.error(`Error sending test request: ${error instanceof Error ? error.message : String(error)}`);
-        }
+    }
       } else {
         // If we've received activity, just send a regular heartbeat
         sendHeartbeat('');
@@ -1433,9 +1432,9 @@ export function createFixClient(options: FixClientOptions) {
       connected = false;
       loggedIn = false;
       clearTimers();
-      
+
       logger.info('[RESET] Connection and sequence numbers reset to initial state');
-      
+
       // Wait a moment before reconnecting
       setTimeout(() => {
         logger.info('[RESET] Reconnecting after reset');

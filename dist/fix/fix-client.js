@@ -733,21 +733,20 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
-            // Use security list sequence number for trading session status too
-            // since it's more related to securities than market data
-            const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
-            logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
+            // Use trading status sequence number for trading session status requests
+            const tradingStatusSeqNum = sequenceManager.getNextTradingStatusAndIncrement();
+            logger_1.default.info(`[SEQUENCE] Using trading status sequence number: ${tradingStatusSeqNum}`);
             const message = (0, message_builder_1.createMessageBuilder)()
                 .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(securityListSeqNum)
+                .setMsgSeqNum(tradingStatusSeqNum)
                 .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
                 .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
             const rawMessage = message.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using sequence: ${securityListSeqNum}`);
+            logger_1.default.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using sequence: ${tradingStatusSeqNum}`);
             return requestId;
         }
         catch (error) {
@@ -767,7 +766,7 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
-            // Use security list sequence number instead of main sequence number
+            // Use security list sequence number which now starts at 2 for PSX
             const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
             logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
             // Create message manually instead of using helper to control sequence number
@@ -806,7 +805,7 @@ function createFixClient(options) {
             }
             const requestId = (0, uuid_1.v4)();
             logger_1.default.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
-            // Use security list sequence number instead of main sequence number
+            // Use security list sequence number which now starts at 3 for PSX
             const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
             logger_1.default.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum}`);
             // Create message in the format used by fn-psx project

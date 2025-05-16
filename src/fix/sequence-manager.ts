@@ -7,8 +7,10 @@ export class SequenceManager {
   private msgSeqNum = 1;
   private serverSeqNum = 1;
   private marketDataSeqNum = 1;
-  // SecurityList ALWAYS uses 2 as specified by PSX - this is critical
+  // SecurityList uses 3 as specified by PSX - this needs to be higher than 2
   private securityListSeqNum = 2;
+  // Trading status uses 3 as well - typically same as security list
+  private tradingStatusSeqNum = 2;
 
   /**
    * Reset sequence numbers to a specific value
@@ -19,12 +21,21 @@ export class SequenceManager {
     this.msgSeqNum = newSeq;
     this.serverSeqNum = newSeq - 1;
     
-    // IMPORTANT: Always set SecurityList to 2 for PSX
-    this.securityListSeqNum = 2;
+    // If the new sequence is higher than 3, use it for security list too
+    if (newSeq > 3) {
+      this.securityListSeqNum = newSeq;
+      this.tradingStatusSeqNum = newSeq;
+      logger.info(`[SEQUENCE] Setting security list/trading status sequence to ${newSeq} (higher than default 3)`);
+    } else {
+      // Otherwise use 3 as default for PSX security list messages
+      this.securityListSeqNum = 2;
+      this.tradingStatusSeqNum = 2;
+    }
+    
     this.marketDataSeqNum = newSeq;
     
     logger.info(`[SEQUENCE] Forced reset of sequence numbers from ${oldMain} to ${this.msgSeqNum} (server: ${this.serverSeqNum})`);
-    logger.info(`[SEQUENCE] Security list sequence number MUST be ${this.securityListSeqNum}, market data: ${this.marketDataSeqNum}`);
+    logger.info(`[SEQUENCE] Security list sequence: ${this.securityListSeqNum}, Trading status: ${this.tradingStatusSeqNum}, Market data: ${this.marketDataSeqNum}`);
   }
 
   /**
@@ -42,21 +53,58 @@ export class SequenceManager {
   }
   
   /**
-   * Get the security list sequence number (always 2 for PSX)
-   * The critical part is that security list messages MUST use sequence number 2
+   * Get the security list sequence number
+   * Starts at 3 for PSX, but can be higher if server has rejected previous messages
    */
   public getSecurityListSeqNum(): number {
-    // CRITICAL: For PSX, security list must use sequence number 2
-    return 2;
+    logger.info(`[SEQUENCE] Getting security list sequence: ${this.securityListSeqNum}`);
+    return this.securityListSeqNum;
   }
   
   /**
-   * Get security list sequence number for incrementing (always 2 for PSX)
-   * This method exists for API consistency, but always returns 2 for PSX
+   * Get trading status sequence number
+   * Starts at 3 for PSX, but can be higher if server has rejected previous messages
+   */
+  public getTradingStatusSeqNum(): number {
+    logger.info(`[SEQUENCE] Getting trading status sequence: ${this.tradingStatusSeqNum}`);
+    return this.tradingStatusSeqNum;
+  }
+  
+  /**
+   * Get security list sequence number for incrementing
+   * This should be used when sending security list requests
    */
   public getNextSecurityListAndIncrement(): number {
-    logger.info(`[SEQUENCE] Security list sequence requested - always using 2 for PSX compatibility`);
-    return 2;
+    // If the main sequence number is higher than 3, use it instead
+    // This happens when the server has rejected our sequence 3 messages
+    if (this.msgSeqNum > this.securityListSeqNum) {
+      const seqNum = this.msgSeqNum;
+      this.securityListSeqNum = this.msgSeqNum + 1;
+      this.msgSeqNum++;
+      logger.info(`[SEQUENCE] Security list sequence requested - using aligned with main: ${seqNum}`);
+      return seqNum;
+    }
+    
+    logger.info(`[SEQUENCE] Security list sequence requested - using: ${this.securityListSeqNum}`);
+    return this.securityListSeqNum++;
+  }
+  
+  /**
+   * Get trading status sequence number for incrementing
+   * This should be used when sending trading status requests
+   */
+  public getNextTradingStatusAndIncrement(): number {
+    // If the main sequence number is higher than our trading status number, use it
+    if (this.msgSeqNum > this.tradingStatusSeqNum) {
+      const seqNum = this.msgSeqNum;
+      this.tradingStatusSeqNum = this.msgSeqNum + 1;
+      this.msgSeqNum++;
+      logger.info(`[SEQUENCE] Trading status sequence requested - using aligned with main: ${seqNum}`);
+      return seqNum;
+    }
+    
+    logger.info(`[SEQUENCE] Trading status sequence requested - using: ${this.tradingStatusSeqNum}`);
+    return this.tradingStatusSeqNum++;
   }
   
   /**
@@ -91,12 +139,32 @@ export class SequenceManager {
 
   /**
    * Set the security list sequence number
-   * This method exists for API consistency, but always keeps the value as 2 for PSX
    */
   public setSecurityListSeqNum(seqNum: number): void {
-    logger.info(`[SEQUENCE] Attempted to set security list sequence number to ${seqNum}, but keeping it fixed at 2 for PSX compatibility`);
-    // Always keep it as 2 for PSX
-    this.securityListSeqNum = 2;
+    const oldSeq = this.securityListSeqNum;
+    this.securityListSeqNum = seqNum;
+    logger.info(`[SEQUENCE] Set security list sequence number: ${oldSeq} -> ${this.securityListSeqNum}`);
+    
+    // Also update the main sequence if needed
+    if (seqNum > this.msgSeqNum) {
+      logger.info(`[SEQUENCE] Also updating main sequence to ${seqNum} to maintain alignment`);
+      this.msgSeqNum = seqNum;
+    }
+  }
+
+  /**
+   * Set the trading status sequence number
+   */
+  public setTradingStatusSeqNum(seqNum: number): void {
+    const oldSeq = this.tradingStatusSeqNum;
+    this.tradingStatusSeqNum = seqNum;
+    logger.info(`[SEQUENCE] Set trading status sequence number: ${oldSeq} -> ${this.tradingStatusSeqNum}`);
+    
+    // Also update the main sequence if needed
+    if (seqNum > this.msgSeqNum) {
+      logger.info(`[SEQUENCE] Also updating main sequence to ${seqNum} to maintain alignment`);
+      this.msgSeqNum = seqNum;
+    }
   }
 
   /**
@@ -109,17 +177,19 @@ export class SequenceManager {
     // (1 for the server's logon acknowledgment, and our next message will be 2)
     if (resetFlag) {
       this.msgSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
-      // SecurityList ALWAYS starts at 2 for PSX
+      // Security list and trading status start at 3 for PSX
       this.securityListSeqNum = 2;
+      this.tradingStatusSeqNum = 2;
       this.marketDataSeqNum = 2; // MarketData starts at 2
-      logger.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, MarketData=${this.marketDataSeqNum}`);
+      logger.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
     } else {
       // Otherwise, set our next sequence to be one more than the server's
       this.msgSeqNum = this.serverSeqNum + 1;
-      // SecurityList ALWAYS starts at 2 for PSX
-      this.securityListSeqNum = 2;
+      // Security list and trading status start at 3 for PSX, but use higher if needed
+      this.securityListSeqNum = Math.max(2, this.msgSeqNum);
+      this.tradingStatusSeqNum = Math.max(2, this.msgSeqNum);
       this.marketDataSeqNum = this.msgSeqNum;
-      logger.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, MarketData=${this.marketDataSeqNum}`);
+      logger.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
     }
   }
 
@@ -137,6 +207,12 @@ export class SequenceManager {
     if (this.msgSeqNum <= this.serverSeqNum) {
       this.msgSeqNum = this.serverSeqNum + 1;
       logger.info(`Updated our next sequence number to: ${this.msgSeqNum}`);
+      
+      // Make sure security list and trading status are at least 3 and aligned with main if higher
+      this.securityListSeqNum = Math.max(2, this.msgSeqNum);
+      this.tradingStatusSeqNum = Math.max(2, this.msgSeqNum);
+      logger.info(`Aligned security list (${this.securityListSeqNum}) and trading status (${this.tradingStatusSeqNum}) with main sequence`);
+      
       return true;
     }
     return false;
@@ -149,21 +225,23 @@ export class SequenceManager {
     this.msgSeqNum = 1;
     this.serverSeqNum = 1;
     this.marketDataSeqNum = 1;
-    // SecurityList ALWAYS uses 2 for PSX
+    // Security list and trading status use 3 for PSX
     this.securityListSeqNum = 2;
+    this.tradingStatusSeqNum = 2;
     logger.info('[SEQUENCE] All sequence numbers reset to initial values');
-    logger.info(`[SEQUENCE] Main=${this.msgSeqNum}, Server=${this.serverSeqNum}, MarketData=${this.marketDataSeqNum}, SecurityList=${this.securityListSeqNum}`);
+    logger.info(`[SEQUENCE] Main=${this.msgSeqNum}, Server=${this.serverSeqNum}, MarketData=${this.marketDataSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}`);
   }
 
   /**
    * Get all sequence numbers
    */
-  public getAll(): { main: number; server: number; marketData: number; securityList: number } {
+  public getAll(): { main: number; server: number; marketData: number; securityList: number; tradingStatus: number } {
     return {
       main: this.msgSeqNum,
       server: this.serverSeqNum,
       marketData: this.marketDataSeqNum,
-      securityList: this.securityListSeqNum
+      securityList: this.securityListSeqNum,
+      tradingStatus: this.tradingStatusSeqNum
     };
   }
 } 
