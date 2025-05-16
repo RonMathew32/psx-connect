@@ -200,12 +200,21 @@ export function createFixClient(options: FixClientOptions) {
       if (connected && loggedIn) {
         sendLogout();
       }
+      
+      // Reset all sequence numbers on disconnect
+      logger.info('[CONNECTION] Resetting all sequence numbers due to disconnect');
+      sequenceManager.resetAll();
+      
       if (socket) {
         socket.destroy();
         socket = null;
       }
       connected = false;
       loggedIn = false;
+      
+      // Reset the requestedEquitySecurities flag so we'll request them again on next connect
+      requestedEquitySecurities = false;
+      
       resolve();
     });
   };
@@ -214,9 +223,17 @@ export function createFixClient(options: FixClientOptions) {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
-    logger.info('Scheduling reconnect in 5 seconds');
+    
+    // Reset all sequence numbers when scheduling a reconnect
+    logger.info('[CONNECTION] Resetting all sequence numbers before reconnect');
+    sequenceManager.resetAll();
+    
+    // Reset the requestedEquitySecurities flag so we'll request them again
+    requestedEquitySecurities = false;
+    
+    logger.info('[CONNECTION] Scheduling reconnect in 5 seconds');
     reconnectTimer = setTimeout(() => {
-      logger.info('Attempting to reconnect');
+      logger.info('[CONNECTION] Attempting to reconnect');
       connect();
     }, 5000);
   };
@@ -634,28 +651,35 @@ export function createFixClient(options: FixClientOptions) {
 
   const handleLogon = (message: ParsedFixMessage, sequenceManager: SequenceManager, emitter: EventEmitter): void => {
     loggedIn = true;
+    
+    // Reset requestedEquitySecurities flag upon new logon
+    requestedEquitySecurities = false;
 
     // Get server's sequence number
     const serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
-    // Update using forceReset which sets both main and server sequence numbers
-    sequenceManager.forceReset(serverSeqNum);
-
-    // If reset sequence number flag is Y, we should reset our sequence counter to 2
-    // (1 for the server's logon acknowledgment, and our next message will be 2)
-    if (message[FieldTag.RESET_SEQ_NUM_FLAG] === 'Y') {
-      // Use forceReset which handles both main sequence number and server sequence number
+    logger.info(`[SESSION:LOGON] Server's sequence number: ${serverSeqNum}`);
+    
+    // Check if a sequence reset is requested
+    const resetFlag = message[FieldTag.RESET_SEQ_NUM_FLAG] === 'Y';
+    
+    if (resetFlag) {
+      // Hard reset of sequence numbers when reset flag is Y
+      logger.info(`[SESSION:LOGON] Reset sequence flag is Y, resetting all sequence numbers`);
+      sequenceManager.resetAll();
+      
+      // After reset, force the main sequence number to 2 (next message after logon)
       sequenceManager.forceReset(2);
-      sequenceManager.setMarketDataSeqNum(2); // Reset market data sequence
-      logger.info(`Reset sequence flag is Y, setting our sequence numbers to 2`);
+      logger.info(`[SESSION:LOGON] Sequence numbers after reset: ${JSON.stringify(sequenceManager.getAll())}`);
     } else {
-      // Otherwise, set our next sequence to be one more than the server's
-      sequenceManager.forceReset(sequenceManager.getServerSeqNum() + 1);
-      // Ensure market data sequence number is also aligned
-      sequenceManager.setMarketDataSeqNum(sequenceManager.getMainSeqNum());
-      logger.info(`Using server's sequence, setting sequence numbers to: ${sequenceManager.getMainSeqNum()}`);
+      // Otherwise, set our next sequence to match what the server expects
+      logger.info(`[SESSION:LOGON] Using server's sequence number to align our sequence numbers`);
+      
+      // Update using server's sequence number
+      sequenceManager.forceReset(serverSeqNum + 1);
+      logger.info(`[SESSION:LOGON] Sequence numbers after alignment: ${JSON.stringify(sequenceManager.getAll())}`);
     }
 
-    logger.info(`Successfully logged in to FIX server. Server sequence: ${sequenceManager.getServerSeqNum()}, Next sequence: ${sequenceManager.getMainSeqNum()}`);
+    logger.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
@@ -665,19 +689,27 @@ export function createFixClient(options: FixClientOptions) {
 
     // Note: We're removing automatic security list requests after login
     // because we need to control sequence numbers manually
-    logger.info('[SECURITY_LIST] Login successful. Use explicit security list requests after logon.');
+    logger.info('[SESSION:LOGON] Login successful. Use explicit security list requests after logon.');
 
     // Add a timer to schedule security list requests after a short delay
     setTimeout(() => {
       if (connected && loggedIn) {
-        logger.info('[SECURITY_LIST] Requesting equity security list after login');
-        sendSecurityListRequestForEquity();
+        logger.info('[SESSION:LOGON] Requesting trading session status after login');
+        sendTradingSessionStatusRequest();
         
-        // Request index securities after a delay to prevent sequence issues
+        // Request equity securities after a delay
         setTimeout(() => {
           if (connected && loggedIn) {
-            logger.info('[SECURITY_LIST] Requesting index security list after login');
-            sendSecurityListRequestForIndex();
+            logger.info('[SESSION:LOGON] Requesting equity security list after login');
+            sendSecurityListRequestForEquity();
+            
+            // Request index securities after a further delay
+            setTimeout(() => {
+              if (connected && loggedIn) {
+                logger.info('[SESSION:LOGON] Requesting index security list after login');
+                sendSecurityListRequestForIndex();
+              }
+            }, 3000);
           }
         }, 3000);
       }
@@ -1017,21 +1049,25 @@ export function createFixClient(options: FixClientOptions) {
 
     // Get any provided text reason for the logout
     const text = message[FieldTag.TEXT];
+    
+    // Reset sequence numbers on any logout
+    logger.info('[SESSION:LOGOUT] Resetting all sequence numbers due to logout');
+    sequenceManager.resetAll();
 
     // Check if this is a sequence number related logout
     if (text && (text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence'))) {
-      logger.warn(`Received logout due to sequence number issue: ${text}`);
+      logger.warn(`[SESSION:LOGOUT] Received logout due to sequence number issue: ${text}`);
 
       // Try to parse the expected sequence number from the message
       const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
       if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
         const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
         if (!isNaN(expectedSeqNum)) {
-          logger.info(`Server expects sequence number: ${expectedSeqNum}`);
+          logger.info(`[SESSION:LOGOUT] Server expects sequence number: ${expectedSeqNum}`);
 
           // Perform a full disconnect and reconnect with sequence reset
           if (socket) {
-            logger.info('Disconnecting due to sequence number error');
+            logger.info('[SESSION:LOGOUT] Disconnecting due to sequence number error');
             socket.destroy();
             socket = null;
           }
@@ -1041,14 +1077,14 @@ export function createFixClient(options: FixClientOptions) {
             // Reset sequence numbers to what the server expects
             sequenceManager.forceReset(expectedSeqNum);
             
-            logger.info(`Reconnecting with adjusted sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+            logger.info(`[SESSION:LOGOUT] Reconnecting with adjusted sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
             connect();
           }, 2000);
 
           return { isSequenceError: true, expectedSeqNum };
         } else {
           // If we can't parse the expected sequence number, do a full reset
-          logger.info('Cannot parse expected sequence number, performing full reset');
+          logger.info('[SESSION:LOGOUT] Cannot parse expected sequence number, performing full reset');
 
           if (socket) {
             socket.destroy();
@@ -1059,7 +1095,7 @@ export function createFixClient(options: FixClientOptions) {
             // Reset sequence numbers
             sequenceManager.resetAll();
             
-            logger.info('Reconnecting with fully reset sequence numbers');
+            logger.info('[SESSION:LOGOUT] Reconnecting with fully reset sequence numbers');
             connect();
           }, 2000);
 
@@ -1067,7 +1103,7 @@ export function createFixClient(options: FixClientOptions) {
         }
       } else {
         // No match found, do a full reset
-        logger.info('No expected sequence number found in message, performing full reset');
+        logger.info('[SESSION:LOGOUT] No expected sequence number found in message, performing full reset');
 
         if (socket) {
           socket.destroy();
@@ -1078,13 +1114,16 @@ export function createFixClient(options: FixClientOptions) {
           // Reset sequence numbers
           sequenceManager.resetAll();
           
-          logger.info('Reconnecting with fully reset sequence numbers');
+          logger.info('[SESSION:LOGOUT] Reconnecting with fully reset sequence numbers');
           connect();
         }, 2000);
 
         return { isSequenceError: true };
       }
     } else {
+      // For normal logout (not sequence error), also reset the sequence numbers
+      logger.info('[SESSION:LOGOUT] Normal logout, sequence numbers reset');
+      
       emitter.emit('logout', message);
       return { isSequenceError: false };
     }
@@ -1178,11 +1217,12 @@ export function createFixClient(options: FixClientOptions) {
     }
 
     try {
-      // Always reset sequence number on logon
-      msgSeqNum = 1; // Start with 1 for the logon message
-      serverSeqNum = 1;
-      logger.info('[SESSION:LOGON] Resetting sequence numbers to 1 for new logon');
-
+      // Always reset all sequence numbers before a new logon
+      sequenceManager.resetAll();
+      logger.info('[SESSION:LOGON] Reset all sequence numbers before logon');
+      logger.info(`[SESSION:LOGON] Sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+      
+      // Sequence number 1 will be used for the logon message
       const builder = createMessageBuilder();
       builder
         .setMsgType(MessageType.LOGON)
@@ -1201,11 +1241,10 @@ export function createFixClient(options: FixClientOptions) {
 
       const message = builder.buildMessage();
       logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
+      logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
       sendMessage(message);
       
-      // Now increment sequence number for next message
-      msgSeqNum++;
-      logger.info(`[SESSION:LOGON] Incremented sequence number to ${msgSeqNum} for next message after logon`);
+      logger.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
     } catch (error) {
       logger.error(`[SESSION:LOGON] Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -1376,15 +1415,28 @@ export function createFixClient(options: FixClientOptions) {
     },
     reset: () => {
       logger.info('[RESET] Performing complete reset with disconnection and reconnection');
+      
+      // Reset sequence manager to initial state
+      sequenceManager.resetAll();
+      logger.info(`[RESET] All sequence numbers reset to initial values: ${JSON.stringify(sequenceManager.getAll())}`);
+      
+      // Reset flag for requested securities
+      requestedEquitySecurities = false;
+      logger.info('[RESET] Reset securities request flag');
+      
+      // Disconnect and clean up
       if (socket) {
+        logger.info('[RESET] Destroying socket connection');
         socket.destroy();
         socket = null;
       }
       connected = false;
       loggedIn = false;
       clearTimers();
-      sequenceManager.resetAll();
+      
       logger.info('[RESET] Connection and sequence numbers reset to initial state');
+      
+      // Wait a moment before reconnecting
       setTimeout(() => {
         logger.info('[RESET] Reconnecting after reset');
         connect();
