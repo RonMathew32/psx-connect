@@ -831,25 +831,22 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
       
-      // CRITICAL FIX: Always force security list sequence to 2 before sending
-      // This is required by PSX and must be strictly followed
-      sequenceManager.setSecurityListSeqNum(2);
-      const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
-      
-      logger.info(`[SEQUENCE] Using FIXED security list sequence number: ${securityListSeqNum} (must be 2)`);
+      // IMPORTANT: For PSX, security list and related requests must use sequence number 2
+      const securityListSeqNum = 2;
+      logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum} (FIXED at 2 for PSX)`);
       
       const message = createMessageBuilder()
         .setMsgType(MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(securityListSeqNum)
+        .setMsgSeqNum(securityListSeqNum) // Always use 2 for security-related requests
         .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0') // 0 = Snapshot
         .addField(FieldTag.TRADING_SESSION_ID, 'REG'); // Regular trading session
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using sequence: ${securityListSeqNum} (must be 2)`);
+      logger.info(`[TRADING_STATUS:REQUEST] Sent request for REG market with ID: ${requestId} | Using fixed sequence: ${securityListSeqNum}`);
       return requestId;
     } catch (error) {
       logger.error('[TRADING_STATUS:REQUEST] Error sending trading session status request:', error);
@@ -872,19 +869,16 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
       
-      // CRITICAL FIX: Always force security list sequence to 2 before sending
-      // This is required by PSX and must be strictly followed
-      sequenceManager.setSecurityListSeqNum(2);
-      const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
+      // IMPORTANT: For PSX, security list must use sequence number 2
+      const securityListSeqNum = 2;
+      logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum} (FIXED at 2 for PSX)`);
       
-      logger.info(`[SEQUENCE] Using FIXED security list sequence number: ${securityListSeqNum} (must be 2)`);
-      
-      // Create message manually instead of using helper to control sequence number
+      // Create message manually to control sequence number
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(securityListSeqNum);
+        .setMsgSeqNum(securityListSeqNum); // Always use 2 for security list
       
       // Add required fields for equity security list request
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
@@ -897,7 +891,7 @@ export function createFixClient(options: FixClientOptions) {
         socket.write(rawMessage);
         requestedEquitySecurities = true;
         logger.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);
-        logger.info(`[SECURITY_LIST:EQUITY] Product: EQUITY | Market: REG | Using sequence: ${securityListSeqNum} (must be 2)`);
+        logger.info(`[SECURITY_LIST:EQUITY] Product: EQUITY | Market: REG | Using fixed sequence: ${securityListSeqNum}`);
         return requestId;
       } else {
         logger.error(`[SECURITY_LIST:EQUITY] Failed to send request - socket not available`);
@@ -919,19 +913,16 @@ export function createFixClient(options: FixClientOptions) {
       const requestId = uuidv4();
       logger.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
       
-      // CRITICAL FIX: Always force security list sequence to 2 before sending
-      // This is required by PSX and must be strictly followed
-      sequenceManager.setSecurityListSeqNum(2);
-      const securityListSeqNum = sequenceManager.getNextSecurityListAndIncrement();
-      
-      logger.info(`[SEQUENCE] Using FIXED security list sequence number: ${securityListSeqNum} (must be 2)`);
+      // IMPORTANT: For PSX, security list must use sequence number 2
+      const securityListSeqNum = 2;
+      logger.info(`[SEQUENCE] Using security list sequence number: ${securityListSeqNum} (FIXED at 2 for PSX)`);
 
-      // Create message in the format used by fn-psx project
+      // Create message manually to control sequence number
       const message = createMessageBuilder()
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(securityListSeqNum);
+        .setMsgSeqNum(securityListSeqNum); // Always use 2 for security list
 
       // Add required fields in same order as fn-psx
       message.addField(FieldTag.SECURITY_REQ_ID, requestId);
@@ -945,7 +936,7 @@ export function createFixClient(options: FixClientOptions) {
       if (socket) {
         socket.write(rawMessage);
         logger.info(`[SECURITY_LIST:INDEX] Request sent successfully with ID: ${requestId}`);
-        logger.info(`[SECURITY_LIST:INDEX] Product: INDEX | Market: REG | Using sequence: ${securityListSeqNum} (must be 2)`);
+        logger.info(`[SECURITY_LIST:INDEX] Product: INDEX | Market: REG | Using fixed sequence: ${securityListSeqNum}`);
         return requestId;
       } else {
         logger.error(`[SECURITY_LIST:INDEX] Failed to send request - socket not available`);

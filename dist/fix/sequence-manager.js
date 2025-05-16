@@ -13,7 +13,8 @@ class SequenceManager {
         this.msgSeqNum = 1;
         this.serverSeqNum = 1;
         this.marketDataSeqNum = 1;
-        this.securityListSeqNum = 2; // Initialize with different number for security list
+        // SecurityList ALWAYS uses 2 as specified by PSX - this is critical
+        this.securityListSeqNum = 2;
     }
     /**
      * Reset sequence numbers to a specific value
@@ -23,12 +24,11 @@ class SequenceManager {
         const oldMain = this.msgSeqNum;
         this.msgSeqNum = newSeq;
         this.serverSeqNum = newSeq - 1;
-        // CRITICAL FIX: Always start security list with 2 after reset
-        // This ensures it matches server expectations
+        // IMPORTANT: Always set SecurityList to 2 for PSX
         this.securityListSeqNum = 2;
         this.marketDataSeqNum = newSeq;
         logger_1.default.info(`[SEQUENCE] Forced reset of sequence numbers from ${oldMain} to ${this.msgSeqNum} (server: ${this.serverSeqNum})`);
-        logger_1.default.info(`[SEQUENCE] Security list sequence FIXED to ${this.securityListSeqNum}, market data sequence set to ${this.marketDataSeqNum}`);
+        logger_1.default.info(`[SEQUENCE] Security list sequence number MUST be ${this.securityListSeqNum}, market data: ${this.marketDataSeqNum}`);
     }
     /**
      * Get the next main sequence number and increment it
@@ -43,16 +43,20 @@ class SequenceManager {
         return this.marketDataSeqNum++;
     }
     /**
-     * Get the next security list sequence number and increment it
+     * Get the security list sequence number (always 2 for PSX)
+     * The critical part is that security list messages MUST use sequence number 2
+     */
+    getSecurityListSeqNum() {
+        // CRITICAL: For PSX, security list must use sequence number 2
+        return 2;
+    }
+    /**
+     * Get security list sequence number for incrementing (always 2 for PSX)
+     * This method exists for API consistency, but always returns 2 for PSX
      */
     getNextSecurityListAndIncrement() {
-        // CRITICAL FIX: Ensure security list sequence never exceeds msgSeqNum
-        // This prevents "sequence too large" errors
-        if (this.securityListSeqNum > this.msgSeqNum) {
-            logger_1.default.warn(`[SEQUENCE] Fixing security list sequence number (${this.securityListSeqNum}) to match main sequence (${this.msgSeqNum})`);
-            this.securityListSeqNum = this.msgSeqNum;
-        }
-        return this.securityListSeqNum++;
+        logger_1.default.info(`[SEQUENCE] Security list sequence requested - always using 2 for PSX compatibility`);
+        return 2;
     }
     /**
      * Get the current main sequence number
@@ -73,12 +77,6 @@ class SequenceManager {
         return this.marketDataSeqNum;
     }
     /**
-     * Get the current security list sequence number
-     */
-    getSecurityListSeqNum() {
-        return this.securityListSeqNum;
-    }
-    /**
      * Set the market data sequence number
      */
     setMarketDataSeqNum(seqNum) {
@@ -88,11 +86,12 @@ class SequenceManager {
     }
     /**
      * Set the security list sequence number
+     * This method exists for API consistency, but always keeps the value as 2 for PSX
      */
     setSecurityListSeqNum(seqNum) {
-        const oldSeq = this.securityListSeqNum;
-        this.securityListSeqNum = seqNum;
-        logger_1.default.info(`[SEQUENCE] Set security list sequence number: ${oldSeq} -> ${this.securityListSeqNum}`);
+        logger_1.default.info(`[SEQUENCE] Attempted to set security list sequence number to ${seqNum}, but keeping it fixed at 2 for PSX compatibility`);
+        // Always keep it as 2 for PSX
+        this.securityListSeqNum = 2;
     }
     /**
      * Handle sequence number setup after logon
@@ -103,15 +102,15 @@ class SequenceManager {
         // (1 for the server's logon acknowledgment, and our next message will be 2)
         if (resetFlag) {
             this.msgSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
-            // CRITICAL FIX: Always use 2 for securityList
-            this.securityListSeqNum = 2; // SecurityList ALWAYS starts at 2 (required by PSX)
+            // SecurityList ALWAYS starts at 2 for PSX
+            this.securityListSeqNum = 2;
             this.marketDataSeqNum = 2; // MarketData starts at 2
             logger_1.default.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, MarketData=${this.marketDataSeqNum}`);
         }
         else {
             // Otherwise, set our next sequence to be one more than the server's
             this.msgSeqNum = this.serverSeqNum + 1;
-            // CRITICAL FIX: SecurityList should always be 2 after reset
+            // SecurityList ALWAYS starts at 2 for PSX
             this.securityListSeqNum = 2;
             this.marketDataSeqNum = this.msgSeqNum;
             logger_1.default.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, MarketData=${this.marketDataSeqNum}`);
@@ -141,7 +140,8 @@ class SequenceManager {
         this.msgSeqNum = 1;
         this.serverSeqNum = 1;
         this.marketDataSeqNum = 1;
-        this.securityListSeqNum = 2; // CRITICAL FIX: SecurityList ALWAYS uses 2 as specified by PSX
+        // SecurityList ALWAYS uses 2 for PSX
+        this.securityListSeqNum = 2;
         logger_1.default.info('[SEQUENCE] All sequence numbers reset to initial values');
         logger_1.default.info(`[SEQUENCE] Main=${this.msgSeqNum}, Server=${this.serverSeqNum}, MarketData=${this.marketDataSeqNum}, SecurityList=${this.securityListSeqNum}`);
     }
