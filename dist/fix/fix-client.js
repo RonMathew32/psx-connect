@@ -13,7 +13,6 @@ const net_1 = require("net");
 const uuid_1 = require("uuid");
 const sequence_manager_1 = require("./sequence-manager");
 const message_helpers_1 = require("./message-helpers");
-const message_handlers_1 = require("./message-handlers");
 /**
  * Create a FIX client with the specified options
  */
@@ -139,12 +138,29 @@ function createFixClient(options) {
                     if (messageTypes.length > 0) {
                         logger_1.default.info(`[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''}`);
                     }
+                    else {
+                        logger_1.default.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
+                    }
                 }
                 catch (err) {
                     logger_1.default.error(`Error pre-parsing data: ${err}`);
                 }
                 logger_1.default.info(data);
-                handleData(data);
+                // Ensure data is processed properly
+                logger_1.default.info(`[DATA:PROCESSING] Starting message processing...`);
+                let processingResult = false;
+                try {
+                    handleData(data);
+                    processingResult = true;
+                }
+                catch (error) {
+                    logger_1.default.error(`[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`);
+                    if (error instanceof Error && error.stack) {
+                        logger_1.default.error(error.stack);
+                    }
+                    processingResult = false;
+                }
+                logger_1.default.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
             });
             // Connect to the server
             logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
@@ -194,14 +210,21 @@ function createFixClient(options) {
         try {
             lastActivityTime = Date.now();
             const dataStr = data.toString();
-            logger_1.default.debug(`Received data: ${dataStr.length} bytes`);
+            logger_1.default.debug(`[DATA:HANDLING] Received data: ${dataStr.length} bytes`);
             const messages = dataStr.split(constants_1.SOH);
             let currentMessage = '';
+            let messageCount = 0;
             for (const segment of messages) {
                 if (segment.startsWith('8=FIX')) {
                     // If we have a previous message, process it
                     if (currentMessage) {
-                        processMessage(currentMessage);
+                        try {
+                            processMessage(currentMessage);
+                            messageCount++;
+                        }
+                        catch (err) {
+                            logger_1.default.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
+                        }
                     }
                     // Start a new message
                     currentMessage = segment;
@@ -213,11 +236,22 @@ function createFixClient(options) {
             }
             // Process the last message if exists
             if (currentMessage) {
-                processMessage(currentMessage);
+                try {
+                    processMessage(currentMessage);
+                    messageCount++;
+                }
+                catch (err) {
+                    logger_1.default.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
+                }
             }
+            logger_1.default.debug(`[DATA:HANDLING] Processed ${messageCount} FIX messages`);
         }
         catch (error) {
-            logger_1.default.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.default.error(`[DATA:ERROR] Error handling data buffer: ${error instanceof Error ? error.message : String(error)}`);
+            if (error instanceof Error && error.stack) {
+                logger_1.default.error(error.stack);
+            }
+            throw error; // Rethrow to ensure the outer catch can log it
         }
     };
     const processMessage = (message) => {
@@ -292,11 +326,13 @@ function createFixClient(options) {
                     logger_1.default.info(`[SESSION:LOGON] Processing logon message from server`);
                     handleLogon(parsedMessage, sequenceManager, emitter);
                     loggedIn = true;
+                    logger_1.default.info(`[SESSION:LOGON] Processing complete`);
                     break;
                 case constants_1.MessageType.LOGOUT:
                     logger_1.default.info(`[SESSION:LOGOUT] Handling logout message`);
                     const logoutResult = handleLogout(parsedMessage, emitter);
                     if (logoutResult.isSequenceError) {
+                        logger_1.default.info(`[SESSION:LOGOUT] Detected sequence error, handling...`);
                         handleSequenceError(logoutResult.expectedSeqNum);
                     }
                     else {
@@ -305,8 +341,10 @@ function createFixClient(options) {
                         if (heartbeatTimer) {
                             clearInterval(heartbeatTimer);
                             heartbeatTimer = null;
+                            logger_1.default.info(`[SESSION:LOGOUT] Cleared heartbeat timer`);
                         }
                     }
+                    logger_1.default.info(`[SESSION:LOGOUT] Processing complete`);
                     break;
                 case constants_1.MessageType.HEARTBEAT:
                     logger_1.default.debug(`[HEARTBEAT] Received heartbeat`);
@@ -319,6 +357,7 @@ function createFixClient(options) {
                         data: parsedMessage,
                         timestamp: new Date().toISOString()
                     });
+                    logger_1.default.debug(`[HEARTBEAT] Processing complete`);
                     break;
                 case constants_1.MessageType.TEST_REQUEST:
                     logger_1.default.info(`[HEARTBEAT:TEST_REQUEST] Responding to test request`);
@@ -331,6 +370,7 @@ function createFixClient(options) {
                         data: parsedMessage,
                         timestamp: new Date().toISOString()
                     });
+                    logger_1.default.info(`[HEARTBEAT:TEST_REQUEST] Processing complete`);
                     break;
                 case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
                     logger_1.default.info(`[MARKET_DATA:SNAPSHOT] Handling market data snapshot for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
@@ -367,32 +407,51 @@ function createFixClient(options) {
                     break;
                 case constants_1.MessageType.REJECT:
                     logger_1.default.error(`[REJECT] Handling reject message`);
-                    const rejectResult = (0, message_handlers_1.handleReject)(parsedMessage, emitter);
-                    // Emit an additional categorized event
-                    emitter.emit('categorizedData', {
-                        category: 'REJECT',
-                        type: 'REJECT',
-                        refMsgType: parsedMessage['45'] || '', // RefMsgType field
-                        text: parsedMessage[constants_1.FieldTag.TEXT] || '',
-                        data: parsedMessage,
-                        timestamp: new Date().toISOString()
-                    });
-                    if (rejectResult.isSequenceError) {
-                        handleSequenceError(rejectResult.expectedSeqNum);
+                    try {
+                        // Process the reject message
+                        const importedRejectHandler = require('./message-handlers').handleReject;
+                        const rejectResult = importedRejectHandler(parsedMessage, emitter);
+                        // Emit an additional categorized event
+                        emitter.emit('categorizedData', {
+                            category: 'REJECT',
+                            type: 'REJECT',
+                            refMsgType: parsedMessage['45'] || '', // RefMsgType field
+                            text: parsedMessage[constants_1.FieldTag.TEXT] || '',
+                            data: parsedMessage,
+                            timestamp: new Date().toISOString()
+                        });
+                        logger_1.default.error(`[REJECT] Message rejected: ${parsedMessage[constants_1.FieldTag.TEXT] || 'No reason provided'}`);
+                        if (rejectResult && rejectResult.isSequenceError) {
+                            logger_1.default.info(`[REJECT] Handling sequence error with expected sequence: ${rejectResult.expectedSeqNum || 'unknown'}`);
+                            handleSequenceError(rejectResult.expectedSeqNum);
+                        }
+                        logger_1.default.info('[REJECT] Processing complete');
+                    }
+                    catch (error) {
+                        logger_1.default.error(`[REJECT] Error processing reject message: ${error instanceof Error ? error.message : String(error)}`);
                     }
                     break;
                 case 'Y': // Market Data Request Reject
                     logger_1.default.error(`[MARKET_DATA:REJECT] Handling market data request reject`);
-                    (0, message_handlers_1.handleMarketDataRequestReject)(parsedMessage, emitter);
-                    // Emit an additional categorized event
-                    emitter.emit('categorizedData', {
-                        category: 'MARKET_DATA',
-                        type: 'REJECT',
-                        requestID: parsedMessage[constants_1.FieldTag.MD_REQ_ID] || '',
-                        text: parsedMessage[constants_1.FieldTag.TEXT] || '',
-                        data: parsedMessage,
-                        timestamp: new Date().toISOString()
-                    });
+                    try {
+                        // Process the market data reject message
+                        const importedMDRejectHandler = require('./message-handlers').handleMarketDataRequestReject;
+                        importedMDRejectHandler(parsedMessage, emitter);
+                        // Emit an additional categorized event
+                        emitter.emit('categorizedData', {
+                            category: 'MARKET_DATA',
+                            type: 'REJECT',
+                            requestID: parsedMessage[constants_1.FieldTag.MD_REQ_ID] || '',
+                            text: parsedMessage[constants_1.FieldTag.TEXT] || '',
+                            data: parsedMessage,
+                            timestamp: new Date().toISOString()
+                        });
+                        logger_1.default.error(`[MARKET_DATA:REJECT] Market data request rejected: ${parsedMessage[constants_1.FieldTag.TEXT] || 'No reason provided'}`);
+                        logger_1.default.info('[MARKET_DATA:REJECT] Processing complete');
+                    }
+                    catch (error) {
+                        logger_1.default.error(`[MARKET_DATA:REJECT] Error processing market data reject: ${error instanceof Error ? error.message : String(error)}`);
+                    }
                     break;
                 default:
                     logger_1.default.info(`[UNKNOWN:${msgType}] Received unhandled message type: ${msgType} (${msgTypeName})`);
@@ -984,8 +1043,10 @@ function createFixClient(options) {
     };
     const handleMarketDataSnapshot = (parsedMessage, emitter) => {
         try {
-            // Get existing function from message-handlers module and add enhanced functionality
-            const result = handleMarketDataSnapshot(parsedMessage, emitter);
+            logger_1.default.info('[MARKET_DATA:SNAPSHOT] Processing market data snapshot...');
+            // Call the imported message handler
+            const importedHandler = require('./message-handlers').handleMarketDataSnapshot;
+            importedHandler(parsedMessage, emitter);
             // Emit an additional categorized event that includes message type information
             emitter.emit('categorizedData', {
                 category: 'MARKET_DATA',
@@ -994,7 +1055,7 @@ function createFixClient(options) {
                 data: parsedMessage,
                 timestamp: new Date().toISOString()
             });
-            return result;
+            logger_1.default.info('[MARKET_DATA:SNAPSHOT] Processing complete for symbol: ' + (parsedMessage[constants_1.FieldTag.SYMBOL] || 'unknown'));
         }
         catch (error) {
             logger_1.default.error(`[MARKET_DATA:SNAPSHOT] Error handling market data snapshot: ${error instanceof Error ? error.message : String(error)}`);
@@ -1002,8 +1063,10 @@ function createFixClient(options) {
     };
     const handleMarketDataIncremental = (parsedMessage, emitter) => {
         try {
-            // Get existing function from message-handlers module and add enhanced functionality
-            const result = handleMarketDataIncremental(parsedMessage, emitter);
+            logger_1.default.info('[MARKET_DATA:INCREMENTAL] Processing incremental update...');
+            // Call the imported message handler
+            const importedHandler = require('./message-handlers').handleMarketDataIncremental;
+            importedHandler(parsedMessage, emitter);
             // Emit an additional categorized event that includes message type information
             emitter.emit('categorizedData', {
                 category: 'MARKET_DATA',
@@ -1012,7 +1075,7 @@ function createFixClient(options) {
                 data: parsedMessage,
                 timestamp: new Date().toISOString()
             });
-            return result;
+            logger_1.default.info('[MARKET_DATA:INCREMENTAL] Processing complete for symbol: ' + (parsedMessage[constants_1.FieldTag.SYMBOL] || 'unknown'));
         }
         catch (error) {
             logger_1.default.error(`[MARKET_DATA:INCREMENTAL] Error handling incremental refresh: ${error instanceof Error ? error.message : String(error)}`);
@@ -1020,8 +1083,10 @@ function createFixClient(options) {
     };
     const handleSecurityList = (parsedMessage, emitter, securityCache) => {
         try {
-            // Get existing function from message-handlers module and add enhanced functionality
-            const result = handleSecurityList(parsedMessage, emitter, securityCache);
+            logger_1.default.info('[SECURITY_LIST] Processing security list...');
+            // Call the imported message handler
+            const importedHandler = require('./message-handlers').handleSecurityList;
+            importedHandler(parsedMessage, emitter, securityCache);
             // Determine if this is an EQUITY or INDEX security list
             let securityType = 'UNKNOWN';
             const product = parsedMessage['460']; // Product type field
@@ -1031,15 +1096,16 @@ function createFixClient(options) {
             else {
                 securityType = 'EQUITY';
             }
+            const noRelatedSym = parseInt(parsedMessage[constants_1.FieldTag.NO_RELATED_SYM] || '0', 10);
             // Emit an additional categorized event that includes message type information
             emitter.emit('categorizedData', {
                 category: 'SECURITY_LIST',
                 type: securityType,
-                count: parseInt(parsedMessage[constants_1.FieldTag.NO_RELATED_SYM] || '0', 10),
+                count: noRelatedSym,
                 data: parsedMessage,
                 timestamp: new Date().toISOString()
             });
-            return result;
+            logger_1.default.info(`[SECURITY_LIST:${securityType}] Processing complete for ${noRelatedSym} securities`);
         }
         catch (error) {
             logger_1.default.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
@@ -1047,8 +1113,10 @@ function createFixClient(options) {
     };
     const handleTradingSessionStatus = (parsedMessage, emitter) => {
         try {
-            // Get existing function from message-handlers module and add enhanced functionality
-            const result = handleTradingSessionStatus(parsedMessage, emitter);
+            logger_1.default.info('[TRADING_STATUS:SESSION] Processing trading session status...');
+            // Call the imported message handler
+            const importedHandler = require('./message-handlers').handleTradingSessionStatus;
+            importedHandler(parsedMessage, emitter);
             // Emit an additional categorized event that includes message type information
             emitter.emit('categorizedData', {
                 category: 'TRADING_STATUS',
@@ -1057,7 +1125,8 @@ function createFixClient(options) {
                 data: parsedMessage,
                 timestamp: new Date().toISOString()
             });
-            return result;
+            logger_1.default.info('[TRADING_STATUS:SESSION] Processing complete for session: ' +
+                (parsedMessage[constants_1.FieldTag.TRADING_SESSION_ID] || 'unknown'));
         }
         catch (error) {
             logger_1.default.error(`[TRADING_STATUS:SESSION] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
@@ -1065,8 +1134,10 @@ function createFixClient(options) {
     };
     const handleTradingStatus = (parsedMessage, emitter) => {
         try {
-            // Get existing function from message-handlers module and add enhanced functionality
-            const result = handleTradingStatus(parsedMessage, emitter);
+            logger_1.default.info('[TRADING_STATUS:SYMBOL] Processing trading status...');
+            // Call the imported message handler
+            const importedHandler = require('./message-handlers').handleTradingStatus;
+            importedHandler(parsedMessage, emitter);
             // Emit an additional categorized event that includes message type information
             emitter.emit('categorizedData', {
                 category: 'TRADING_STATUS',
@@ -1076,7 +1147,8 @@ function createFixClient(options) {
                 data: parsedMessage,
                 timestamp: new Date().toISOString()
             });
-            return result;
+            logger_1.default.info('[TRADING_STATUS:SYMBOL] Processing complete for symbol: ' +
+                (parsedMessage[constants_1.FieldTag.SYMBOL] || 'unknown'));
         }
         catch (error) {
             logger_1.default.error(`[TRADING_STATUS:SYMBOL] Error handling trading status: ${error instanceof Error ? error.message : String(error)}`);
