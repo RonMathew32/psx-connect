@@ -509,7 +509,7 @@ function handleLogon(message, seqManager, emitter) {
     const serverSeqNum = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
     // Setup sequence numbers based on whether reset flag is set
     const resetFlag = message[constants_1.FieldTag.RESET_SEQ_NUM_FLAG] === 'Y';
-    seqManager.setupAfterLogon(serverSeqNum, resetFlag);
+    seqManager.processLogon(serverSeqNum, resetFlag);
     logger_1.default.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${seqManager.getAll().main}`);
     // Emit event so client can handle login success
     emitter.emit('logon', message);

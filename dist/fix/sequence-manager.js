@@ -10,48 +10,44 @@ const logger_1 = __importDefault(require("../utils/logger"));
  */
 class SequenceManager {
     constructor() {
-        this.msgSeqNum = 1;
+        this.mainSeqNum = 1;
         this.serverSeqNum = 1;
         this.marketDataSeqNum = 1;
-        // SecurityList uses 3 as specified by PSX - this needs to be higher than 2
         this.securityListSeqNum = 2;
-        // Trading status uses 3 as well - typically same as security list
         this.tradingStatusSeqNum = 2;
+        logger_1.default.info('[SEQUENCE] Initializing sequence manager with:');
+        logger_1.default.info(`[SEQUENCE] Main seq: ${this.mainSeqNum}, Server seq: ${this.serverSeqNum}`);
+        logger_1.default.info(`[SEQUENCE] Market data seq: ${this.marketDataSeqNum}, Security list seq: ${this.securityListSeqNum}, Trading status seq: ${this.tradingStatusSeqNum}`);
     }
     /**
      * Reset sequence numbers to a specific value
      * Used when the server expects a specific sequence number
      */
-    forceReset(newSeq = 2) {
-        const oldMain = this.msgSeqNum;
-        this.msgSeqNum = newSeq;
-        this.serverSeqNum = newSeq - 1;
-        // If the new sequence is higher than 3, use it for security list too
-        if (newSeq > 3) {
-            this.securityListSeqNum = newSeq;
-            this.tradingStatusSeqNum = newSeq;
-            logger_1.default.info(`[SEQUENCE] Setting security list/trading status sequence to ${newSeq} (higher than default 3)`);
-        }
-        else {
-            // Otherwise use 3 as default for PSX security list messages
-            this.securityListSeqNum = 2;
-            this.tradingStatusSeqNum = 2;
-        }
-        this.marketDataSeqNum = newSeq;
-        logger_1.default.info(`[SEQUENCE] Forced reset of sequence numbers from ${oldMain} to ${this.msgSeqNum} (server: ${this.serverSeqNum})`);
-        logger_1.default.info(`[SEQUENCE] Security list sequence: ${this.securityListSeqNum}, Trading status: ${this.tradingStatusSeqNum}, Market data: ${this.marketDataSeqNum}`);
+    forceReset(newSeq = 1) {
+        logger_1.default.info(`[SEQUENCE] Force resetting all sequence numbers to ${newSeq}`);
+        this.mainSeqNum = newSeq;
+        this.serverSeqNum = newSeq;
+        this.marketDataSeqNum = 1; // Market data always starts at 1
+        this.securityListSeqNum = 2; // Security list always starts at 2
+        this.tradingStatusSeqNum = 2; // Trading status always starts at 2
     }
     /**
      * Get the next main sequence number and increment it
      */
     getNextAndIncrement() {
-        return this.msgSeqNum++;
+        const current = this.mainSeqNum;
+        this.mainSeqNum++;
+        logger_1.default.debug(`[SEQUENCE] Main sequence incremented to ${this.mainSeqNum}`);
+        return current;
     }
     /**
      * Get the next market data sequence number and increment it
      */
     getNextMarketDataAndIncrement() {
-        return this.marketDataSeqNum++;
+        const current = this.marketDataSeqNum;
+        this.marketDataSeqNum++;
+        logger_1.default.debug(`[SEQUENCE] Market data sequence incremented to ${this.marketDataSeqNum}`);
+        return current;
     }
     /**
      * Get the security list sequence number
@@ -74,39 +70,26 @@ class SequenceManager {
      * This should be used when sending security list requests
      */
     getNextSecurityListAndIncrement() {
-        // If the main sequence number is higher than 3, use it instead
-        // This happens when the server has rejected our sequence 3 messages
-        if (this.msgSeqNum > this.securityListSeqNum) {
-            const seqNum = this.msgSeqNum;
-            this.securityListSeqNum = this.msgSeqNum + 1;
-            this.msgSeqNum++;
-            logger_1.default.info(`[SEQUENCE] Security list sequence requested - using aligned with main: ${seqNum}`);
-            return seqNum;
-        }
-        logger_1.default.info(`[SEQUENCE] Security list sequence requested - using: ${this.securityListSeqNum}`);
-        return this.securityListSeqNum++;
+        const current = this.securityListSeqNum;
+        this.securityListSeqNum++;
+        logger_1.default.debug(`[SEQUENCE] Security list sequence incremented to ${this.securityListSeqNum}`);
+        return current;
     }
     /**
      * Get trading status sequence number for incrementing
      * This should be used when sending trading status requests
      */
     getNextTradingStatusAndIncrement() {
-        // If the main sequence number is higher than our trading status number, use it
-        if (this.msgSeqNum > this.tradingStatusSeqNum) {
-            const seqNum = this.msgSeqNum;
-            this.tradingStatusSeqNum = this.msgSeqNum + 1;
-            this.msgSeqNum++;
-            logger_1.default.info(`[SEQUENCE] Trading status sequence requested - using aligned with main: ${seqNum}`);
-            return seqNum;
-        }
-        logger_1.default.info(`[SEQUENCE] Trading status sequence requested - using: ${this.tradingStatusSeqNum}`);
-        return this.tradingStatusSeqNum++;
+        const current = this.tradingStatusSeqNum;
+        this.tradingStatusSeqNum++;
+        logger_1.default.debug(`[SEQUENCE] Trading status sequence incremented to ${this.tradingStatusSeqNum}`);
+        return current;
     }
     /**
      * Get the current main sequence number
      */
     getMainSeqNum() {
-        return this.msgSeqNum;
+        return this.mainSeqNum;
     }
     /**
      * Get the current server sequence number
@@ -123,102 +106,89 @@ class SequenceManager {
     /**
      * Set the market data sequence number
      */
-    setMarketDataSeqNum(seqNum) {
+    setMarketDataSeqNum(value) {
         const oldSeq = this.marketDataSeqNum;
-        this.marketDataSeqNum = seqNum;
-        logger_1.default.info(`[SEQUENCE] Set market data sequence number: ${oldSeq} -> ${this.marketDataSeqNum}`);
+        this.marketDataSeqNum = value;
+        logger_1.default.debug(`[SEQUENCE] Set market data sequence number to ${value}`);
     }
     /**
      * Set the security list sequence number
      */
-    setSecurityListSeqNum(seqNum) {
+    setSecurityListSeqNum(value) {
         const oldSeq = this.securityListSeqNum;
-        this.securityListSeqNum = seqNum;
-        logger_1.default.info(`[SEQUENCE] Set security list sequence number: ${oldSeq} -> ${this.securityListSeqNum}`);
+        this.securityListSeqNum = value;
+        logger_1.default.debug(`[SEQUENCE] Set security list sequence number to ${value}`);
         // Also update the main sequence if needed
-        if (seqNum > this.msgSeqNum) {
-            logger_1.default.info(`[SEQUENCE] Also updating main sequence to ${seqNum} to maintain alignment`);
-            this.msgSeqNum = seqNum;
+        if (value > this.mainSeqNum) {
+            logger_1.default.info(`[SEQUENCE] Also updating main sequence to ${value} to maintain alignment`);
+            this.mainSeqNum = value;
         }
     }
     /**
      * Set the trading status sequence number
      */
-    setTradingStatusSeqNum(seqNum) {
+    setTradingStatusSeqNum(value) {
         const oldSeq = this.tradingStatusSeqNum;
-        this.tradingStatusSeqNum = seqNum;
-        logger_1.default.info(`[SEQUENCE] Set trading status sequence number: ${oldSeq} -> ${this.tradingStatusSeqNum}`);
+        this.tradingStatusSeqNum = value;
+        logger_1.default.debug(`[SEQUENCE] Set trading status sequence number to ${value}`);
         // Also update the main sequence if needed
-        if (seqNum > this.msgSeqNum) {
-            logger_1.default.info(`[SEQUENCE] Also updating main sequence to ${seqNum} to maintain alignment`);
-            this.msgSeqNum = seqNum;
+        if (value > this.mainSeqNum) {
+            logger_1.default.info(`[SEQUENCE] Also updating main sequence to ${value} to maintain alignment`);
+            this.mainSeqNum = value;
         }
     }
     /**
      * Handle sequence number setup after logon
      */
-    setupAfterLogon(serverSeqNumParam, resetFlag) {
-        this.serverSeqNum = serverSeqNumParam;
-        // If reset sequence number flag is Y, we should reset our sequence counter to 2
+    processLogon(serverSeqNum, resetFlag) {
+        this.serverSeqNum = serverSeqNum;
+        // If reset flag is Y, set our next sequence number to 2
         // (1 for the server's logon acknowledgment, and our next message will be 2)
         if (resetFlag) {
-            this.msgSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
-            // Security list and trading status start at 3 for PSX
+            this.mainSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
+            // Security list and trading status start at 2 for PSX
             this.securityListSeqNum = 2;
             this.tradingStatusSeqNum = 2;
-            this.marketDataSeqNum = 2; // MarketData starts at 2
-            logger_1.default.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
+            this.marketDataSeqNum = 1; // MarketData starts at 1
+            logger_1.default.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.mainSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
         }
         else {
             // Otherwise, set our next sequence to be one more than the server's
-            this.msgSeqNum = this.serverSeqNum + 1;
-            // Security list and trading status start at 3 for PSX, but use higher if needed
-            this.securityListSeqNum = Math.max(2, this.msgSeqNum);
-            this.tradingStatusSeqNum = Math.max(2, this.msgSeqNum);
-            this.marketDataSeqNum = this.msgSeqNum;
-            logger_1.default.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.msgSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
+            this.mainSeqNum = this.serverSeqNum + 1;
+            // Use correct starting values but ensure they're aligned if main sequence is higher
+            this.securityListSeqNum = Math.max(2, this.mainSeqNum);
+            this.tradingStatusSeqNum = Math.max(2, this.mainSeqNum);
+            this.marketDataSeqNum = Math.max(1, this.mainSeqNum);
+            logger_1.default.info(`[SEQUENCE] Using server's sequence, setting numbers: Main=${this.mainSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
         }
     }
     /**
      * Update server sequence number based on incoming message
      * Returns true if the sequence was updated
      */
-    updateServerSequence(incomingSeqNum) {
-        // For normal messages, track the server's sequence
-        this.serverSeqNum = incomingSeqNum;
-        logger_1.default.info(`Server sequence number updated to: ${this.serverSeqNum}`);
-        // Our next message should be one more than what the server expects
-        // The server expects our next message to have a sequence number of serverSeqNum + 1
-        if (this.msgSeqNum <= this.serverSeqNum) {
-            this.msgSeqNum = this.serverSeqNum + 1;
-            logger_1.default.info(`Updated our next sequence number to: ${this.msgSeqNum}`);
-            // Make sure security list and trading status are at least 3 and aligned with main if higher
-            this.securityListSeqNum = Math.max(2, this.msgSeqNum);
-            this.tradingStatusSeqNum = Math.max(2, this.msgSeqNum);
-            logger_1.default.info(`Aligned security list (${this.securityListSeqNum}) and trading status (${this.tradingStatusSeqNum}) with main sequence`);
-            return true;
+    updateServerSequence(newValue) {
+        if (newValue > this.serverSeqNum) {
+            logger_1.default.debug(`[SEQUENCE] Updating server sequence from ${this.serverSeqNum} to ${newValue}`);
+            this.serverSeqNum = newValue;
         }
-        return false;
     }
     /**
      * Reset all sequence numbers to initial values
      */
     resetAll() {
-        this.msgSeqNum = 1;
+        logger_1.default.info('[SEQUENCE] Resetting all sequence numbers to initial values');
+        this.mainSeqNum = 1;
         this.serverSeqNum = 1;
         this.marketDataSeqNum = 1;
-        // Security list and trading status use 3 for PSX
         this.securityListSeqNum = 2;
         this.tradingStatusSeqNum = 2;
-        logger_1.default.info('[SEQUENCE] All sequence numbers reset to initial values');
-        logger_1.default.info(`[SEQUENCE] Main=${this.msgSeqNum}, Server=${this.serverSeqNum}, MarketData=${this.marketDataSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}`);
     }
     /**
      * Get all sequence numbers
      */
     getAll() {
         return {
-            main: this.msgSeqNum,
+            main: this.mainSeqNum,
             server: this.serverSeqNum,
             marketData: this.marketDataSeqNum,
             securityList: this.securityListSeqNum,

@@ -604,7 +604,7 @@ export function handleLogon(
   
   // Setup sequence numbers based on whether reset flag is set
   const resetFlag = message[FieldTag.RESET_SEQ_NUM_FLAG] === 'Y';
-  seqManager.setupAfterLogon(serverSeqNum, resetFlag);
+  seqManager.processLogon(serverSeqNum, resetFlag);
 
   logger.info(`Successfully logged in to FIX server. Server sequence: ${serverSeqNum}, Next sequence: ${seqManager.getAll().main}`);
 

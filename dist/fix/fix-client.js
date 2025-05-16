@@ -590,21 +590,8 @@ function createFixClient(options) {
         logger_1.default.info(`[SESSION:LOGON] Server's sequence number: ${serverSeqNum}`);
         // Check if a sequence reset is requested
         const resetFlag = message[constants_1.FieldTag.RESET_SEQ_NUM_FLAG] === 'Y';
-        if (resetFlag) {
-            // Hard reset of sequence numbers when reset flag is Y
-            logger_1.default.info(`[SESSION:LOGON] Reset sequence flag is Y, resetting all sequence numbers`);
-            sequenceManager.resetAll();
-            // After reset, force the main sequence number to 2 (next message after logon)
-            sequenceManager.forceReset(2);
-            logger_1.default.info(`[SESSION:LOGON] Sequence numbers after reset: ${JSON.stringify(sequenceManager.getAll())}`);
-        }
-        else {
-            // Otherwise, set our next sequence to match what the server expects
-            logger_1.default.info(`[SESSION:LOGON] Using server's sequence number to align our sequence numbers`);
-            // Update using server's sequence number
-            sequenceManager.forceReset(serverSeqNum + 1);
-            logger_1.default.info(`[SESSION:LOGON] Sequence numbers after alignment: ${JSON.stringify(sequenceManager.getAll())}`);
-        }
+        // Process the logon using the sequence manager to ensure correct sequence numbers
+        sequenceManager.processLogon(serverSeqNum, resetFlag);
         logger_1.default.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
@@ -1233,6 +1220,10 @@ function createFixClient(options) {
         },
         setSecurityListSequenceNumber: (seqNum) => {
             sequenceManager.setSecurityListSeqNum(seqNum);
+            return client;
+        },
+        setTradingStatusSequenceNumber: (seqNum) => {
+            sequenceManager.setTradingStatusSeqNum(seqNum);
             return client;
         },
         getSequenceNumbers: () => {
