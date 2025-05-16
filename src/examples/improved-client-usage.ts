@@ -11,6 +11,42 @@ import { createFixClient } from '../fix/fix-client';
 import logger from '../utils/logger';
 import { SecurityInfo } from '../types';
 
+// Define message category types
+type MessageCategory = 'MARKET_DATA' | 'SECURITY_LIST' | 'TRADING_STATUS' | 'SESSION' | 'HEARTBEAT' | 'REJECT' | 'UNKNOWN';
+type SecurityListType = 'EQUITY' | 'INDEX' | 'UNKNOWN';
+
+// Track message statistics
+const messageStats: Record<MessageCategory, any> = {
+  MARKET_DATA: {
+    count: 0,
+    symbols: new Set<string>()
+  },
+  SECURITY_LIST: {
+    count: 0,
+    types: {
+      EQUITY: 0,
+      INDEX: 0,
+      UNKNOWN: 0
+    }
+  },
+  TRADING_STATUS: {
+    count: 0,
+    symbols: new Set<string>()
+  },
+  SESSION: {
+    count: 0
+  },
+  HEARTBEAT: {
+    count: 0
+  },
+  REJECT: {
+    count: 0
+  },
+  UNKNOWN: {
+    count: 0
+  }
+};
+
 // FIX connection parameters for PSX
 const fixConfig = {
   host: 'ip-90-0-209-72.ip.secureserver.net',
@@ -90,6 +126,38 @@ export async function runImprovedClient() {
     }
   });
   
+  // Listen for categorized data events to track different message types
+  client.on('categorizedData', (data) => {
+    // Update statistics based on message category
+    const category = data.category as MessageCategory;
+    if (messageStats[category]) {
+      messageStats[category].count++;
+      
+      // Track symbols for market data
+      if (category === 'MARKET_DATA' && data.symbol) {
+        messageStats.MARKET_DATA.symbols.add(data.symbol);
+      }
+      
+      // Track security list types
+      if (category === 'SECURITY_LIST' && data.type) {
+        const secType = data.type as SecurityListType;
+        messageStats.SECURITY_LIST.types[secType] = 
+          (messageStats.SECURITY_LIST.types[secType] || 0) + 1;
+      }
+      
+      // Track symbols with trading status updates
+      if (category === 'TRADING_STATUS' && data.symbol) {
+        messageStats.TRADING_STATUS.symbols.add(data.symbol);
+      }
+      
+      // Log statistics every 10 messages
+      const totalMessages = Object.values(messageStats).reduce((sum, category) => sum + category.count, 0);
+      if (totalMessages % 10 === 0) {
+        logMessageStats();
+      }
+    }
+  });
+  
   // Connect to the server
   logger.info('[EXAMPLE] Connecting to FIX server...');
   await client.connect();
@@ -136,4 +204,17 @@ if (require.main === module) {
     logger.error(`[EXAMPLE] Error: ${err.message}`);
     process.exit(1);
   });
+}
+
+// Function to log message statistics
+function logMessageStats() {
+  logger.info('================ MESSAGE STATISTICS ================');
+  logger.info(`MARKET_DATA: ${messageStats.MARKET_DATA.count} messages, ${messageStats.MARKET_DATA.symbols.size} symbols`);
+  logger.info(`SECURITY_LIST: ${messageStats.SECURITY_LIST.count} messages (EQUITY: ${messageStats.SECURITY_LIST.types.EQUITY}, INDEX: ${messageStats.SECURITY_LIST.types.INDEX})`);
+  logger.info(`TRADING_STATUS: ${messageStats.TRADING_STATUS.count} messages, ${messageStats.TRADING_STATUS.symbols.size} symbols`);
+  logger.info(`SESSION: ${messageStats.SESSION.count} messages`);
+  logger.info(`HEARTBEAT: ${messageStats.HEARTBEAT.count} messages`);
+  logger.info(`REJECT: ${messageStats.REJECT.count} messages`);
+  logger.info(`UNKNOWN: ${messageStats.UNKNOWN.count} messages`);
+  logger.info('=====================================================');
 } 

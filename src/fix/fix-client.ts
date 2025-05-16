@@ -115,8 +115,58 @@ export function createFixClient(options: FixClientOptions) {
       // Handle received data
       socket.on('data', (data) => {
         logger.info("--------------------------------");
+        // Extract message types from data for better identification
+        try {
+          const dataStr = data.toString();
+          const messageTypes = [];
+          const symbolsFound = [];
+          
+          // Quick scan for message types in the data
+          const msgTypeMatches = dataStr.match(/35=([A-Za-z0-9])/g) || [];
+          for (const match of msgTypeMatches) {
+            const msgType = match.substring(3);
+            messageTypes.push(msgType);
+          }
+          
+          // Quick scan for symbols in the data
+          const symbolMatches = dataStr.match(/55=([^\x01]+)/g) || [];
+          for (const match of symbolMatches) {
+            const symbol = match.substring(3);
+            if (symbol) symbolsFound.push(symbol);
+          }
+          
+          // Identify message categories
+          const categorizedMessages = messageTypes.map(type => {
+            let category = 'UNKNOWN';
+            if (type === MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH || 
+                type === MessageType.MARKET_DATA_INCREMENTAL_REFRESH || 
+                type === 'Y') {
+              category = 'MARKET_DATA';
+            } else if (type === MessageType.SECURITY_LIST) {
+              category = 'SECURITY_LIST';
+            } else if (type === MessageType.TRADING_SESSION_STATUS || type === 'f') {
+              category = 'TRADING_STATUS';
+            } else if (type === MessageType.LOGON || type === MessageType.LOGOUT) {
+              category = 'SESSION';
+            } else if (type === MessageType.HEARTBEAT || type === MessageType.TEST_REQUEST) {
+              category = 'HEARTBEAT';
+            } else if (type === MessageType.REJECT) {
+              category = 'REJECT';
+            }
+            return `${category}:${type}`;
+          });
+          
+          // Log the data summary before detailed processing
+          if (messageTypes.length > 0) {
+            logger.info(`[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''}`);
+          }
+          
+        } catch (err) {
+          logger.error(`Error pre-parsing data: ${err}`);
+        }
+        
         logger.info(data);
-        // handleData(data);
+        handleData(data);
       });
 
       // Connect to the server
@@ -190,7 +240,6 @@ export function createFixClient(options: FixClientOptions) {
       }
       // Process the last message if exists
       if (currentMessage) {
-        // logger.info(`Processing message: ${currentMessage}`);
         processMessage(currentMessage);
       }
     } catch (error) {
@@ -209,9 +258,37 @@ export function createFixClient(options: FixClientOptions) {
         return;
       }
 
-      // Log the raw message in FIX format (replacing SOH with pipe for readability)
-      logger.info(`Received FIX message: ${message}`);
+      // Get message type for classification before full parsing
+      const msgTypeField = segments.find(s => s.startsWith('35='));
+      const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
+      const msgTypeName = getMessageTypeName(msgType);
+      
+      // Get symbol if it exists for better logging
+      const symbolField = segments.find(s => s.startsWith('55='));
+      const symbol = symbolField ? symbolField.substring(3) : '';
+      
+      // Classify message
+      let messageCategory = 'UNKNOWN';
+      if (msgType === MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH || 
+          msgType === MessageType.MARKET_DATA_INCREMENTAL_REFRESH || 
+          msgType === 'Y') {
+        messageCategory = 'MARKET_DATA';
+      } else if (msgType === MessageType.SECURITY_LIST) {
+        messageCategory = 'SECURITY_LIST';
+      } else if (msgType === MessageType.TRADING_SESSION_STATUS || msgType === 'f') {
+        messageCategory = 'TRADING_STATUS';
+      } else if (msgType === MessageType.LOGON || msgType === MessageType.LOGOUT) {
+        messageCategory = 'SESSION';
+      } else if (msgType === MessageType.HEARTBEAT || msgType === MessageType.TEST_REQUEST) {
+        messageCategory = 'HEARTBEAT';
+      } else if (msgType === MessageType.REJECT) {
+        messageCategory = 'REJECT';
+      }
+      
+      // Log with category and type for clear identification
+      logger.info(`[${messageCategory}] Received FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`);
       logger.info(`------------------------------------------------------------------------------------------------------------`);
+      logger.info(message);
       
       // Parse the raw message
       const parsedMessage = parseFixMessage(message);
@@ -242,20 +319,15 @@ export function createFixClient(options: FixClientOptions) {
         }
       }
 
-      // Log message type for debugging
-      const messageType = parsedMessage[FieldTag.MSG_TYPE];
-      const messageTypeName = getMessageTypeName(messageType);
-      logger.info(`Message type: ${messageType} (${messageTypeName})`);
-
       // Process specific message types
-      switch (messageType) {
+      switch (msgType) {
         case MessageType.LOGON:
-          logger.info(`[LOGON] Processing logon message from server`);
+          logger.info(`[SESSION:LOGON] Processing logon message from server`);
           handleLogon(parsedMessage, sequenceManager, emitter);
           loggedIn = true;
           break;
         case MessageType.LOGOUT:
-          logger.info(`[LOGOUT] Handling logout message`);
+          logger.info(`[SESSION:LOGOUT] Handling logout message`);
           const logoutResult = handleLogout(parsedMessage, emitter);
           
           if (logoutResult.isSequenceError) {
@@ -274,63 +346,118 @@ export function createFixClient(options: FixClientOptions) {
           logger.debug(`[HEARTBEAT] Received heartbeat`);
           // Just log and reset the test request counter
           testRequestCount = 0;
+          
+          // Emit an additional categorized event
+          emitter.emit('categorizedData', {
+            category: 'HEARTBEAT',
+            type: 'HEARTBEAT',
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+          });
           break;
         case MessageType.TEST_REQUEST:
-          logger.info(`[TEST_REQUEST] Responding to test request`);
+          logger.info(`[HEARTBEAT:TEST_REQUEST] Responding to test request`);
           // Respond with heartbeat
           sendHeartbeat(parsedMessage[FieldTag.TEST_REQ_ID]);
+          
+          // Emit an additional categorized event
+          emitter.emit('categorizedData', {
+            category: 'HEARTBEAT',
+            type: 'TEST_REQUEST',
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+          });
           break;
         case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-          logger.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          logger.info(`[MARKET_DATA:SNAPSHOT] Handling market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           // Update market data sequence number
           if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
             sequenceManager.setMarketDataSeqNum(parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10));
           }
+          
+          // Use our custom enhanced handler
           handleMarketDataSnapshot(parsedMessage, emitter);
           break;
         case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-          logger.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          logger.info(`[MARKET_DATA:INCREMENTAL] Handling market data incremental refresh for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           // Update market data sequence number
           if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
             sequenceManager.setMarketDataSeqNum(parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10));
           }
+          
+          // Use our custom enhanced handler
           handleMarketDataIncremental(parsedMessage, emitter);
           break;
         case MessageType.SECURITY_LIST:
           logger.info(`[SECURITY_LIST] Handling security list response`);
+          
+          // Use our custom enhanced handler
           handleSecurityList(parsedMessage, emitter, securityCache);
           break;
         case MessageType.TRADING_SESSION_STATUS:
-          logger.info(`[TRADING_STATUS] Handling trading session status update`);
+          logger.info(`[TRADING_STATUS:SESSION] Handling trading session status update`);
+          
+          // Use our custom enhanced handler
           handleTradingSessionStatus(parsedMessage, emitter);
           break;
         case 'f': // Trading Status - specific PSX format
-          logger.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          logger.info(`[TRADING_STATUS:SYMBOL] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+          
+          // Use our custom enhanced handler
           handleTradingStatus(parsedMessage, emitter);
           break;
         case MessageType.REJECT:
           logger.error(`[REJECT] Handling reject message`);
           const rejectResult = handleReject(parsedMessage, emitter);
           
+          // Emit an additional categorized event
+          emitter.emit('categorizedData', {
+            category: 'REJECT',
+            type: 'REJECT',
+            refMsgType: parsedMessage['45'] || '', // RefMsgType field
+            text: parsedMessage[FieldTag.TEXT] || '',
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+          });
+          
           if (rejectResult.isSequenceError) {
             handleSequenceError(rejectResult.expectedSeqNum);
           }
           break;
         case 'Y': // Market Data Request Reject
-          logger.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
+          logger.error(`[MARKET_DATA:REJECT] Handling market data request reject`);
           handleMarketDataRequestReject(parsedMessage, emitter);
+          
+          // Emit an additional categorized event
+          emitter.emit('categorizedData', {
+            category: 'MARKET_DATA',
+            type: 'REJECT',
+            requestID: parsedMessage[FieldTag.MD_REQ_ID] || '',
+            text: parsedMessage[FieldTag.TEXT] || '',
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+          });
           break;
         default:
-          logger.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
+          logger.info(`[UNKNOWN:${msgType}] Received unhandled message type: ${msgType} (${msgTypeName})`);
           if (parsedMessage[FieldTag.SYMBOL]) {
-            logger.info(`[UNKNOWN] Symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+            logger.info(`[UNKNOWN:${msgType}] Symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
           }
+          
+          // Emit an additional categorized event for unknown messages
+          emitter.emit('categorizedData', {
+            category: 'UNKNOWN',
+            type: msgType,
+            symbol: parsedMessage[FieldTag.SYMBOL] || '',
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+          });
       }
     } catch (error) {
       logger.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
-  
+
   const handleSequenceError = (expectedSeqNum?: number): void => {
     if (expectedSeqNum !== undefined) {
       logger.info(`Server expects sequence number: ${expectedSeqNum}`);
@@ -350,7 +477,7 @@ export function createFixClient(options: FixClientOptions) {
         logger.info(`Reconnecting with adjusted sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         connect();
       }, 2000);
-    } else {
+      } else {
       // If we can't parse the expected sequence number, do a full reset
       logger.info('Cannot determine expected sequence number, performing full reset');
       
@@ -373,6 +500,8 @@ export function createFixClient(options: FixClientOptions) {
     if (!connected) return;
 
     try {
+      logger.debug(`[HEARTBEAT:SEND] Creating heartbeat message${testReqId ? ' with test request ID: ' + testReqId : ''}`);
+      
       const message = createHeartbeatMessage(
         {
           senderCompId: options.senderCompId,
@@ -386,7 +515,7 @@ export function createFixClient(options: FixClientOptions) {
       );
       sendMessage(message);
     } catch (error) {
-      logger.error(`Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[HEARTBEAT:SEND] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -401,9 +530,35 @@ export function createFixClient(options: FixClientOptions) {
     }
 
     try {
-      // Log the raw message with SOH delimiters replaced with pipes for readability
-      logger.debug(`Sending FIX message with sequence number ${sequenceManager.getMainSeqNum()}: ${message}`);
-      logger.debug(`Current server sequence: ${sequenceManager.getServerSeqNum()}`);
+      // Extract message type for categorization
+      const segments = message.split(SOH);
+      const msgTypeField = segments.find(s => s.startsWith('35='));
+      const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
+      const msgTypeName = getMessageTypeName(msgType);
+      
+      // Get symbol if it exists for better logging
+      const symbolField = segments.find(s => s.startsWith('55='));
+      const symbol = symbolField ? symbolField.substring(3) : '';
+      
+      // Classify message
+      let messageCategory = 'UNKNOWN';
+      if (msgType === MessageType.MARKET_DATA_REQUEST) {
+        messageCategory = 'MARKET_DATA';
+      } else if (msgType === MessageType.SECURITY_LIST_REQUEST) {
+        messageCategory = 'SECURITY_LIST';
+      } else if (msgType === MessageType.TRADING_SESSION_STATUS_REQUEST) {
+        messageCategory = 'TRADING_STATUS';
+      } else if (msgType === MessageType.LOGON || msgType === MessageType.LOGOUT) {
+        messageCategory = 'SESSION';
+      } else if (msgType === MessageType.HEARTBEAT || msgType === MessageType.TEST_REQUEST) {
+        messageCategory = 'HEARTBEAT';
+      }
+      
+      // Log with category and type for clear identification
+      logger.info(`[${messageCategory}:OUTGOING] Sending FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`);
+      logger.info(`----------------------------OUTGOING MESSAGE-----------------------------`);
+      logger.info(message);
+      logger.debug(`Current sequence numbers: main=${sequenceManager.getMainSeqNum()}, server=${sequenceManager.getServerSeqNum()}`);
 
       // Send the message
       socket.write(message);
@@ -474,11 +629,13 @@ export function createFixClient(options: FixClientOptions) {
   ): string | null => {
     try {
       if (!socket || !connected) {
-        logger.error('Cannot send market data request: not connected');
+        logger.error('[MARKET_DATA:REQUEST] Cannot send market data request: not connected');
         return null;
       }
 
       const requestId = uuidv4();
+      logger.info(`[MARKET_DATA:REQUEST] Creating market data request for symbols: ${symbols.join(', ')}`);
+      
       const builder = createMessageBuilder()
         .setMsgType(MessageType.MARKET_DATA_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -509,12 +666,33 @@ export function createFixClient(options: FixClientOptions) {
       }
 
       const rawMessage = builder.buildMessage();
-      logger.info(`Sent market data request with ID: ${requestId}`);
-      logger.info(`Market data request message: ${rawMessage}`);
       socket.write(rawMessage);
+      
+      // Log with clear categorization
+      const subTypes: Record<string, string> = {
+        '0': 'SNAPSHOT',
+        '1': 'SNAPSHOT+UPDATES',
+        '2': 'DISABLE_UPDATES'
+      };
+      const entryTypeNames: Record<string, string> = {
+        '0': 'BID',
+        '1': 'OFFER',
+        '2': 'TRADE',
+        '3': 'INDEX_VALUE',
+        '4': 'OPENING_PRICE',
+        '7': 'HIGH_PRICE',
+        '8': 'LOW_PRICE'
+      };
+      
+      const entryTypeLabels = entryTypes.map(t => entryTypeNames[t] || t).join(', ');
+      const subTypeLabel = subTypes[subscriptionType] || subscriptionType;
+      
+      logger.info(`[MARKET_DATA:REQUEST] Sent ${subTypeLabel} request with ID: ${requestId}`);
+      logger.info(`[MARKET_DATA:REQUEST] Symbols: ${symbols.join(', ')} | Entry types: ${entryTypeLabels}`);
+      
       return requestId;
     } catch (error) {
-      logger.error('Error sending market data request:', error);
+      logger.error('[MARKET_DATA:REQUEST] Error sending market data request:', error);
       return null;
     }
   };
@@ -575,12 +753,12 @@ export function createFixClient(options: FixClientOptions) {
   const sendSecurityListRequestForEquity = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
-        logger.error('[SECURITY_LIST] Cannot send equity security list request: not connected or not logged in');
+        logger.error('[SECURITY_LIST:EQUITY] Cannot send equity security list request: not connected or not logged in');
         return null;
       }
 
       if (requestedEquitySecurities) {
-        logger.info('[SECURITY_LIST] Equity securities already requested, skipping duplicate request');
+        logger.info('[SECURITY_LIST:EQUITY] Equity securities already requested, skipping duplicate request');
         return null;
       }
 
@@ -598,27 +776,28 @@ export function createFixClient(options: FixClientOptions) {
       if (socket) {
         socket.write(message);
         requestedEquitySecurities = true;
-        logger.info(`[SECURITY_LIST] Equity security list request sent successfully.`);
+        logger.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);
+        logger.info(`[SECURITY_LIST:EQUITY] Product: EQUITY | Market: REG+FUT`);
         return requestId;
       } else {
-        logger.error(`[SECURITY_LIST] Failed to send equity security list request - socket not available`);
+        logger.error(`[SECURITY_LIST:EQUITY] Failed to send request - socket not available`);
         return null;
       }
     } catch (error) {
-      logger.error(`[SECURITY_LIST] Error sending equity security list request: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[SECURITY_LIST:EQUITY] Error sending request: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   };
-  
+
   const sendSecurityListRequestForIndex = (): string | null => {
     try {
       if (!socket || !connected || !loggedIn) {
-        logger.error('[SECURITY_LIST] Cannot send index security list request: not connected or not logged in');
+        logger.error('[SECURITY_LIST:INDEX] Cannot send index security list request: not connected or not logged in');
         return null;
       }
 
       const requestId = uuidv4();
-      logger.info(`[SECURITY_LIST] Sending INDEX security list request with ID: ${requestId}`);
+      logger.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
 
       // Create message in the format used by fn-psx project
       const message = createMessageBuilder()
@@ -635,18 +814,18 @@ export function createFixClient(options: FixClientOptions) {
       message.addField('336', 'REG'); // TradingSessionID = REG
 
       const rawMessage = message.buildMessage();
-      logger.info(`[SECURITY_LIST] Raw index security list request message: ${rawMessage.replace(new RegExp(SOH, 'g'), '|')}`);
-
+      
       if (socket) {
         socket.write(rawMessage);
-        logger.info(`[SECURITY_LIST] Index security list request sent successfully. Next index sequence: ${sequenceManager.getNextAndIncrement()}`);
+        logger.info(`[SECURITY_LIST:INDEX] Request sent successfully with ID: ${requestId}`);
+        logger.info(`[SECURITY_LIST:INDEX] Product: INDEX | Market: REG | Next sequence: ${sequenceManager.getMainSeqNum()}`);
         return requestId;
       } else {
-        logger.error(`[SECURITY_LIST] Failed to send index security list request - socket not available`);
+        logger.error(`[SECURITY_LIST:INDEX] Failed to send request - socket not available`);
         return null;
       }
     } catch (error) {
-      logger.error(`[SECURITY_LIST] Error sending index security list request: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[SECURITY_LIST:INDEX] Error sending request: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   };
@@ -654,11 +833,13 @@ export function createFixClient(options: FixClientOptions) {
   const sendIndexMarketDataRequest = (symbols: string[]): string | null => {
     try {
       if (!socket || !connected) {
-        logger.error('Cannot send market data request: not connected');
+        logger.error('[MARKET_DATA:INDEX] Cannot send index data request: not connected');
         return null;
       }
 
       const requestId = uuidv4();
+      logger.info(`[MARKET_DATA:INDEX] Creating request for indices: ${symbols.join(', ')}`);
+      
       const builder = createMessageBuilder()
         .setMsgType(MessageType.MARKET_DATA_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -676,14 +857,17 @@ export function createFixClient(options: FixClientOptions) {
       }
 
       builder.addField(FieldTag.NO_MD_ENTRY_TYPES, '1');
-      builder.addField(FieldTag.MD_ENTRY_TYPE, '3');
+      builder.addField(FieldTag.MD_ENTRY_TYPE, '3'); // Index value
 
       const rawMessage = builder.buildMessage();
       socket.write(rawMessage);
-      logger.info(`Sent market data request for indices: ${symbols.join(', ')}`);
+      
+      logger.info(`[MARKET_DATA:INDEX] Sent SNAPSHOT request with ID: ${requestId}`);
+      logger.info(`[MARKET_DATA:INDEX] Indices: ${symbols.join(', ')} | Entry type: INDEX_VALUE`);
+      
       return requestId;
     } catch (error) {
-      logger.error('Error sending market data request:', error);
+      logger.error('[MARKET_DATA:INDEX] Error sending index data request:', error);
       return null;
     }
   };
@@ -691,11 +875,13 @@ export function createFixClient(options: FixClientOptions) {
   const sendSymbolMarketDataSubscription = (symbols: string[]): string | null => {
     try {
       if (!socket || !connected) {
-        logger.error('Cannot send market data subscription: not connected');
+        logger.error('[MARKET_DATA:SYMBOL] Cannot send market data subscription: not connected');
         return null;
       }
 
       const requestId = uuidv4();
+      logger.info(`[MARKET_DATA:SYMBOL] Creating subscription for symbols: ${symbols.join(', ')}`);
+      
       const message = createMessageBuilder()
         .setMsgType(MessageType.MARKET_DATA_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -720,10 +906,13 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
       socket.write(rawMessage);
-      logger.info(`Sent market data subscription for symbols: ${symbols.join(', ')}`);
+      
+      logger.info(`[MARKET_DATA:SYMBOL] Sent SNAPSHOT+UPDATES subscription with ID: ${requestId}`);
+      logger.info(`[MARKET_DATA:SYMBOL] Symbols: ${symbols.join(', ')} | Entry types: BID, OFFER, TRADE`);
+      
       return requestId;
     } catch (error) {
-      logger.error('Error sending market data subscription:', error);
+      logger.error('[MARKET_DATA:SYMBOL] Error sending market data subscription:', error);
       return null;
     }
   };
@@ -854,7 +1043,7 @@ export function createFixClient(options: FixClientOptions) {
 
   const sendLogout = (text?: string): void => {
     if (!connected) {
-      logger.warn('Cannot send logout, not connected');
+      logger.warn('[SESSION:LOGOUT] Cannot send logout, not connected');
       emitter.emit('logout', {
         message: 'Logged out from FIX server',
         timestamp: new Date().toISOString(),
@@ -863,6 +1052,8 @@ export function createFixClient(options: FixClientOptions) {
     }
 
     try {
+      logger.info('[SESSION:LOGOUT] Creating logout message');
+      
       const builder = createMessageBuilder();
 
       builder
@@ -873,20 +1064,21 @@ export function createFixClient(options: FixClientOptions) {
 
       if (text) {
         builder.addField(FieldTag.TEXT, text);
+        logger.info(`[SESSION:LOGOUT] Reason: ${text}`);
       }
 
       const message = builder.buildMessage();
       sendMessage(message);
-      logger.info('Sent logout message to server');
+      logger.info('[SESSION:LOGOUT] Sent logout message to server');
     } catch (error) {
-      logger.error(`Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[SESSION:LOGOUT] Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
   const sendLogon = (): void => {
-    logger.info('Sending logon message...');
+    logger.info('[SESSION:LOGON] Creating logon message');
     if (!connected) {
-      logger.warn('Cannot send logon, not connected');
+      logger.warn('[SESSION:LOGON] Cannot send logon, not connected');
       return;
     }
 
@@ -894,7 +1086,7 @@ export function createFixClient(options: FixClientOptions) {
       // Always reset sequence number on logon
       msgSeqNum = 1; // Start with 1 for the logon message
       serverSeqNum = 1;
-      logger.info('Resetting sequence numbers to 1 for new logon');
+      logger.info('[SESSION:LOGON] Resetting sequence numbers to 1 for new logon');
 
       const builder = createMessageBuilder();
       builder
@@ -913,14 +1105,124 @@ export function createFixClient(options: FixClientOptions) {
       builder.addField('1408', 'FIX5.00_PSX_1.00'); // DefaultCstmApplVerID
 
       const message = builder.buildMessage();
-      logger.info(`Sending Logon Message`);
+      logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
       sendMessage(message);
       
       // Now increment sequence number for next message
       msgSeqNum++;
-      logger.info(`Incremented sequence number to ${msgSeqNum} for next message after logon`);
+      logger.info(`[SESSION:LOGON] Incremented sequence number to ${msgSeqNum} for next message after logon`);
     } catch (error) {
-      logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`[SESSION:LOGON] Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleMarketDataSnapshot = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
+    try {
+      // Get existing function from message-handlers module and add enhanced functionality
+      const result = handleMarketDataSnapshot(parsedMessage, emitter);
+      
+      // Emit an additional categorized event that includes message type information
+      emitter.emit('categorizedData', {
+        category: 'MARKET_DATA',
+        type: 'SNAPSHOT',
+        symbol: parsedMessage[FieldTag.SYMBOL] || '',
+        data: parsedMessage,
+        timestamp: new Date().toISOString()
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`[MARKET_DATA:SNAPSHOT] Error handling market data snapshot: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleMarketDataIncremental = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
+    try {
+      // Get existing function from message-handlers module and add enhanced functionality
+      const result = handleMarketDataIncremental(parsedMessage, emitter);
+      
+      // Emit an additional categorized event that includes message type information
+      emitter.emit('categorizedData', {
+        category: 'MARKET_DATA',
+        type: 'INCREMENTAL',
+        symbol: parsedMessage[FieldTag.SYMBOL] || '',
+        data: parsedMessage,
+        timestamp: new Date().toISOString()
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`[MARKET_DATA:INCREMENTAL] Error handling incremental refresh: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleSecurityList = (parsedMessage: ParsedFixMessage, emitter: EventEmitter, securityCache: any): void => {
+    try {
+      // Get existing function from message-handlers module and add enhanced functionality
+      const result = handleSecurityList(parsedMessage, emitter, securityCache);
+      
+      // Determine if this is an EQUITY or INDEX security list
+      let securityType = 'UNKNOWN';
+      const product = parsedMessage['460']; // Product type field
+      if (product === '5') {
+        securityType = 'INDEX';
+      } else {
+        securityType = 'EQUITY';
+      }
+      
+      // Emit an additional categorized event that includes message type information
+      emitter.emit('categorizedData', {
+        category: 'SECURITY_LIST',
+        type: securityType,
+        count: parseInt(parsedMessage[FieldTag.NO_RELATED_SYM] || '0', 10),
+        data: parsedMessage,
+        timestamp: new Date().toISOString()
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleTradingSessionStatus = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
+    try {
+      // Get existing function from message-handlers module and add enhanced functionality
+      const result = handleTradingSessionStatus(parsedMessage, emitter);
+      
+      // Emit an additional categorized event that includes message type information
+      emitter.emit('categorizedData', {
+        category: 'TRADING_STATUS',
+        type: 'SESSION',
+        session: parsedMessage[FieldTag.TRADING_SESSION_ID] || '',
+        data: parsedMessage,
+        timestamp: new Date().toISOString()
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`[TRADING_STATUS:SESSION] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleTradingStatus = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
+    try {
+      // Get existing function from message-handlers module and add enhanced functionality
+      const result = handleTradingStatus(parsedMessage, emitter);
+      
+      // Emit an additional categorized event that includes message type information
+      emitter.emit('categorizedData', {
+        category: 'TRADING_STATUS',
+        type: 'SYMBOL',
+        symbol: parsedMessage[FieldTag.SYMBOL] || '',
+        status: parsedMessage['326'] || '', // Trading Status field
+        data: parsedMessage,
+        timestamp: new Date().toISOString()
+      });
+      
+      return result;
+    } catch (error) {
+      logger.error(`[TRADING_STATUS:SYMBOL] Error handling trading status: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -1006,6 +1308,19 @@ export interface FixClient {
   on(event: 'kseTradingStatus', listener: (status: { symbol: string; status: string; timestamp: string; origTime?: string }) => void): this;
   on(event: 'marketDataReject', listener: (reject: { requestId: string; reason: string; text: string | undefined }) => void): this;
   on(event: 'reject', listener: (reject: { refSeqNum: string; refTagId: string; text: string | undefined; msgType: string }) => void): this;
+  on(event: 'categorizedData', listener: (data: { 
+    category: string; 
+    type: string; 
+    symbol?: string; 
+    session?: string; 
+    count?: number;
+    status?: string;
+    requestID?: string;
+    refMsgType?: string;
+    text?: string;
+    data: ParsedFixMessage; 
+    timestamp: string 
+  }) => void): this;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   sendMarketDataRequest(
