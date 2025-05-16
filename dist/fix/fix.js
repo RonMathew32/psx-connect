@@ -7,7 +7,6 @@ exports.createFixClient = createFixClient;
 const logger_1 = __importDefault(require("../utils/logger"));
 const events_1 = require("events");
 const message_builder_1 = require("./message-builder");
-const message_parser_1 = require("./message-parser");
 const constants_1 = require("./constants");
 const net_1 = require("net");
 const uuid_1 = require("uuid");
@@ -211,108 +210,107 @@ function createFixClient(options) {
             // Log the raw message in FIX format (replacing SOH with pipe for readability)
             logger_1.default.info(`Received FIX message: ${message}`);
             logger_1.default.info(`------------------------------------------------------------------------------------------------------------`);
-            // Parse the raw message
-            const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
-            if (!parsedMessage) {
-                logger_1.default.warn('Could not parse FIX message');
-                return;
-            }
-            // Track server's sequence number if available
-            if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
-                const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
-                // Special handling for logout and reject messages with sequence errors
-                const msgType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
-                const text = parsedMessage[constants_1.FieldTag.TEXT] || '';
-                // Check if this is a sequence error message
-                const isSequenceError = text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence');
-                if ((msgType === constants_1.MessageType.LOGOUT || msgType === constants_1.MessageType.REJECT) && isSequenceError) {
-                    // For sequence errors, don't update our sequence counter
-                    // This will be handled in the handleLogout or handleReject methods
-                    logger_1.default.warn(`Received ${msgType} with sequence error: ${text}`);
-                }
-                else {
-                    // For normal messages, track the server's sequence
-                    serverSeqNum = incomingSeqNum;
-                    logger_1.default.info(`Server sequence number updated to: ${serverSeqNum}`);
-                    // Only update our outgoing sequence if this isn't a duplicate message
-                    // or a resend of an old message (possDup flag not set)
-                    if (!parsedMessage[constants_1.FieldTag.POSS_DUP_FLAG] || parsedMessage[constants_1.FieldTag.POSS_DUP_FLAG] !== 'Y') {
-                        // Our next message should be one more than what the server expects
-                        // The server expects our next message to have a sequence number of serverSeqNum + 1
-                        if (msgSeqNum <= serverSeqNum) {
-                            msgSeqNum = serverSeqNum + 1;
-                            logger_1.default.info(`Updated our next sequence number to: ${msgSeqNum}`);
-                        }
-                    }
-                }
-            }
-            // Log message type for debugging
-            const messageType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
-            const messageTypeName = getMessageTypeName(messageType);
-            logger_1.default.info(`Message type: ${messageType} (${messageTypeName})`);
-            // Process specific message types
-            switch (messageType) {
-                case constants_1.MessageType.LOGON:
-                    logger_1.default.info(`[LOGON] Processing logon message from server`);
-                    handleLogon(parsedMessage);
-                    break;
-                case constants_1.MessageType.LOGOUT:
-                    logger_1.default.info(`[LOGOUT] Handling logout message`);
-                    handleLogout(parsedMessage);
-                    break;
-                case constants_1.MessageType.HEARTBEAT:
-                    logger_1.default.debug(`[HEARTBEAT] Received heartbeat`);
-                    // Just log and reset the test request counter
-                    testRequestCount = 0;
-                    break;
-                case constants_1.MessageType.TEST_REQUEST:
-                    logger_1.default.info(`[TEST_REQUEST] Responding to test request`);
-                    // Respond with heartbeat
-                    sendHeartbeat(parsedMessage[constants_1.FieldTag.TEST_REQ_ID]);
-                    break;
-                case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-                    logger_1.default.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
-                    // Use marketSequenceNumber for market data 
-                    if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
-                        marketDataSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
-                    }
-                    handleMarketDataSnapshot(parsedMessage);
-                    break;
-                case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-                    logger_1.default.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
-                    // Use marketSequenceNumber for market data
-                    if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
-                        marketDataSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
-                    }
-                    handleMarketDataIncremental(parsedMessage);
-                    break;
-                case constants_1.MessageType.SECURITY_LIST:
-                    logger_1.default.info(`[SECURITY_LIST] Handling security list response`);
-                    // Use securityListSequenceNumber for security list
-                    handleSecurityList(parsedMessage);
-                    break;
-                case constants_1.MessageType.TRADING_SESSION_STATUS:
-                    logger_1.default.info(`[TRADING_STATUS] Handling trading session status update`);
-                    handleTradingSessionStatus(parsedMessage);
-                    break;
-                case 'f': // Trading Status - specific PSX format
-                    logger_1.default.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
-                    handleTradingStatus(parsedMessage);
-                    break;
-                case constants_1.MessageType.REJECT:
-                    logger_1.default.error(`[REJECT] Handling reject message`);
-                    handleReject(parsedMessage);
-                    break;
-                case 'Y': // Market Data Request Reject
-                    logger_1.default.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
-                    handleMarketDataRequestReject(parsedMessage);
-                    break;
-                default:
-                    logger_1.default.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
-                    if (parsedMessage[constants_1.FieldTag.SYMBOL]) {
-                        logger_1.default.info(`[UNKNOWN] Symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
-                    }
-            }
+            // // Parse the raw message
+            // const parsedMessage = parseFixMessage(message);
+            // if (!parsedMessage) {
+            //   logger.warn('Could not parse FIX message');
+            //   return;
+            // }
+            // // Track server's sequence number if available
+            // if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+            //   const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+            //   // Special handling for logout and reject messages with sequence errors
+            //   const msgType = parsedMessage[FieldTag.MSG_TYPE];
+            //   const text = parsedMessage[FieldTag.TEXT] || '';
+            //   // Check if this is a sequence error message
+            //   const isSequenceError = text.includes('MsgSeqNum') || text.includes('too large') || text.includes('sequence');
+            //   if ((msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) && isSequenceError) {
+            //     // For sequence errors, don't update our sequence counter
+            //     // This will be handled in the handleLogout or handleReject methods
+            //     logger.warn(`Received ${msgType} with sequence error: ${text}`);
+            //   } else {
+            //     // For normal messages, track the server's sequence
+            //     serverSeqNum = incomingSeqNum;
+            //     logger.info(`Server sequence number updated to: ${serverSeqNum}`);
+            //     // Only update our outgoing sequence if this isn't a duplicate message
+            //     // or a resend of an old message (possDup flag not set)
+            //     if (!parsedMessage[FieldTag.POSS_DUP_FLAG] || parsedMessage[FieldTag.POSS_DUP_FLAG] !== 'Y') {
+            //       // Our next message should be one more than what the server expects
+            //       // The server expects our next message to have a sequence number of serverSeqNum + 1
+            //       if (msgSeqNum <= serverSeqNum) {
+            //         msgSeqNum = serverSeqNum + 1;
+            //         logger.info(`Updated our next sequence number to: ${msgSeqNum}`);
+            //       }
+            //     }
+            //   }
+            // }
+            // // Log message type for debugging
+            // const messageType = parsedMessage[FieldTag.MSG_TYPE];
+            // const messageTypeName = getMessageTypeName(messageType);
+            // logger.info(`Message type: ${messageType} (${messageTypeName})`);
+            // // Process specific message types
+            // switch (messageType) {
+            //   case MessageType.LOGON:
+            //     logger.info(`[LOGON] Processing logon message from server`);
+            //     handleLogon(parsedMessage);
+            //     break;
+            //   case MessageType.LOGOUT:
+            //     logger.info(`[LOGOUT] Handling logout message`);
+            //     handleLogout(parsedMessage);
+            //     break;
+            //   case MessageType.HEARTBEAT:
+            //     logger.debug(`[HEARTBEAT] Received heartbeat`);
+            //     // Just log and reset the test request counter
+            //     testRequestCount = 0;
+            //     break;
+            //   case MessageType.TEST_REQUEST:
+            //     logger.info(`[TEST_REQUEST] Responding to test request`);
+            //     // Respond with heartbeat
+            //     sendHeartbeat(parsedMessage[FieldTag.TEST_REQ_ID]);
+            //     break;
+            //   case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+            //     logger.info(`[MARKET_DATA] Handling market data snapshot for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+            //     // Use marketSequenceNumber for market data 
+            //     if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+            //       marketDataSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+            //     }
+            //     handleMarketDataSnapshot(parsedMessage);
+            //     break;
+            //   case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+            //     logger.info(`[MARKET_DATA] Handling market data incremental refresh for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+            //     // Use marketSequenceNumber for market data
+            //     if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+            //       marketDataSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+            //     }
+            //     handleMarketDataIncremental(parsedMessage);
+            //     break;
+            //   case MessageType.SECURITY_LIST:
+            //     logger.info(`[SECURITY_LIST] Handling security list response`);
+            //     // Use securityListSequenceNumber for security list
+            //     handleSecurityList(parsedMessage);
+            //     break;
+            //   case MessageType.TRADING_SESSION_STATUS:
+            //     logger.info(`[TRADING_STATUS] Handling trading session status update`);
+            //     handleTradingSessionStatus(parsedMessage);
+            //     break;
+            //   case 'f': // Trading Status - specific PSX format
+            //     logger.info(`[TRADING_STATUS] Handling trading status for symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+            //     handleTradingStatus(parsedMessage);
+            //     break;
+            //   case MessageType.REJECT:
+            //     logger.error(`[REJECT] Handling reject message`);
+            //     handleReject(parsedMessage);
+            //     break;
+            //   case 'Y': // Market Data Request Reject
+            //     logger.error(`[MARKET_DATA_REJECT] Handling market data request reject`);
+            //     handleMarketDataRequestReject(parsedMessage);
+            //     break;
+            //   default:
+            //     logger.info(`[UNKNOWN] Received unhandled message type: ${messageType} (${messageTypeName})`);
+            //     if (parsedMessage[FieldTag.SYMBOL]) {
+            //       logger.info(`[UNKNOWN] Symbol: ${parsedMessage[FieldTag.SYMBOL]}`);
+            //     }
+            // }
         }
         catch (error) {
             logger_1.default.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
