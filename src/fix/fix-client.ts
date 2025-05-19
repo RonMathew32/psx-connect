@@ -258,10 +258,10 @@ export function createFixClient(options: FixClientOptions) {
   const handleData = (data: Buffer): void => {
     try {
       // Remove automatic delayed security list request
-      setTimeout(() => {
-        logger.info('[SECURITY_LIST] Requesting equity security list');
-        sendSecurityListRequestForEquity();
-      }, 5000);
+      // setTimeout(() => {
+      //   logger.info('[SECURITY_LIST] Requesting equity security list');
+      //   sendSecurityListRequestForEquity();
+      // }, 5000);
 
       lastActivityTime = Date.now();
       const dataStr = data.toString();
