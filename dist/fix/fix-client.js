@@ -224,9 +224,9 @@ function createFixClient(options) {
         // Remove automatic security list request
         try {
             // Remove automatic delayed security list request
-            // setTimeout(() => {
-            //   sendSecurityListRequestForEquity();
-            // }, 5000);
+            setTimeout(() => {
+                sendSecurityListRequestForEquity();
+            }, 5000);
             lastActivityTime = Date.now();
             const dataStr = data.toString();
             logger_1.default.debug(`[DATA:HANDLING] Received data: ${dataStr.length} bytes`);
