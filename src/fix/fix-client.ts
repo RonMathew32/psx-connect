@@ -873,7 +873,7 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getSecurityListSeqNum())
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .addField(FieldTag.SECURITY_REQ_ID, requestId)
         .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
 
