@@ -102,13 +102,13 @@ export function createFixClient(options: FixClientOptions) {
           try {
             logger.info('Sending logon message...');
             sendLogon();
+
           } catch (error) {
             logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
             disconnect();
           }
         }, 500);
         emitter.emit('connected');
-        // sendSecurityListRequest();
       });
 
       // Handle received data
@@ -183,6 +183,10 @@ export function createFixClient(options: FixClientOptions) {
           processingResult = false;
         }
         logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
+      });
+
+      socket.on('securityList', (securities) => {
+        logger.info('Received security list:', securities);
       });
 
       // Connect to the server
@@ -632,6 +636,11 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
       logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
       sendMessage(message);
+
+      setTimeout(() => {
+        sendSecurityListRequestForEquity();
+        sendSecurityListRequestForIndex();
+      }, 5000);
 
       logger.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
     } catch (error) {

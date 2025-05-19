@@ -85,7 +85,6 @@ function createFixClient(options) {
                     }
                 }, 500);
                 emitter.emit('connected');
-                // sendSecurityListRequest();
             });
             // Handle received data
             socket.on('data', (data) => {
@@ -161,6 +160,9 @@ function createFixClient(options) {
                     processingResult = false;
                 }
                 logger_1.default.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
+            });
+            socket.on('securityList', (securities) => {
+                logger_1.default.info('Received security list:', securities);
             });
             // Connect to the server
             logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
@@ -562,6 +564,10 @@ function createFixClient(options) {
             logger_1.default.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
             logger_1.default.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
             sendMessage(message);
+            setTimeout(() => {
+                sendSecurityListRequestForEquity();
+                sendSecurityListRequestForIndex();
+            }, 5000);
             logger_1.default.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
         }
         catch (error) {
