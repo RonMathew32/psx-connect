@@ -256,11 +256,10 @@ export function createFixClient(options: FixClientOptions) {
   };
 
   const handleData = (data: Buffer): void => {
-    // Remove automatic security list request
-
     try {
       // Remove automatic delayed security list request
       setTimeout(() => {
+        logger.info('[SECURITY_LIST] Requesting equity security list');
         sendSecurityListRequestForEquity();
       }, 5000);
 
@@ -890,6 +889,7 @@ export function createFixClient(options: FixClientOptions) {
 
   const sendSecurityListRequestForEquity = (): string | null => {
     try {
+      logger.info('[SECURITY_LIST:EQUITY] Requesting equity security list inner');
       if (!socket || !connected || !loggedIn) {
         logger.error('[SECURITY_LIST:EQUITY] Cannot send equity security list request: not connected or not logged in');
         return null;
@@ -922,6 +922,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = message.buildMessage();
 
+      logger.info('[SECURITY_LIST:EQUITY] Sending equity security list request');
       if (socket) {
         socket.write(rawMessage);
         requestedEquitySecurities = true;

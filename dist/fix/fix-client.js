@@ -222,10 +222,10 @@ function createFixClient(options) {
         }
     };
     const handleData = (data) => {
-        // Remove automatic security list request
         try {
             // Remove automatic delayed security list request
             setTimeout(() => {
+                logger_1.default.info('[SECURITY_LIST] Requesting equity security list');
                 sendSecurityListRequestForEquity();
             }, 5000);
             lastActivityTime = Date.now();
@@ -783,6 +783,7 @@ function createFixClient(options) {
     };
     const sendSecurityListRequestForEquity = () => {
         try {
+            logger_1.default.info('[SECURITY_LIST:EQUITY] Requesting equity security list inner');
             if (!socket || !connected || !loggedIn) {
                 logger_1.default.error('[SECURITY_LIST:EQUITY] Cannot send equity security list request: not connected or not logged in');
                 return null;
@@ -808,6 +809,7 @@ function createFixClient(options) {
             message.addField(constants_1.FieldTag.PRODUCT, '4'); // 4 = EQUITY per PKF-50
             message.addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG'); // REG = Regular market session
             const rawMessage = message.buildMessage();
+            logger_1.default.info('[SECURITY_LIST:EQUITY] Sending equity security list request');
             if (socket) {
                 socket.write(rawMessage);
                 requestedEquitySecurities = true;
