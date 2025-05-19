@@ -119,6 +119,7 @@ function createFixClient(options) {
                             category = 'MARKET_DATA';
                         }
                         else if (type === constants_1.MessageType.SECURITY_LIST || type === constants_1.MessageType.SECURITY_LIST_REQUEST) {
+                            logger_1.default.info(`[SECURITY_LIST] Received security list message`);
                             category = 'SECURITY_LIST';
                         }
                         else if (type === constants_1.MessageType.TRADING_SESSION_STATUS || type === 'f') {
@@ -772,7 +773,7 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
             const rawMessage = builder.buildMessage();
             socket.write(rawMessage);
-            // logger.info(`Sent security list request with sequence number: ${sequenceManager.getSecurityListSeqNum()}`);
+            logger_1.default.info(`Sent security list request with sequence`);
             return requestId;
         }
         catch (error) {
@@ -946,7 +947,7 @@ function createFixClient(options) {
     const handleLogon = (message, sequenceManager, emitter) => {
         loggedIn = true;
         // Reset requestedEquitySecurities flag upon new logon
-        requestedEquitySecurities = false;
+        requestedEquitySecurities = true;
         // Get server's sequence number
         const serverSeqNum = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
         logger_1.default.info(`[SESSION:LOGON] Server's sequence number: ${serverSeqNum}`);

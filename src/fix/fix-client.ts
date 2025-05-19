@@ -144,6 +144,7 @@ export function createFixClient(options: FixClientOptions) {
               type === 'Y') {
               category = 'MARKET_DATA';
             } else if (type === MessageType.SECURITY_LIST || type === MessageType.SECURITY_LIST_REQUEST) {
+              logger.info(`[SECURITY_LIST] Received security list message`);
               category = 'SECURITY_LIST';
             } else if (type === MessageType.TRADING_SESSION_STATUS || type === 'f') {
               category = 'TRADING_STATUS';
@@ -879,7 +880,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = builder.buildMessage();
       socket.write(rawMessage);
-      // logger.info(`Sent security list request with sequence number: ${sequenceManager.getSecurityListSeqNum()}`);
+      logger.info(`Sent security list request with sequence`);
       return requestId;
     } catch (error) {
       logger.error('Error sending security list request:', error);
@@ -1081,7 +1082,7 @@ export function createFixClient(options: FixClientOptions) {
     loggedIn = true;
 
     // Reset requestedEquitySecurities flag upon new logon
-    requestedEquitySecurities = false;
+    requestedEquitySecurities = true;
 
     // Get server's sequence number
     const serverSeqNum = parseInt(message[FieldTag.MSG_SEQ_NUM] || '1', 10);
