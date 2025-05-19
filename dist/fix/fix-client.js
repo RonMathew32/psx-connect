@@ -767,7 +767,7 @@ function createFixClient(options) {
                 .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+                .setMsgSeqNum(sequenceManager.getSecurityListSeqNum())
                 .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
                 .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
             const rawMessage = builder.buildMessage();
