@@ -772,7 +772,7 @@ function createFixClient(options) {
                 .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
             const rawMessage = builder.buildMessage();
             socket.write(rawMessage);
-            logger_1.default.info(`Sent security list request with sequence number: ${sequenceManager.getMainSeqNum()}`);
+            logger_1.default.info(`Sent security list request with sequence number: ${sequenceManager.getSecurityListSeqNum()}`);
             return requestId;
         }
         catch (error) {

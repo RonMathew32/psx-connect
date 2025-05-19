@@ -879,7 +879,7 @@ export function createFixClient(options: FixClientOptions) {
 
       const rawMessage = builder.buildMessage();
       socket.write(rawMessage);
-      logger.info(`Sent security list request with sequence number: ${sequenceManager.getMainSeqNum()}`);
+      logger.info(`Sent security list request with sequence number: ${sequenceManager.getSecurityListSeqNum()}`);
       return requestId;
     } catch (error) {
       logger.error('Error sending security list request:', error);
