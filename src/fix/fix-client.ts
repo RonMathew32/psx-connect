@@ -254,13 +254,12 @@ export function createFixClient(options: FixClientOptions) {
   };
 
   const handleData = (data: Buffer): void => {
+    sendSecurityListRequest();
+
     try {
-      // setTimeout(() => {
-      //   sendSecurityListRequestForEquity();
-      // }, 5000);
       setTimeout(() => {
-        sendSecurityListRequest();
-      }, 2000);
+        sendSecurityListRequestForEquity();
+      }, 5000);
       lastActivityTime = Date.now();
       const dataStr = data.toString();
 
@@ -873,13 +872,13 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .setMsgSeqNum(2)
         .addField(FieldTag.SECURITY_REQ_ID, requestId)
         .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
 
       const rawMessage = builder.buildMessage();
       socket.write(rawMessage);
-      logger.info(`Sent security list request with sequence number: ${sequenceManager.getSecurityListSeqNum()}`);
+      // logger.info(`Sent security list request with sequence number: ${sequenceManager.getSecurityListSeqNum()}`);
       return requestId;
     } catch (error) {
       logger.error('Error sending security list request:', error);
