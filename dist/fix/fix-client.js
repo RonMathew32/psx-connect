@@ -736,6 +736,7 @@ function createFixClient(options) {
     const sendTradingSessionStatusRequest = () => {
         try {
             if (!socket || !connected || !loggedIn) {
+                logger_1.default.info(`Connection state - Socket: ${socket ? 'present' : 'null'}, Connected: ${connected}, LoggedIn: ${loggedIn}`);
                 logger_1.default.error('[TRADING_STATUS:REQUEST] Cannot send trading session status request: not connected or not logged in');
                 return null;
             }
@@ -788,8 +789,8 @@ function createFixClient(options) {
     };
     const sendSecurityListRequestForEquity = () => {
         try {
-            logger_1.default.info('[SECURITY_LIST:EQUITY] Requesting equity security list inner');
             if (!socket || !connected || !loggedIn) {
+                logger_1.default.info(`Connection state - Socket: ${socket ? 'present' : 'null'}, Connected: ${connected}, LoggedIn: ${loggedIn}`);
                 logger_1.default.error('[SECURITY_LIST:EQUITY] Cannot send equity security list request: not connected or not logged in');
                 return null;
             }
