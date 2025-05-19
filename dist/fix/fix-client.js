@@ -26,8 +26,6 @@ function createFixClient(options) {
     let lastActivityTime = 0;
     let testRequestCount = 0;
     let logonTimer = null;
-    let msgSeqNum = 1;
-    let serverSeqNum = 1;
     const sequenceManager = new sequence_manager_1.SequenceManager();
     let requestedEquitySecurities = false;
     const securityCache = {
@@ -87,7 +85,7 @@ function createFixClient(options) {
                     }
                 }, 500);
                 emitter.emit('connected');
-                sendSecurityListRequest();
+                // sendSecurityListRequest();
             });
             // Handle received data
             socket.on('data', (data) => {

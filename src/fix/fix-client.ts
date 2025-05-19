@@ -37,8 +37,6 @@ export function createFixClient(options: FixClientOptions) {
   let lastActivityTime = 0;
   let testRequestCount = 0;
   let logonTimer: NodeJS.Timeout | null = null;
-  let msgSeqNum = 1;
-  let serverSeqNum = 1;
 
   const sequenceManager = new SequenceManager();
 
@@ -110,7 +108,7 @@ export function createFixClient(options: FixClientOptions) {
           }
         }, 500);
         emitter.emit('connected');
-        sendSecurityListRequest();
+        // sendSecurityListRequest();
       });
 
       // Handle received data
