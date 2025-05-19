@@ -93,9 +93,6 @@ function createFixClient(options) {
                 logger_1.default.info("--------------------------------");
                 // Extract message types from data for better identification
                 try {
-                    setTimeout(() => {
-                        sendSecurityListRequest();
-                    }, 2000);
                     const dataStr = data.toString();
                     const messageTypes = [];
                     const symbolsFound = [];
@@ -224,9 +221,12 @@ function createFixClient(options) {
     };
     const handleData = (data) => {
         try {
+            // setTimeout(() => {
+            //   sendSecurityListRequestForEquity();
+            // }, 5000);
             setTimeout(() => {
-                sendSecurityListRequestForEquity();
-            }, 5000);
+                sendSecurityListRequest();
+            }, 2000);
             lastActivityTime = Date.now();
             const dataStr = data.toString();
             logger_1.default.debug(`[DATA:HANDLING] Received data: ${dataStr.length} bytes`);

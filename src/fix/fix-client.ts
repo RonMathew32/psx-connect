@@ -117,9 +117,6 @@ export function createFixClient(options: FixClientOptions) {
         logger.info("--------------------------------");
         // Extract message types from data for better identification
         try {
-          setTimeout(() => {
-            sendSecurityListRequest();
-          }, 2000);
           const dataStr = data.toString();
           const messageTypes = [];
           const symbolsFound = [];
@@ -258,9 +255,12 @@ export function createFixClient(options: FixClientOptions) {
 
   const handleData = (data: Buffer): void => {
     try {
+      // setTimeout(() => {
+      //   sendSecurityListRequestForEquity();
+      // }, 5000);
       setTimeout(() => {
-        sendSecurityListRequestForEquity();
-      }, 5000);
+        sendSecurityListRequest();
+      }, 2000);
       lastActivityTime = Date.now();
       const dataStr = data.toString();
 
