@@ -213,6 +213,21 @@ export class SequenceManager {
   }
 
   /**
+   * Reset security list sequence number to initial value (2)
+   * This is used when we need to reset only the security list sequence
+   */
+  public resetSecurityListSequence(): void {
+    logger.info('[SEQUENCE] Resetting security list sequence number to 2');
+    this.securityListSeqNum = 2;
+    
+    // Also update main sequence if needed
+    if (this.mainSeqNum < 2) {
+      logger.info(`[SEQUENCE] Also updating main sequence to 2 to maintain alignment`);
+      this.mainSeqNum = 2;
+    }
+  }
+
+  /**
    * Get all sequence numbers
    */
   public getAll(): { main: number; server: number; marketData: number; securityList: number; tradingStatus: number } {

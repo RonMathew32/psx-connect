@@ -565,6 +565,7 @@ function createFixClient(options) {
             logger_1.default.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
             sendMessage(message);
             setTimeout(() => {
+                sequenceManager.setSecurityListSeqNum(2);
                 sendSecurityListRequestForEquity();
                 sendSecurityListRequestForIndex();
             }, 5000);

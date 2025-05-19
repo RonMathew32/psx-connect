@@ -638,6 +638,7 @@ export function createFixClient(options: FixClientOptions) {
       sendMessage(message);
 
       setTimeout(() => {
+        sequenceManager.setSecurityListSeqNum(2);
         sendSecurityListRequestForEquity();
         sendSecurityListRequestForIndex();
       }, 5000);
