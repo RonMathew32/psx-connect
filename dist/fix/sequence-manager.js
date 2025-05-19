@@ -150,20 +150,18 @@ class SequenceManager {
      */
     processLogon(serverSeqNum, resetFlag) {
         this.serverSeqNum = serverSeqNum;
-        // If reset flag is Y, set our next sequence number to 2
-        // (1 for the server's logon acknowledgment, and our next message will be 2)
         if (resetFlag) {
-            this.mainSeqNum = 2; // Start with 2 after logon acknowledgment with reset flag
-            // Align all sequences with main sequence
-            this.securityListSeqNum = this.mainSeqNum;
-            this.tradingStatusSeqNum = this.mainSeqNum;
-            this.marketDataSeqNum = 1; // MarketData starts at 1
+            // If reset flag is Y, set our next sequence number to 2
+            // (1 for the server's logon acknowledgment, and our next message will be 2)
+            this.mainSeqNum = 2;
+            this.securityListSeqNum = 2;
+            this.tradingStatusSeqNum = 2;
+            this.marketDataSeqNum = 1; // MarketData always starts at 1
             logger_1.default.info(`[SEQUENCE] Reset sequence flag is Y, setting sequence numbers: Main=${this.mainSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}, MarketData=${this.marketDataSeqNum}`);
         }
         else {
-            // Otherwise, set our next sequence to be one more than the server's
-            this.mainSeqNum = this.serverSeqNum + 1;
-            // Align all sequences with main sequence
+            // If no reset flag, align with server's sequence
+            this.mainSeqNum = serverSeqNum + 1;
             this.securityListSeqNum = this.mainSeqNum;
             this.tradingStatusSeqNum = this.mainSeqNum;
             this.marketDataSeqNum = 1; // Always start marketData at 1 after logon

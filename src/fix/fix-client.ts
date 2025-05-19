@@ -110,6 +110,7 @@ export function createFixClient(options: FixClientOptions) {
           }
         }, 500);
         emitter.emit('connected');
+        sendSecurityListRequest();
       });
 
       // Handle received data
@@ -254,12 +255,14 @@ export function createFixClient(options: FixClientOptions) {
   };
 
   const handleData = (data: Buffer): void => {
-    sendSecurityListRequest();
+    // Remove automatic security list request
 
     try {
-      setTimeout(() => {
-        sendSecurityListRequestForEquity();
-      }, 5000);
+      // Remove automatic delayed security list request
+      // setTimeout(() => {
+      //   sendSecurityListRequestForEquity();
+      // }, 5000);
+
       lastActivityTime = Date.now();
       const dataStr = data.toString();
 
@@ -273,7 +276,7 @@ export function createFixClient(options: FixClientOptions) {
           // If we have a previous message, process it
           if (currentMessage) {
             try {
-              // processMessage(currentMessage);
+              processMessage(currentMessage);
               logger.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
               messageCount++;
             } catch (err: any) {
@@ -290,8 +293,8 @@ export function createFixClient(options: FixClientOptions) {
       // Process the last message if exists
       if (currentMessage) {
         try {
+          processMessage(currentMessage);
           logger.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
-          // processMessage(currentMessage);
           messageCount++;
         } catch (err: any) {
           logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
@@ -304,7 +307,7 @@ export function createFixClient(options: FixClientOptions) {
       if (error instanceof Error && error.stack) {
         logger.error(error.stack);
       }
-      throw error; // Rethrow to ensure the outer catch can log it
+      throw error;
     }
   };
 
@@ -597,8 +600,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-
-
   const sendLogon = (): void => {
     logger.info('[SESSION:LOGON] Creating logon message');
     if (!connected) {
@@ -618,12 +619,12 @@ export function createFixClient(options: FixClientOptions) {
         .setMsgType(MessageType.LOGON)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextAndIncrement()); // Use sequence number 1
+        .setMsgSeqNum(1); // Always use sequence number 1 for initial logon
 
       // Add body fields in the order specified by PKF-50
       builder.addField(FieldTag.ENCRYPT_METHOD, DEFAULT_CONNECTION.ENCRYPT_METHOD);
       builder.addField(FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-      builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, DEFAULT_CONNECTION.RESET_SEQ_NUM); // Always use Y to reset sequence numbers
+      builder.addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always use Y to reset sequence numbers
       builder.addField(FieldTag.USERNAME, options.username);
       builder.addField(FieldTag.PASSWORD, options.password);
       builder.addField(FieldTag.DEFAULT_APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
@@ -1076,8 +1077,6 @@ export function createFixClient(options: FixClientOptions) {
     }
   };
 
-
-
   const handleLogon = (message: ParsedFixMessage, sequenceManager: SequenceManager, emitter: EventEmitter): void => {
     loggedIn = true;
 
@@ -1098,38 +1097,17 @@ export function createFixClient(options: FixClientOptions) {
 
     // Start heartbeat monitoring
     startHeartbeatMonitoring();
-    sendTradingSessionStatusRequest();
 
     // Emit event so client can handle login success
     emitter.emit('logon', message);
 
-    // Note: We're removing automatic security list requests after login
-    // because we need to control sequence numbers manually
-    logger.info('[SESSION:LOGON] Login successful. Use explicit security list requests after logon.');
-
-    // Add a timer to schedule security list requests after a short delay
-    // setTimeout(() => {
-    //   if (connected && loggedIn) {
-    //     logger.info('[SESSION:LOGON] Requesting trading session status after login');
-    //     sendTradingSessionStatusRequest();
-
-    //     // Request equity securities after a delay
-    //     setTimeout(() => {
-    //       if (connected && loggedIn) {
-    //         logger.info('[SESSION:LOGON] Requesting equity security list after login');
-    //         sendSecurityListRequestForEquity();
-
-    //         // Request index securities after a further delay
-    //         setTimeout(() => {
-    //           if (connected && loggedIn) {
-    //             logger.info('[SESSION:LOGON] Requesting index security list after login');
-    //             sendSecurityListRequestForIndex();
-    //           }
-    //         }, 3000);
-    //       }
-    //     }, 3000);
-    //   }
-    // }, 2000);
+    // Schedule trading session status request after a short delay
+    setTimeout(() => {
+      if (connected && loggedIn) {
+        logger.info('[SESSION:LOGON] Requesting trading session status after login');
+        sendTradingSessionStatusRequest();
+      }
+    }, 1000);
   };
 
   const handleLogout = (message: ParsedFixMessage, emitter: EventEmitter): { isSequenceError: boolean, expectedSeqNum?: number } => {

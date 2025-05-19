@@ -87,6 +87,7 @@ function createFixClient(options) {
                     }
                 }, 500);
                 emitter.emit('connected');
+                sendSecurityListRequest();
             });
             // Handle received data
             socket.on('data', (data) => {
@@ -220,11 +221,12 @@ function createFixClient(options) {
         }
     };
     const handleData = (data) => {
-        sendSecurityListRequest();
+        // Remove automatic security list request
         try {
-            setTimeout(() => {
-                sendSecurityListRequestForEquity();
-            }, 5000);
+            // Remove automatic delayed security list request
+            // setTimeout(() => {
+            //   sendSecurityListRequestForEquity();
+            // }, 5000);
             lastActivityTime = Date.now();
             const dataStr = data.toString();
             logger_1.default.debug(`[DATA:HANDLING] Received data: ${dataStr.length} bytes`);
@@ -236,7 +238,7 @@ function createFixClient(options) {
                     // If we have a previous message, process it
                     if (currentMessage) {
                         try {
-                            // processMessage(currentMessage);
+                            processMessage(currentMessage);
                             logger_1.default.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
                             messageCount++;
                         }
@@ -255,8 +257,8 @@ function createFixClient(options) {
             // Process the last message if exists
             if (currentMessage) {
                 try {
+                    processMessage(currentMessage);
                     logger_1.default.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
-                    // processMessage(currentMessage);
                     messageCount++;
                 }
                 catch (err) {
@@ -270,7 +272,7 @@ function createFixClient(options) {
             if (error instanceof Error && error.stack) {
                 logger_1.default.error(error.stack);
             }
-            throw error; // Rethrow to ensure the outer catch can log it
+            throw error;
         }
     };
     const processMessage = (message) => {
@@ -548,11 +550,11 @@ function createFixClient(options) {
                 .setMsgType(constants_1.MessageType.LOGON)
                 .setSenderCompID(options.senderCompId)
                 .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement()); // Use sequence number 1
+                .setMsgSeqNum(1); // Always use sequence number 1 for initial logon
             // Add body fields in the order specified by PKF-50
             builder.addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD);
             builder.addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-            builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, constants_1.DEFAULT_CONNECTION.RESET_SEQ_NUM); // Always use Y to reset sequence numbers
+            builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always use Y to reset sequence numbers
             builder.addField(constants_1.FieldTag.USERNAME, options.username);
             builder.addField(constants_1.FieldTag.PASSWORD, options.password);
             builder.addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
@@ -955,33 +957,15 @@ function createFixClient(options) {
         logger_1.default.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         // Start heartbeat monitoring
         startHeartbeatMonitoring();
-        sendTradingSessionStatusRequest();
         // Emit event so client can handle login success
         emitter.emit('logon', message);
-        // Note: We're removing automatic security list requests after login
-        // because we need to control sequence numbers manually
-        logger_1.default.info('[SESSION:LOGON] Login successful. Use explicit security list requests after logon.');
-        // Add a timer to schedule security list requests after a short delay
-        // setTimeout(() => {
-        //   if (connected && loggedIn) {
-        //     logger.info('[SESSION:LOGON] Requesting trading session status after login');
-        //     sendTradingSessionStatusRequest();
-        //     // Request equity securities after a delay
-        //     setTimeout(() => {
-        //       if (connected && loggedIn) {
-        //         logger.info('[SESSION:LOGON] Requesting equity security list after login');
-        //         sendSecurityListRequestForEquity();
-        //         // Request index securities after a further delay
-        //         setTimeout(() => {
-        //           if (connected && loggedIn) {
-        //             logger.info('[SESSION:LOGON] Requesting index security list after login');
-        //             sendSecurityListRequestForIndex();
-        //           }
-        //         }, 3000);
-        //       }
-        //     }, 3000);
-        //   }
-        // }, 2000);
+        // Schedule trading session status request after a short delay
+        setTimeout(() => {
+            if (connected && loggedIn) {
+                logger_1.default.info('[SESSION:LOGON] Requesting trading session status after login');
+                sendTradingSessionStatusRequest();
+            }
+        }, 1000);
     };
     const handleLogout = (message, emitter) => {
         loggedIn = false;
