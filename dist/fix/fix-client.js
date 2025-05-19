@@ -93,6 +93,9 @@ function createFixClient(options) {
                 logger_1.default.info("--------------------------------");
                 // Extract message types from data for better identification
                 try {
+                    setTimeout(() => {
+                        sendSecurityListRequest();
+                    }, 2000);
                     const dataStr = data.toString();
                     const messageTypes = [];
                     const symbolsFound = [];
@@ -117,7 +120,7 @@ function createFixClient(options) {
                             type === 'Y') {
                             category = 'MARKET_DATA';
                         }
-                        else if (type === constants_1.MessageType.SECURITY_LIST) {
+                        else if (type === constants_1.MessageType.SECURITY_LIST || type === constants_1.MessageType.SECURITY_LIST_REQUEST) {
                             category = 'SECURITY_LIST';
                         }
                         else if (type === constants_1.MessageType.TRADING_SESSION_STATUS || type === 'f') {
@@ -221,6 +224,9 @@ function createFixClient(options) {
     };
     const handleData = (data) => {
         try {
+            setTimeout(() => {
+                sendSecurityListRequestForEquity();
+            }, 5000);
             lastActivityTime = Date.now();
             const dataStr = data.toString();
             logger_1.default.debug(`[DATA:HANDLING] Received data: ${dataStr.length} bytes`);
@@ -527,6 +533,71 @@ function createFixClient(options) {
             }, 2000);
         }
     };
+    const sendLogon = () => {
+        logger_1.default.info('[SESSION:LOGON] Creating logon message');
+        if (!connected) {
+            logger_1.default.warn('[SESSION:LOGON] Cannot send logon, not connected');
+            return;
+        }
+        try {
+            // Always reset all sequence numbers before a new logon
+            sequenceManager.resetAll();
+            logger_1.default.info('[SESSION:LOGON] Reset all sequence numbers before logon');
+            logger_1.default.info(`[SESSION:LOGON] Sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+            // Sequence number 1 will be used for the logon message
+            const builder = (0, message_builder_1.createMessageBuilder)();
+            builder
+                .setMsgType(constants_1.MessageType.LOGON)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(sequenceManager.getNextAndIncrement()); // Use sequence number 1
+            // Add body fields in the order specified by PKF-50
+            builder.addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD);
+            builder.addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
+            builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, constants_1.DEFAULT_CONNECTION.RESET_SEQ_NUM); // Always use Y to reset sequence numbers
+            builder.addField(constants_1.FieldTag.USERNAME, options.username);
+            builder.addField(constants_1.FieldTag.PASSWORD, options.password);
+            builder.addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
+            builder.addField(constants_1.FieldTag.DEFAULT_CSTM_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID);
+            const message = builder.buildMessage();
+            logger_1.default.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
+            logger_1.default.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
+            sendMessage(message);
+            logger_1.default.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
+        }
+        catch (error) {
+            logger_1.default.error(`[SESSION:LOGON] Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+    const sendLogout = (text) => {
+        if (!connected) {
+            logger_1.default.warn('[SESSION:LOGOUT] Cannot send logout, not connected');
+            emitter.emit('logout', {
+                message: 'Logged out from FIX server',
+                timestamp: new Date().toISOString(),
+            });
+            return;
+        }
+        try {
+            logger_1.default.info('[SESSION:LOGOUT] Creating logout message');
+            const builder = (0, message_builder_1.createMessageBuilder)();
+            builder
+                .setMsgType(constants_1.MessageType.LOGOUT)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(sequenceManager.getNextAndIncrement());
+            if (text) {
+                builder.addField(constants_1.FieldTag.TEXT, text);
+                logger_1.default.info(`[SESSION:LOGOUT] Reason: ${text}`);
+            }
+            const message = builder.buildMessage();
+            sendMessage(message);
+            logger_1.default.info('[SESSION:LOGOUT] Sent logout message to server');
+        }
+        catch (error) {
+            logger_1.default.error(`[SESSION:LOGOUT] Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
     const sendHeartbeat = (testReqId) => {
         if (!connected)
             return;
@@ -589,49 +660,6 @@ function createFixClient(options) {
             socket?.destroy();
             connected = false;
         }
-    };
-    const handleLogon = (message, sequenceManager, emitter) => {
-        loggedIn = true;
-        // Reset requestedEquitySecurities flag upon new logon
-        requestedEquitySecurities = false;
-        // Get server's sequence number
-        const serverSeqNum = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
-        logger_1.default.info(`[SESSION:LOGON] Server's sequence number: ${serverSeqNum}`);
-        // Check if a sequence reset is requested
-        const resetFlag = message[constants_1.FieldTag.RESET_SEQ_NUM_FLAG] === 'Y';
-        // Process the logon using the sequence manager to ensure correct sequence numbers
-        sequenceManager.processLogon(serverSeqNum, resetFlag);
-        logger_1.default.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-        // Start heartbeat monitoring
-        startHeartbeatMonitoring();
-        sendTradingSessionStatusRequest();
-        sendSecurityListRequestForEquity();
-        // Emit event so client can handle login success
-        emitter.emit('logon', message);
-        // Note: We're removing automatic security list requests after login
-        // because we need to control sequence numbers manually
-        logger_1.default.info('[SESSION:LOGON] Login successful. Use explicit security list requests after logon.');
-        // Add a timer to schedule security list requests after a short delay
-        // setTimeout(() => {
-        //   if (connected && loggedIn) {
-        //     logger.info('[SESSION:LOGON] Requesting trading session status after login');
-        //     sendTradingSessionStatusRequest();
-        //     // Request equity securities after a delay
-        //     setTimeout(() => {
-        //       if (connected && loggedIn) {
-        //         logger.info('[SESSION:LOGON] Requesting equity security list after login');
-        //         sendSecurityListRequestForEquity();
-        //         // Request index securities after a further delay
-        //         setTimeout(() => {
-        //           if (connected && loggedIn) {
-        //             logger.info('[SESSION:LOGON] Requesting index security list after login');
-        //             sendSecurityListRequestForIndex();
-        //           }
-        //         }, 3000);
-        //       }
-        //     }, 3000);
-        //   }
-        // }, 2000);
     };
     const sendMarketDataRequest = (symbols, entryTypes = ['0', '1'], // Default: 0 = Bid, 1 = Offer
     subscriptionType = '1' // Default: 1 = Snapshot + Updates
@@ -699,30 +727,6 @@ function createFixClient(options) {
             return null;
         }
     };
-    const sendSecurityListRequest = () => {
-        try {
-            if (!socket || !connected) {
-                logger_1.default.error('Cannot send security list request: not connected');
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            const builder = (0, message_builder_1.createMessageBuilder)()
-                .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement())
-                .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
-                .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
-            const rawMessage = builder.buildMessage();
-            socket.write(rawMessage);
-            logger_1.default.info(`Sent security list request with sequence number: ${sequenceManager.getMainSeqNum()}`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.default.error('Error sending security list request:', error);
-            return null;
-        }
-    };
     const sendTradingSessionStatusRequest = () => {
         try {
             if (!socket || !connected || !loggedIn) {
@@ -749,6 +753,30 @@ function createFixClient(options) {
         }
         catch (error) {
             logger_1.default.error('[TRADING_STATUS:REQUEST] Error sending trading session status request:', error);
+            return null;
+        }
+    };
+    const sendSecurityListRequest = () => {
+        try {
+            if (!socket || !connected) {
+                logger_1.default.error('Cannot send security list request: not connected');
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            const builder = (0, message_builder_1.createMessageBuilder)()
+                .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+                .setSenderCompID(options.senderCompId)
+                .setTargetCompID(options.targetCompId)
+                .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+                .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+                .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0'); // 0 = Symbol
+            const rawMessage = builder.buildMessage();
+            socket.write(rawMessage);
+            logger_1.default.info(`Sent security list request with sequence number: ${sequenceManager.getMainSeqNum()}`);
+            return requestId;
+        }
+        catch (error) {
+            logger_1.default.error('Error sending security list request:', error);
             return null;
         }
     };
@@ -915,6 +943,48 @@ function createFixClient(options) {
             return null;
         }
     };
+    const handleLogon = (message, sequenceManager, emitter) => {
+        loggedIn = true;
+        // Reset requestedEquitySecurities flag upon new logon
+        requestedEquitySecurities = false;
+        // Get server's sequence number
+        const serverSeqNum = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || '1', 10);
+        logger_1.default.info(`[SESSION:LOGON] Server's sequence number: ${serverSeqNum}`);
+        // Check if a sequence reset is requested
+        const resetFlag = message[constants_1.FieldTag.RESET_SEQ_NUM_FLAG] === 'Y';
+        // Process the logon using the sequence manager to ensure correct sequence numbers
+        sequenceManager.processLogon(serverSeqNum, resetFlag);
+        logger_1.default.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+        // Start heartbeat monitoring
+        startHeartbeatMonitoring();
+        sendTradingSessionStatusRequest();
+        // Emit event so client can handle login success
+        emitter.emit('logon', message);
+        // Note: We're removing automatic security list requests after login
+        // because we need to control sequence numbers manually
+        logger_1.default.info('[SESSION:LOGON] Login successful. Use explicit security list requests after logon.');
+        // Add a timer to schedule security list requests after a short delay
+        // setTimeout(() => {
+        //   if (connected && loggedIn) {
+        //     logger.info('[SESSION:LOGON] Requesting trading session status after login');
+        //     sendTradingSessionStatusRequest();
+        //     // Request equity securities after a delay
+        //     setTimeout(() => {
+        //       if (connected && loggedIn) {
+        //         logger.info('[SESSION:LOGON] Requesting equity security list after login');
+        //         sendSecurityListRequestForEquity();
+        //         // Request index securities after a further delay
+        //         setTimeout(() => {
+        //           if (connected && loggedIn) {
+        //             logger.info('[SESSION:LOGON] Requesting index security list after login');
+        //             sendSecurityListRequestForIndex();
+        //           }
+        //         }, 3000);
+        //       }
+        //     }, 3000);
+        //   }
+        // }, 2000);
+    };
     const handleLogout = (message, emitter) => {
         loggedIn = false;
         // Get any provided text reason for the logout
@@ -1028,71 +1098,6 @@ function createFixClient(options) {
                 sendHeartbeat('');
             }
         }, heartbeatInterval);
-    };
-    const sendLogout = (text) => {
-        if (!connected) {
-            logger_1.default.warn('[SESSION:LOGOUT] Cannot send logout, not connected');
-            emitter.emit('logout', {
-                message: 'Logged out from FIX server',
-                timestamp: new Date().toISOString(),
-            });
-            return;
-        }
-        try {
-            logger_1.default.info('[SESSION:LOGOUT] Creating logout message');
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            builder
-                .setMsgType(constants_1.MessageType.LOGOUT)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement());
-            if (text) {
-                builder.addField(constants_1.FieldTag.TEXT, text);
-                logger_1.default.info(`[SESSION:LOGOUT] Reason: ${text}`);
-            }
-            const message = builder.buildMessage();
-            sendMessage(message);
-            logger_1.default.info('[SESSION:LOGOUT] Sent logout message to server');
-        }
-        catch (error) {
-            logger_1.default.error(`[SESSION:LOGOUT] Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    };
-    const sendLogon = () => {
-        logger_1.default.info('[SESSION:LOGON] Creating logon message');
-        if (!connected) {
-            logger_1.default.warn('[SESSION:LOGON] Cannot send logon, not connected');
-            return;
-        }
-        try {
-            // Always reset all sequence numbers before a new logon
-            sequenceManager.resetAll();
-            logger_1.default.info('[SESSION:LOGON] Reset all sequence numbers before logon');
-            logger_1.default.info(`[SESSION:LOGON] Sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-            // Sequence number 1 will be used for the logon message
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            builder
-                .setMsgType(constants_1.MessageType.LOGON)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(sequenceManager.getNextAndIncrement()); // Use sequence number 1
-            // Add body fields in the order specified by PKF-50
-            builder.addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD);
-            builder.addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-            builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, constants_1.DEFAULT_CONNECTION.RESET_SEQ_NUM); // Always use Y to reset sequence numbers
-            builder.addField(constants_1.FieldTag.USERNAME, options.username);
-            builder.addField(constants_1.FieldTag.PASSWORD, options.password);
-            builder.addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
-            builder.addField(constants_1.FieldTag.DEFAULT_CSTM_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID);
-            const message = builder.buildMessage();
-            logger_1.default.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
-            logger_1.default.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
-            sendMessage(message);
-            logger_1.default.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
-        }
-        catch (error) {
-            logger_1.default.error(`[SESSION:LOGON] Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
-        }
     };
     const handleMarketDataSnapshot = (parsedMessage, emitter) => {
         try {
