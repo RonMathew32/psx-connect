@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = __importDefault(require("./utils/logger"));
 const websocket_server_1 = require("./websocket-server");
-const fix_1 = require("./fix/fix");
+const fix_client_1 = require("./fix/fix-client");
 dotenv_1.default.config();
 logger_1.default.info('PSX-Connect starting...');
 logger_1.default.info(`Node.js version: ${process.version}`);
@@ -28,7 +28,7 @@ async function main() {
             rawData: process.env.RAW_DATA || 'kse',
             resetOnLogon: true
         };
-        const fixClient = (0, fix_1.createFixClient)(fixOptions);
+        const fixClient = (0, fix_client_1.createFixClient)(fixOptions);
         fixClient.on('connected', () => {
             logger_1.default.info('TCP connection established to PSX server.');
         });
