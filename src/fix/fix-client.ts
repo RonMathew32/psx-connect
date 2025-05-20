@@ -566,14 +566,14 @@ export function createFixClient(options: FixClientOptions): FixClient {
   };
 
   const sendLogout = (text?: string): void => {
-    if (!state.isConnected()) {
-      logger.warn("[SESSION:LOGOUT] Cannot send logout, not connected");
-      emitter.emit("logout", {
-        message: "Logged out from FIX server",
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
+    // if (!state.isConnected()) {
+    //   logger.warn("[SESSION:LOGOUT] Cannot send logout, not connected");
+    //   emitter.emit("logout", {
+    //     message: "Logged out from FIX server",
+    //     timestamp: new Date().toISOString(),
+    //   });
+    //   return;
+    // }
 
     try {
       logger.info("[SESSION:LOGOUT] Creating logout message");

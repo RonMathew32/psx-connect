@@ -439,14 +439,14 @@ function createFixClient(options) {
         }
     };
     const sendLogout = (text) => {
-        if (!state.isConnected()) {
-            logger_1.logger.warn("[SESSION:LOGOUT] Cannot send logout, not connected");
-            emitter.emit("logout", {
-                message: "Logged out from FIX server",
-                timestamp: new Date().toISOString(),
-            });
-            return;
-        }
+        // if (!state.isConnected()) {
+        //   logger.warn("[SESSION:LOGOUT] Cannot send logout, not connected");
+        //   emitter.emit("logout", {
+        //     message: "Logged out from FIX server",
+        //     timestamp: new Date().toISOString(),
+        //   });
+        //   return;
+        // }
         try {
             logger_1.logger.info("[SESSION:LOGOUT] Creating logout message");
             const builder = (0, message_builder_1.createLogoutMessageBuilder)(options, sequenceManager, text);
