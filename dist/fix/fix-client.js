@@ -650,6 +650,34 @@ function createFixClient(options) {
             return null;
         }
     };
+    // Add event listener for logon to send market data request and setup heartbeat
+    emitter.on('logon', () => {
+        logger_1.logger.info('[MARKET_DATA:LOGON] Logon successful, requesting market data...');
+        // Send market data request for some symbols - modify these as needed
+        const symbols = ['PTC', 'NBP', 'PAEL', 'JVDC', 'KESC'];
+        sendMarketDataRequest(symbols);
+        // Also request security list for equity 
+        sendSecurityListRequestForEquity();
+        // Set up heartbeat timer to keep connection alive
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+        }
+        heartbeatTimer = setInterval(() => {
+            try {
+                sendHeartbeat();
+                logger_1.logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
+            }
+            catch (error) {
+                logger_1.logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }, (options.heartbeatIntervalSecs * 1000) || 30000);
+        logger_1.logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
+    });
+    // Add handler for requestTradingSessionStatus event
+    emitter.on('requestTradingSessionStatus', () => {
+        logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
+        sendTradingSessionStatusRequest();
+    });
     const client = {
         on: (event, listener) => {
             emitter.on(event, listener);
