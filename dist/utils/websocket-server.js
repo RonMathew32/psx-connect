@@ -194,19 +194,19 @@ function createWebSocketServer(port, fixConfig = {
                 broadcast({ type: 'logon', message: 'Logged in to FIX server', timestamp: Date.now() });
                 // After successful login, request security lists with proper sequencing
                 // First request equity securities
-                setTimeout(() => {
-                    logger_1.logger.info(`[WEBSOCKET] Requesting equity security list after logon`);
-                    if (fixClient) {
-                        fixClient.sendSecurityListRequestForEquity();
-                    }
-                    // Then request index securities after a delay to allow the first request to complete
-                    setTimeout(() => {
-                        logger_1.logger.info(`[WEBSOCKET] Requesting index security list after equity list`);
-                        if (fixClient) {
-                            fixClient.sendSecurityListRequestForIndex();
-                        }
-                    }, 5000); // 5 second delay between equity and index requests
-                }, 2000); // 2 second delay after logon
+                // setTimeout(() => {
+                //   logger.info(`[WEBSOCKET] Requesting equity security list after logon`);
+                //   if (fixClient) {
+                //     fixClient.sendSecurityListRequestForEquity();
+                //   }
+                //   // Then request index securities after a delay to allow the first request to complete
+                //   setTimeout(() => {
+                //     logger.info(`[WEBSOCKET] Requesting index security list after equity list`);
+                //     if (fixClient) {
+                //       fixClient.sendSecurityListRequestForIndex();
+                //     }
+                //   }, 5000); // 5 second delay between equity and index requests
+                // }, 2000); // 2 second delay after logon
             }
             catch (error) {
                 logger_1.logger.error(`[WEBSOCKET] Error handling logon event: ${error instanceof Error ? error.message : String(error)}`);

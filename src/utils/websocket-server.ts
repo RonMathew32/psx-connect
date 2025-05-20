@@ -219,20 +219,20 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
         
         // After successful login, request security lists with proper sequencing
         // First request equity securities
-        setTimeout(() => {
-          logger.info(`[WEBSOCKET] Requesting equity security list after logon`);
-          if (fixClient) {
-            fixClient.sendSecurityListRequestForEquity();
-          }
+        // setTimeout(() => {
+        //   logger.info(`[WEBSOCKET] Requesting equity security list after logon`);
+        //   if (fixClient) {
+        //     fixClient.sendSecurityListRequestForEquity();
+        //   }
           
-          // Then request index securities after a delay to allow the first request to complete
-          setTimeout(() => {
-            logger.info(`[WEBSOCKET] Requesting index security list after equity list`);
-            if (fixClient) {
-              fixClient.sendSecurityListRequestForIndex();
-            }
-          }, 5000); // 5 second delay between equity and index requests
-        }, 2000); // 2 second delay after logon
+        //   // Then request index securities after a delay to allow the first request to complete
+        //   setTimeout(() => {
+        //     logger.info(`[WEBSOCKET] Requesting index security list after equity list`);
+        //     if (fixClient) {
+        //       fixClient.sendSecurityListRequestForIndex();
+        //     }
+        //   }, 5000); // 5 second delay between equity and index requests
+        // }, 2000); // 2 second delay after logon
       } catch (error) {
         logger.error(`[WEBSOCKET] Error handling logon event: ${error instanceof Error ? error.message : String(error)}`);
       }
