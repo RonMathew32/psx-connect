@@ -55,6 +55,13 @@ export function createFixClient(options: FixClientOptions) {
       return;
     }
 
+    // Validate port number
+    if (typeof options.port !== 'number' || isNaN(options.port) || options.port < 0 || options.port >= 65536) {
+      logger.error(`Invalid port number: ${options.port}. Port should be a number between 0 and 65535.`);
+      emitter.emit('error', new Error(`Invalid port number: ${options.port}`));
+      return;
+    }
+
     try {
       socket = new Socket();
       socket.setKeepAlive(true);
@@ -625,12 +632,6 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
       logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
       sendMessage(message);
-
-      // setTimeout(() => {
-      //   sequenceManager.setSecurityListSeqNum(2);
-      //   sendSecurityListRequestForEquity();
-      //   sendSecurityListRequestForIndex();
-      // }, 5000);
 
       logger.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
     } catch (error) {
