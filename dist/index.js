@@ -36,6 +36,7 @@ async function main() {
         });
         fixClient.on('logon', () => {
             logger_1.logger.info('Successfully logged in to PSX server.');
+            fixClient.sendLogout();
         });
         fixClient.on('message', (message) => {
             logger_1.logger.info(`Received message: ${(message)}`);
