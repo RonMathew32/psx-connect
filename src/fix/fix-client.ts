@@ -1085,7 +1085,7 @@ export function createFixClient(options: FixClientOptions) {
     
     // Note: We're removing automatic security list requests after login
     // because we need to control sequence numbers manually
-    logger.info('[SECURITY_LIST] Login successful. Use sendSecurityListRequestForEquity() with forced sequence numbers to request security lists.');
+    // logger.info('[SECURITY_LIST] Login successful. Use sendSecurityListRequestForEquity() with forced sequence numbers to request security lists.');
   };
 
   /**
