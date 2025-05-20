@@ -128,7 +128,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logonTimer = setTimeout(() => {
           try {
             logger.info('Sending logon message...');
-            sendLogon();
+            sendLogout();
+            // sendLogon();
           } catch (error) {
             logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
             disconnect();

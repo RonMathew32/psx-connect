@@ -90,7 +90,8 @@ function createFixClient(options) {
                 logonTimer = setTimeout(() => {
                     try {
                         logger_1.logger.info('Sending logon message...');
-                        sendLogon();
+                        sendLogout();
+                        // sendLogon();
                     }
                     catch (error) {
                         logger_1.logger.error(`Error during logon: ${error instanceof Error ? error.message : String(error)}`);
