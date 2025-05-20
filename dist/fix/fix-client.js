@@ -61,7 +61,7 @@ function createFixClient(options) {
                 if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
                     logger_1.logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
                 }
-                emitter.emit('error', error);
+                // emitter.emit('error', error);
             });
             socket.on('timeout', () => {
                 logger_1.logger.error('Connection timed out');

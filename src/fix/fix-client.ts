@@ -95,7 +95,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
           logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
         }
-        emitter.emit('error', error);
+        // emitter.emit('error', error);
       });
 
       socket.on('timeout', () => {
