@@ -47,10 +47,12 @@ function createFixClient(options) {
             logger_1.default.warn('Already connected');
             return;
         }
-        // Validate port number
-        if (typeof options.port !== 'number' || isNaN(options.port) || options.port < 0 || options.port >= 65536) {
-            logger_1.default.error(`Invalid port number: ${options.port}. Port should be a number between 0 and 65535.`);
-            emitter.emit('error', new Error(`Invalid port number: ${options.port}`));
+        // Ensure environment variables are defined and valid
+        const fixPort = parseInt(process.env.FIX_PORT || '', 10);
+        const fixHost = process.env.FIX_HOST;
+        if (isNaN(fixPort) || !fixHost) {
+            logger_1.default.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
+            emitter.emit('error', new Error('Invalid FIX_PORT or FIX_HOST environment variable.'));
             return;
         }
         try {
@@ -75,7 +77,7 @@ function createFixClient(options) {
                 scheduleReconnect();
             });
             socket.on('connect', () => {
-                logger_1.default.info(`Connected to ${options.host}:${options.port}`);
+                logger_1.default.info(`Connected to ${process.env.FIX_HOST}:${process.env.FIX_PORT}`);
                 connected = true;
                 if (logonTimer) {
                     clearTimeout(logonTimer);
@@ -171,8 +173,8 @@ function createFixClient(options) {
                 logger_1.default.info('Received security list:', securities);
             });
             // Connect to the server
-            logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
-            socket.connect(options.port, options.host);
+            logger_1.default.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
+            socket.connect(fixPort, fixHost);
         }
         catch (error) {
             logger_1.default.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);

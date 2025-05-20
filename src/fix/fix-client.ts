@@ -55,10 +55,13 @@ export function createFixClient(options: FixClientOptions) {
       return;
     }
 
-    // Validate port number
-    if (typeof options.port !== 'number' || isNaN(options.port) || options.port < 0 || options.port >= 65536) {
-      logger.error(`Invalid port number: ${options.port}. Port should be a number between 0 and 65535.`);
-      emitter.emit('error', new Error(`Invalid port number: ${options.port}`));
+    // Ensure environment variables are defined and valid
+    const fixPort = parseInt(process.env.FIX_PORT || '', 10);
+    const fixHost = process.env.FIX_HOST;
+
+    if (isNaN(fixPort) || !fixHost) {
+      logger.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
+      emitter.emit('error', new Error('Invalid FIX_PORT or FIX_HOST environment variable.'));
       return;
     }
 
@@ -89,7 +92,7 @@ export function createFixClient(options: FixClientOptions) {
       });
 
       socket.on('connect', () => {
-        logger.info(`Connected to ${options.host}:${options.port}`);
+        logger.info(`Connected to ${process.env.FIX_HOST}:${process.env.FIX_PORT}`);
         connected = true;
         if (logonTimer) {
           clearTimeout(logonTimer);
@@ -186,8 +189,8 @@ export function createFixClient(options: FixClientOptions) {
       });
 
       // Connect to the server
-      logger.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
-      socket.connect(options.port, options.host);
+      logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
+      socket.connect(fixPort, fixHost);
     } catch (error) {
       logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);
       emitter.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
