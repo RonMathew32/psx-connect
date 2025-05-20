@@ -31,6 +31,7 @@ function createFixClient(options) {
         connect();
     };
     const stop = () => {
+        state.setShuttingDown(true);
         sendLogout();
         disconnect();
     };
@@ -50,24 +51,35 @@ function createFixClient(options) {
         }
         try {
             socket = new net_1.Socket();
-            socket.setKeepAlive(true);
+            // Improve socket stability with more robust settings
+            socket.setKeepAlive(true, 10000); // More aggressive keepalive
             socket.setNoDelay(true);
-            socket.setTimeout(options.connectTimeoutMs || 30000);
+            socket.setTimeout(options.connectTimeoutMs || 60000); // Increased timeout
+            // Add error handling for socket errors
+            socket.on('error', (error) => {
+                logger_1.logger.error(`Socket error: ${error.message}`);
+                if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
+                    logger_1.logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
+                }
+                emitter.emit('error', error);
+            });
             socket.on('timeout', () => {
                 logger_1.logger.error('Connection timed out');
-                socket?.destroy();
+                if (socket) {
+                    socket.destroy();
+                    socket = null;
+                }
                 state.setConnected(false); // Update state
                 emitter.emit('error', new Error('Connection timed out'));
             });
-            socket.on('error', (error) => {
-                logger_1.logger.error(`Socket error: ${error.message}`);
-                emitter.emit('error', error);
-            });
-            socket.on('close', () => {
-                logger_1.logger.info('Socket disconnected');
+            socket.on('close', (hadError) => {
+                logger_1.logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
                 state.reset(); // Reset all states on disconnect
                 emitter.emit('disconnected');
-                scheduleReconnect();
+                // Only schedule reconnect if not during normal shutdown
+                if (!state.isShuttingDown()) {
+                    scheduleReconnect();
+                }
             });
             socket.on('connect', () => {
                 logger_1.logger.info(`Connected to ${fixHost}:${fixPort}`);
@@ -90,8 +102,9 @@ function createFixClient(options) {
             // Handle received data
             socket.on('data', (data) => {
                 logger_1.logger.info('--------------------------------');
-                logger_1.logger.info(data);
                 try {
+                    // Update last activity time to reset heartbeat timer
+                    lastActivityTime = Date.now();
                     const dataStr = data.toString();
                     const messageTypes = [];
                     const symbolsFound = [];
@@ -141,25 +154,34 @@ function createFixClient(options) {
                     else {
                         logger_1.logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
                     }
+                    // If we received test request, respond immediately with heartbeat
+                    if (dataStr.includes('35=1')) { // Test request
+                        const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
+                        if (testReqIdMatch && testReqIdMatch[1]) {
+                            const testReqId = testReqIdMatch[1];
+                            logger_1.logger.info(`[TEST_REQUEST] Received test request with ID: ${testReqId}, responding immediately`);
+                            sendHeartbeat(testReqId);
+                        }
+                    }
+                    logger_1.logger.info(data);
+                    logger_1.logger.info(`[DATA:PROCESSING] Starting message processing...`);
+                    let processingResult = false;
+                    try {
+                        handleData(data);
+                        processingResult = true;
+                    }
+                    catch (error) {
+                        logger_1.logger.error(`[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`);
+                        if (error instanceof Error && error.stack) {
+                            logger_1.logger.error(error.stack);
+                        }
+                        processingResult = false;
+                    }
+                    logger_1.logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
                 }
                 catch (err) {
                     logger_1.logger.error(`Error pre-parsing data: ${err}`);
                 }
-                logger_1.logger.info(data);
-                logger_1.logger.info(`[DATA:PROCESSING] Starting message processing...`);
-                let processingResult = false;
-                try {
-                    handleData(data);
-                    processingResult = true;
-                }
-                catch (error) {
-                    logger_1.logger.error(`[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`);
-                    if (error instanceof Error && error.stack) {
-                        logger_1.logger.error(error.stack);
-                    }
-                    processingResult = false;
-                }
-                logger_1.logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
             });
             logger_1.logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
             socket.connect(fixPort, fixHost);

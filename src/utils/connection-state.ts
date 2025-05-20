@@ -3,6 +3,7 @@ import { logger } from "./logger";
 export class ConnectionState {
     private connected: boolean = false;
     private loggedIn: boolean = false;
+    private shuttingDown: boolean = false;
     private requests: Map<string, boolean> = new Map([
       ['equitySecurities', false],
       ['indexSecurities', false],
@@ -24,6 +25,15 @@ export class ConnectionState {
   
     isLoggedIn(): boolean {
       return this.loggedIn;
+    }
+  
+    setShuttingDown(value: boolean): void {
+      this.shuttingDown = value;
+      logger.info(`[STATE] Shutdown state updated: shuttingDown=${value}`);
+    }
+  
+    isShuttingDown(): boolean {
+      return this.shuttingDown;
     }
   
     setRequestSent(requestType: string, value: boolean): void {

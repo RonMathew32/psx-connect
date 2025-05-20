@@ -59,6 +59,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
   };
 
   const stop = (): void => {
+    state.setShuttingDown(true);
     sendLogout();
     disconnect();
   };
@@ -82,28 +83,40 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
     try {
       socket = new Socket();
-      socket.setKeepAlive(true);
+      
+      // Improve socket stability with more robust settings
+      socket.setKeepAlive(true, 10000); // More aggressive keepalive
       socket.setNoDelay(true);
-
-      socket.setTimeout(options.connectTimeoutMs || 30000);
+      socket.setTimeout(options.connectTimeoutMs || 60000); // Increased timeout
+      
+      // Add error handling for socket errors
+      socket.on('error', (error) => {
+        logger.error(`Socket error: ${error.message}`);
+        if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
+          logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
+        }
+        emitter.emit('error', error);
+      });
 
       socket.on('timeout', () => {
         logger.error('Connection timed out');
-        socket?.destroy();
+        if (socket) {
+          socket.destroy();
+          socket = null;
+        }
         state.setConnected(false); // Update state
         emitter.emit('error', new Error('Connection timed out'));
       });
 
-      socket.on('error', (error) => {
-        logger.error(`Socket error: ${error.message}`);
-        emitter.emit('error', error);
-      });
-
-      socket.on('close', () => {
-        logger.info('Socket disconnected');
+      socket.on('close', (hadError) => {
+        logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
         state.reset(); // Reset all states on disconnect
         emitter.emit('disconnected');
-        scheduleReconnect();
+        
+        // Only schedule reconnect if not during normal shutdown
+        if (!state.isShuttingDown()) {
+          scheduleReconnect();
+        }
       });
 
       socket.on('connect', () => {
@@ -127,8 +140,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // Handle received data
       socket.on('data', (data) => {
         logger.info('--------------------------------');
-        logger.info(data);
         try {
+          // Update last activity time to reset heartbeat timer
+          lastActivityTime = Date.now();
+          
           const dataStr = data.toString();
           const messageTypes = [];
           const symbolsFound = [];
@@ -188,27 +203,37 @@ export function createFixClient(options: FixClientOptions): FixClient {
           } else {
             logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
           }
+          
+          // If we received test request, respond immediately with heartbeat
+          if (dataStr.includes('35=1')) { // Test request
+            const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
+            if (testReqIdMatch && testReqIdMatch[1]) {
+              const testReqId = testReqIdMatch[1];
+              logger.info(`[TEST_REQUEST] Received test request with ID: ${testReqId}, responding immediately`);
+              sendHeartbeat(testReqId);
+            }
+          }
+          
+          logger.info(data);
+
+          logger.info(`[DATA:PROCESSING] Starting message processing...`);
+          let processingResult = false;
+          try {
+            handleData(data);
+            processingResult = true;
+          } catch (error: any) {
+            logger.error(
+              `[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`
+            );
+            if (error instanceof Error && error.stack) {
+              logger.error(error.stack);
+            }
+            processingResult = false;
+          }
+          logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
         } catch (err) {
           logger.error(`Error pre-parsing data: ${err}`);
         }
-
-        logger.info(data);
-
-        logger.info(`[DATA:PROCESSING] Starting message processing...`);
-        let processingResult = false;
-        try {
-          handleData(data);
-          processingResult = true;
-        } catch (error: any) {
-          logger.error(
-            `[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`
-          );
-          if (error instanceof Error && error.stack) {
-            logger.error(error.stack);
-          }
-          processingResult = false;
-        }
-        logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
       });
 
       logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);

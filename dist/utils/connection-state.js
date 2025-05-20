@@ -6,6 +6,7 @@ class ConnectionState {
     constructor() {
         this.connected = false;
         this.loggedIn = false;
+        this.shuttingDown = false;
         this.requests = new Map([
             ['equitySecurities', false],
             ['indexSecurities', false],
@@ -24,6 +25,13 @@ class ConnectionState {
     }
     isLoggedIn() {
         return this.loggedIn;
+    }
+    setShuttingDown(value) {
+        this.shuttingDown = value;
+        logger_1.logger.info(`[STATE] Shutdown state updated: shuttingDown=${value}`);
+    }
+    isShuttingDown() {
+        return this.shuttingDown;
     }
     setRequestSent(requestType, value) {
         this.requests.set(requestType, value);
