@@ -1,4 +1,4 @@
-import { SOH, MessageType, FieldTag } from './constants';
+import { SOH, MessageType, FieldTag } from '../constants';
 
 /**
  * Parsed FIX message as a dictionary of tag-value pairs
@@ -6,7 +6,6 @@ import { SOH, MessageType, FieldTag } from './constants';
 export interface ParsedFixMessage {
   [key: string]: string;
 }
-
 /**
  * Parse a FIX message string into a tag-value object
  * @param message The raw FIX message string

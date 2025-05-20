@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
-import logger from './utils/logger';
-import { createWebSocketServer } from './websocket-server';
+import { logger } from './utils/logger';
+import { createWebSocketServer } from './utils/websocket-server';
 import { FixClientOptions } from './types';
 import { createFixClient } from './fix/fix-client';
+import { validateFixOptions } from './utils/validate-fix-options';
 
 dotenv.config();
 
@@ -28,6 +29,8 @@ async function main() {
       rawData: process.env.RAW_DATA || 'kse',
       resetOnLogon: true
     };
+
+    validateFixOptions(fixOptions);
 
     const fixClient = createFixClient(fixOptions);
 

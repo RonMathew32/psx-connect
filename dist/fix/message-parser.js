@@ -18,7 +18,7 @@ exports.getTestReqID = getTestReqID;
 exports.getMDReqID = getMDReqID;
 exports.getRejectText = getRejectText;
 exports.verifyChecksum = verifyChecksum;
-const constants_1 = require("./constants");
+const constants_1 = require("../constants");
 /**
  * Parse a FIX message string into a tag-value object
  * @param message The raw FIX message string

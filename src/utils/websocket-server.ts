@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { createFixClient, FixClient } from './fix/fix-client';
-import logger from './utils/logger';
-import { MarketDataItem, TradingSessionInfo, SecurityInfo } from './types';
+import { createFixClient, FixClient } from '../fix/fix-client';
+import { MarketDataItem, TradingSessionInfo, SecurityInfo } from '../types';
+import { logger } from './logger';
 
 interface WebSocketMessage {
   type: 'marketData' | 'tradingSessionStatus' | 'securityList' | 'equitySecurityList' | 'indexSecurityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';

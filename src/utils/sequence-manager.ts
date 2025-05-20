@@ -1,21 +1,22 @@
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * Manages sequence numbers for FIX protocol communication
  */
 export class SequenceManager {
-  private mainSeqNum: number = 1;
+  private mainSeqNum: number;
   private serverSeqNum: number = 1;
-  private marketDataSeqNum: number = 1;
-  private securityListSeqNum: number = 2;
-  private tradingStatusSeqNum: number = 2;
+  private marketDataSeqNum: number;
+  private securityListSeqNum: number;
+  private tradingStatusSeqNum: number;
 
-  constructor() {
-    logger.info('[SEQUENCE] Initializing sequence manager with:');
-    logger.info(`[SEQUENCE] Main seq: ${this.mainSeqNum}, Server seq: ${this.serverSeqNum}`);
-    logger.info(`[SEQUENCE] Market data seq: ${this.marketDataSeqNum}, Security list seq: ${this.securityListSeqNum}, Trading status seq: ${this.tradingStatusSeqNum}`);
+  constructor(initialSeq?: { main?: number; marketData?: number; securityList?: number; tradingStatus?: number }) {
+    this.mainSeqNum = initialSeq?.main ?? 1;
+    this.marketDataSeqNum = initialSeq?.marketData ?? 1;
+    this.securityListSeqNum = initialSeq?.securityList ?? 2; // PSX-specific default
+    this.tradingStatusSeqNum = initialSeq?.tradingStatus ?? 2; // PSX-specific default
+    logger.info('[SEQUENCE] Initializing sequence manager with:', this.getAll());
   }
-
   /**
    * Reset sequence numbers to a specific value
    * Used when the server expects a specific sequence number
@@ -38,7 +39,7 @@ export class SequenceManager {
     logger.debug(`[SEQUENCE] Main sequence incremented to ${this.mainSeqNum}`);
     return current;
   }
-  
+
   /**
    * Get the next market data sequence number and increment it
    */
@@ -48,7 +49,7 @@ export class SequenceManager {
     logger.debug(`[SEQUENCE] Market data sequence incremented to ${this.marketDataSeqNum}`);
     return current;
   }
-  
+
   /**
    * Get the security list sequence number
    * This should be used when sending security list requests
@@ -57,7 +58,7 @@ export class SequenceManager {
     logger.info(`[SEQUENCE] Getting security list sequence: ${this.securityListSeqNum}`);
     return this.securityListSeqNum;
   }
-  
+
   /**
    * Get trading status sequence number
    * Starts at 3 for PSX, but can be higher if server has rejected previous messages
@@ -66,7 +67,7 @@ export class SequenceManager {
     logger.info(`[SEQUENCE] Getting trading status sequence: ${this.tradingStatusSeqNum}`);
     return this.tradingStatusSeqNum;
   }
-  
+
   /**
    * Get security list sequence number for incrementing
    * This should be used when sending security list requests
@@ -81,7 +82,7 @@ export class SequenceManager {
     logger.debug(`[SEQUENCE] Security list sequence incremented to ${this.securityListSeqNum}`);
     return current;
   }
-  
+
   /**
    * Get trading status sequence number for incrementing
    * This should be used when sending trading status requests
@@ -96,28 +97,28 @@ export class SequenceManager {
     logger.debug(`[SEQUENCE] Trading status sequence incremented to ${this.tradingStatusSeqNum}`);
     return current;
   }
-  
+
   /**
    * Get the current main sequence number
    */
   public getMainSeqNum(): number {
     return this.mainSeqNum;
   }
-  
+
   /**
    * Get the current server sequence number
    */
   public getServerSeqNum(): number {
     return this.serverSeqNum;
   }
-  
+
   /**
    * Get the current market data sequence number
    */
   public getMarketDataSeqNum(): number {
     return this.marketDataSeqNum;
   }
-  
+
   /**
    * Set the market data sequence number
    */
@@ -134,7 +135,7 @@ export class SequenceManager {
     const oldSeq = this.securityListSeqNum;
     this.securityListSeqNum = value;
     logger.debug(`[SEQUENCE] Set security list sequence number to ${value}`);
-    
+
     // Also update the main sequence if needed
     if (value > this.mainSeqNum) {
       logger.info(`[SEQUENCE] Also updating main sequence to ${value} to maintain alignment`);
@@ -149,7 +150,7 @@ export class SequenceManager {
     const oldSeq = this.tradingStatusSeqNum;
     this.tradingStatusSeqNum = value;
     logger.debug(`[SEQUENCE] Set trading status sequence number to ${value}`);
-    
+
     // Also update the main sequence if needed
     if (value > this.mainSeqNum) {
       logger.info(`[SEQUENCE] Also updating main sequence to ${value} to maintain alignment`);
@@ -162,7 +163,7 @@ export class SequenceManager {
    */
   public processLogon(serverSeqNum: number, resetFlag: boolean): void {
     this.serverSeqNum = serverSeqNum;
-    
+
     if (resetFlag) {
       // If reset flag is Y, set our next sequence number to 2
       // (1 for the server's logon acknowledgment, and our next message will be 2)
@@ -189,7 +190,7 @@ export class SequenceManager {
     if (newValue > this.serverSeqNum) {
       logger.debug(`[SEQUENCE] Updating server sequence from ${this.serverSeqNum} to ${newValue}`);
       this.serverSeqNum = newValue;
-      
+
       // If server sequence is higher than our sequences, update them
       if (newValue >= this.mainSeqNum) {
         this.mainSeqNum = newValue + 1;
@@ -219,7 +220,7 @@ export class SequenceManager {
   public resetSecurityListSequence(): void {
     logger.info('[SEQUENCE] Resetting security list sequence number to 2');
     this.securityListSeqNum = 2;
-    
+
     // Also update main sequence if needed
     if (this.mainSeqNum < 2) {
       logger.info(`[SEQUENCE] Also updating main sequence to 2 to maintain alignment`);

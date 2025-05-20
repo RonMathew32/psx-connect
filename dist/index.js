@@ -4,13 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
-const logger_1 = __importDefault(require("./utils/logger"));
-const websocket_server_1 = require("./websocket-server");
+const logger_1 = require("./utils/logger");
+const websocket_server_1 = require("./utils/websocket-server");
 const fix_client_1 = require("./fix/fix-client");
+const validate_fix_options_1 = require("./utils/validate-fix-options");
 dotenv_1.default.config();
-logger_1.default.info('PSX-Connect starting...');
-logger_1.default.info(`Node.js version: ${process.version}`);
-logger_1.default.info(`Operating system: ${process.platform} ${process.arch}`);
+logger_1.logger.info('PSX-Connect starting...');
+logger_1.logger.info(`Node.js version: ${process.version}`);
+logger_1.logger.info(`Operating system: ${process.platform} ${process.arch}`);
 async function main() {
     try {
         const wss = (0, websocket_server_1.createWebSocketServer)(8080);
@@ -28,43 +29,44 @@ async function main() {
             rawData: process.env.RAW_DATA || 'kse',
             resetOnLogon: true
         };
+        (0, validate_fix_options_1.validateFixOptions)(fixOptions);
         const fixClient = (0, fix_client_1.createFixClient)(fixOptions);
         fixClient.on('connected', () => {
-            logger_1.default.info('TCP connection established to PSX server.');
+            logger_1.logger.info('TCP connection established to PSX server.');
         });
         fixClient.on('logon', () => {
-            logger_1.default.info('Successfully logged in to PSX server.');
+            logger_1.logger.info('Successfully logged in to PSX server.');
         });
         fixClient.on('message', (message) => {
-            logger_1.default.info(`Received message: ${(message)}`);
+            logger_1.logger.info(`Received message: ${(message)}`);
         });
         fixClient.on('error', (error) => {
-            logger_1.default.error(`FIX client error: ${error.message}`);
+            logger_1.logger.error(`FIX client error: ${error.message}`);
         });
         fixClient.on('disconnected', () => {
-            logger_1.default.warn('Disconnected from PSX server.');
+            logger_1.logger.warn('Disconnected from PSX server.');
         });
         await fixClient.connect();
         process.on('SIGINT', async () => {
-            logger_1.default.info('Received SIGINT. Shutting down...');
+            logger_1.logger.info('Received SIGINT. Shutting down...');
             await fixClient.disconnect();
             wss.close();
             process.exit(0);
         });
         process.on('SIGTERM', async () => {
-            logger_1.default.info('Received SIGTERM. Shutting down...');
+            logger_1.logger.info('Received SIGTERM. Shutting down...');
             await fixClient.disconnect();
             wss.close();
             process.exit(0);
         });
-        logger_1.default.info('PSX-Connect running. Press Ctrl+C to exit.');
+        logger_1.logger.info('PSX-Connect running. Press Ctrl+C to exit.');
     }
     catch (error) {
-        logger_1.default.error(`Application error: ${error instanceof Error ? error.message : String(error)}`);
+        logger_1.logger.error(`Application error: ${error instanceof Error ? error.message : String(error)}`);
         process.exit(1);
     }
 }
 main().catch(error => {
-    logger_1.default.error(`Unhandled error in main: ${error instanceof Error ? error.message : String(error)}`);
+    logger_1.logger.error(`Unhandled error in main: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
 });
