@@ -417,7 +417,7 @@ function createFixClient(options) {
     };
     const sendLogon = () => {
         logger_1.logger.info("[SESSION:LOGON] Creating logon message");
-        if (!state.isConnected() || state.isLoggedIn()) {
+        if (!state.isConnected()) {
             logger_1.logger.warn('[SESSION:LOGON] Cannot send logon: not connected or already logged in');
             return;
         }

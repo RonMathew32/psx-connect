@@ -528,7 +528,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
   const sendLogon = (): void => {
     logger.info("[SESSION:LOGON] Creating logon message");
-    if (!state.isConnected() || state.isLoggedIn()) {
+    if (!state.isConnected()) {
       logger.warn('[SESSION:LOGON] Cannot send logon: not connected or already logged in');
       return;
     }
