@@ -8,7 +8,6 @@ import {
   createLogonMessageBuilder,
   createLogoutMessageBuilder,
   createMarketDataRequestBuilder,
-  createMessageBuilder,
   createSecurityListRequestForEquityBuilder,
   createSecurityListRequestForIndexBuilder,
   createSymbolMarketDataSubscriptionBuilder,
@@ -51,11 +50,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
   const sequenceManager = new SequenceManager();
   const state = new ConnectionState(); // Initialize ConnectionState
 
-  const securityCache = {
-    EQUITY: [] as SecurityInfo[],
-    INDEX: [] as SecurityInfo[],
-  };
-
   const forceResetSequenceNumber = (newSeq: number = 2): void => {
     sequenceManager.forceReset(newSeq);
   };
@@ -77,8 +71,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
 
     // Ensure environment variables are defined and valid
-    const fixPort = parseInt(process.env.FIX_PORT || '', 10);
-    const fixHost = process.env.FIX_HOST;
+    const fixPort = parseInt(process.env.FIX_PORT || '8016', 10);
+    const fixHost = process.env.FIX_HOST || '172.21.101.36';
 
     if (isNaN(fixPort) || !fixHost) {
       logger.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
@@ -133,6 +127,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // Handle received data
       socket.on('data', (data) => {
         logger.info('--------------------------------');
+        logger.info(data);
         try {
           const dataStr = data.toString();
           const messageTypes = [];
@@ -187,8 +182,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
           if (messageTypes.length > 0) {
             logger.info(
-              `[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${
-                symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''
+              `[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''
               }`
             );
           } else {

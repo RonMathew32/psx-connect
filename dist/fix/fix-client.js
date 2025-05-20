@@ -24,10 +24,6 @@ function createFixClient(options) {
     let logonTimer = null;
     const sequenceManager = new sequence_manager_1.SequenceManager();
     const state = new connection_state_1.ConnectionState(); // Initialize ConnectionState
-    const securityCache = {
-        EQUITY: [],
-        INDEX: [],
-    };
     const forceResetSequenceNumber = (newSeq = 2) => {
         sequenceManager.forceReset(newSeq);
     };
@@ -45,8 +41,8 @@ function createFixClient(options) {
             return;
         }
         // Ensure environment variables are defined and valid
-        const fixPort = parseInt(process.env.FIX_PORT || '', 10);
-        const fixHost = process.env.FIX_HOST;
+        const fixPort = parseInt(process.env.FIX_PORT || '8016', 10);
+        const fixHost = process.env.FIX_HOST || '172.21.101.36';
         if (isNaN(fixPort) || !fixHost) {
             logger_1.logger.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
             emitter.emit('error', new Error('Invalid FIX_PORT or FIX_HOST environment variable.'));
@@ -94,6 +90,7 @@ function createFixClient(options) {
             // Handle received data
             socket.on('data', (data) => {
                 logger_1.logger.info('--------------------------------');
+                logger_1.logger.info(data);
                 try {
                     const dataStr = data.toString();
                     const messageTypes = [];
