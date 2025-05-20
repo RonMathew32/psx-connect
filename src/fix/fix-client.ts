@@ -87,12 +87,13 @@ export function createFixClient(options: FixClientOptions) {
       socket.on('close', () => {
         logger.info('Socket disconnected');
         connected = false;
+        loggedIn = false; // Ensure loggedIn is reset on disconnect
         emitter.emit('disconnected');
         scheduleReconnect();
       });
 
       socket.on('connect', () => {
-        logger.info(`Connected to ${process.env.FIX_HOST}:${process.env.FIX_PORT}`);
+        logger.info(`Connected to ${fixHost}:${fixPort}`);
         connected = true;
         if (logonTimer) {
           clearTimeout(logonTimer);
