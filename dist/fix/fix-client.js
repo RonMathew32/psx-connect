@@ -415,66 +415,18 @@ function createFixClient(options) {
             }, 2000);
         }
     };
-    // const sendLogon = (): void => {
-    //   logger.info("[SESSION:LOGON] Creating logon message");
-    //   if (!state.isConnected() || state.isLoggedIn()) {
-    //     logger.warn('[SESSION:LOGON] Cannot send logon: not connected or already logged in');
-    //     return;
-    //   }
-    //   try {
-    //     // Always reset all sequence numbers before a new logon
-    //     sequenceManager.resetAll();
-    //     logger.info("[SESSION:LOGON] Reset all sequence numbers before logon");
-    //     logger.info(
-    //       `[SESSION:LOGON] Sequence numbers: ${JSON.stringify(
-    //         sequenceManager.getAll()
-    //       )}`
-    //     );
-    //     const builder = createLogonMessageBuilder(options, sequenceManager);
-    //     const message = builder.buildMessage();
-    //     logger.info(
-    //       `[SESSION:LOGON] Sending logon message with username: ${options.username}`
-    //     );
-    //     logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
-    //     sendMessage(message);
-    //     logger.info(
-    //       `[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(
-    //         sequenceManager.getAll()
-    //       )}`
-    //     );
-    //   } catch (error) {
-    //     logger.error(
-    //       `[SESSION:LOGON] Error sending logon: ${error instanceof Error ? error.message : String(error)
-    //       }`
-    //     );
-    //   }
-    // };
     const sendLogon = () => {
-        logger_1.logger.info('[SESSION:LOGON] Creating logon message');
-        if (!state.isConnected()) {
-            logger_1.logger.warn('[SESSION:LOGON] Cannot send logon, not connected');
+        logger_1.logger.info("[SESSION:LOGON] Creating logon message");
+        if (!state.isConnected() || state.isLoggedIn()) {
+            logger_1.logger.warn('[SESSION:LOGON] Cannot send logon: not connected or already logged in');
             return;
         }
         try {
             // Always reset all sequence numbers before a new logon
             sequenceManager.resetAll();
-            logger_1.logger.info('[SESSION:LOGON] Reset all sequence numbers before logon');
+            logger_1.logger.info("[SESSION:LOGON] Reset all sequence numbers before logon");
             logger_1.logger.info(`[SESSION:LOGON] Sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-            // Sequence number 1 will be used for the logon message
-            const builder = (0, message_builder_1.createMessageBuilder)();
-            builder
-                .setMsgType(constants_1.MessageType.LOGON)
-                .setSenderCompID(options.senderCompId)
-                .setTargetCompID(options.targetCompId)
-                .setMsgSeqNum(1); // Always use sequence number 1 for initial logon
-            // Add body fields in the order specified by PKF-50
-            builder.addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD);
-            builder.addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString());
-            builder.addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y'); // Always use Y to reset sequence numbers
-            builder.addField(constants_1.FieldTag.USERNAME, options.username);
-            builder.addField(constants_1.FieldTag.PASSWORD, options.password);
-            builder.addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
-            builder.addField(constants_1.FieldTag.DEFAULT_CSTM_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID);
+            const builder = (0, message_builder_1.createLogonMessageBuilder)(options, sequenceManager);
             const message = builder.buildMessage();
             logger_1.logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
             logger_1.logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
@@ -720,29 +672,28 @@ function createFixClient(options) {
             return null;
         }
     };
-    // Add event listener for logon to send market data request and setup heartbeat
-    emitter.on('logon', () => {
-        logger_1.logger.info('[MARKET_DATA:LOGON] Logon successful, requesting market data...');
-        // Send market data request for some symbols - modify these as needed
-        const symbols = ['PTC', 'NBP', 'PAEL', 'JVDC', 'KESC'];
-        sendMarketDataRequest(symbols);
-        // Also request security list for equity 
-        sendSecurityListRequestForEquity();
-        // Set up heartbeat timer to keep connection alive
-        if (heartbeatTimer) {
-            clearInterval(heartbeatTimer);
-        }
-        heartbeatTimer = setInterval(() => {
-            try {
-                sendHeartbeat();
-                logger_1.logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
-            }
-            catch (error) {
-                logger_1.logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        }, (options.heartbeatIntervalSecs * 1000) || 30000);
-        logger_1.logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
-    });
+    // // Add event listener for logon to send market data request and setup heartbeat
+    // emitter.on('logon', () => {
+    //   logger.info('[MARKET_DATA:LOGON] Logon successful, requesting market data...');
+    //   // Send market data request for some symbols - modify these as needed
+    //   const symbols = ['PTC', 'NBP', 'PAEL', 'JVDC', 'KESC'];
+    //   sendMarketDataRequest(symbols);
+    //   // Also request security list for equity 
+    //   sendSecurityListRequestForEquity();
+    //   // Set up heartbeat timer to keep connection alive
+    //   if (heartbeatTimer) {
+    //     clearInterval(heartbeatTimer);
+    //   }
+    //   heartbeatTimer = setInterval(() => {
+    //     try {
+    //       sendHeartbeat();
+    //       logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
+    //     } catch (error) {
+    //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+    //     }
+    //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
+    //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
+    // });
     // // Add handler for requestTradingSessionStatus event
     // emitter.on('requestTradingSessionStatus', () => {
     //   logger.info('[TRADING_STATUS] Received request for trading session status');
