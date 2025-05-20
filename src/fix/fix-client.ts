@@ -626,11 +626,11 @@ export function createFixClient(options: FixClientOptions) {
       logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
       sendMessage(message);
 
-      setTimeout(() => {
-        sequenceManager.setSecurityListSeqNum(2);
-        sendSecurityListRequestForEquity();
-        sendSecurityListRequestForIndex();
-      }, 5000);
+      // setTimeout(() => {
+      //   sequenceManager.setSecurityListSeqNum(2);
+      //   sendSecurityListRequestForEquity();
+      //   sendSecurityListRequestForIndex();
+      // }, 5000);
 
       logger.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
     } catch (error) {

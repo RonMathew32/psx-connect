@@ -564,11 +564,11 @@ function createFixClient(options) {
             logger_1.default.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
             logger_1.default.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
             sendMessage(message);
-            setTimeout(() => {
-                sequenceManager.setSecurityListSeqNum(2);
-                sendSecurityListRequestForEquity();
-                sendSecurityListRequestForIndex();
-            }, 5000);
+            // setTimeout(() => {
+            //   sequenceManager.setSecurityListSeqNum(2);
+            //   sendSecurityListRequestForEquity();
+            //   sendSecurityListRequestForIndex();
+            // }, 5000);
             logger_1.default.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
         }
         catch (error) {
