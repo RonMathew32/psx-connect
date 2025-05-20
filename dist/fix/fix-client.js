@@ -161,9 +161,6 @@ function createFixClient(options) {
                 }
                 logger_1.logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
             });
-            socket.on('securityList', (securities) => {
-                logger_1.logger.info('Received security list:', securities);
-            });
             logger_1.logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
             socket.connect(fixPort, fixHost);
         }

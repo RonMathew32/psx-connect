@@ -211,10 +211,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
       });
 
-      socket.on('securityList', (securities) => {
-        logger.info('Received security list:', securities);
-      });
-
       logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
       socket.connect(fixPort, fixHost);
     } catch (error) {
@@ -951,7 +947,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
       return null;
     }
   };
-
 
   const client = {
     on: (event: string, listener: (...args: any[]) => void) => {
