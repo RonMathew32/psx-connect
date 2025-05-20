@@ -15,13 +15,13 @@ async function main() {
     try {
         const wss = (0, websocket_server_1.createWebSocketServer)(8080);
         const fixOptions = {
-            host: process.env.PSX_HOST || '172.21.101.36',
-            port: parseInt(process.env.PSX_PORT || '8016', 10),
-            senderCompId: process.env.SENDER_COMP_ID || 'realtime',
-            targetCompId: process.env.TARGET_COMP_ID || 'NMDUFISQ0001',
-            username: process.env.FIX_USERNAME || 'realtime',
-            password: process.env.FIX_PASSWORD || 'NMDUFISQ0001',
-            heartbeatIntervalSecs: parseInt(process.env.HEARTBEAT_INTERVAL || '30', 10),
+            host: process.env.PSX_HOST || '',
+            port: parseInt(process.env.PSX_PORT || ''),
+            senderCompId: process.env.SENDER_COMP_ID || '',
+            targetCompId: process.env.TARGET_COMP_ID || '',
+            username: process.env.FIX_USERNAME || '',
+            password: process.env.FIX_PASSWORD || '',
+            heartbeatIntervalSecs: parseInt(process.env.HEARTBEAT_INTERVAL || ''),
             connectTimeoutMs: parseInt(process.env.CONNECT_TIMEOUT || '30000', 10),
             onBehalfOfCompId: process.env.ON_BEHALF_OF_COMP_ID || '600',
             rawDataLength: parseInt(process.env.RAW_DATA_LENGTH || '3', 10),

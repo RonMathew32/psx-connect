@@ -10,19 +10,8 @@ import { FixClientOptions, MarketDataItem, SecurityInfo, TradingSessionInfo } fr
 import { SequenceManager } from './sequence-manager';
 import {
   createHeartbeatMessage,
-  createTestRequestMessage,
-  createEquitySecurityListRequest,
   getMessageTypeName
 } from './message-helpers';
-import {
-  handleMarketDataSnapshot,
-  handleMarketDataIncremental,
-  handleSecurityList,
-  handleTradingSessionStatus,
-  handleReject,
-  handleMarketDataRequestReject,
-  handleTradingStatus
-} from './message-handlers';
 
 /** 
  * Create a FIX client with the specified options
@@ -1232,23 +1221,6 @@ export function createFixClient(options: FixClientOptions) {
           logger.warn('No response to test requests, disconnecting');
           disconnect();
           return;
-        }
-
-        // Send test request
-        try {
-          const message = createTestRequestMessage(
-            {
-              senderCompId: options.senderCompId,
-              targetCompId: options.targetCompId,
-              username: options.username,
-              password: options.password,
-              heartbeatIntervalSecs: options.heartbeatIntervalSecs
-            },
-            sequenceManager
-          );
-          sendMessage(message);
-        } catch (error) {
-          logger.error(`Error sending test request: ${error instanceof Error ? error.message : String(error)}`);
         }
       } else {
         // If we've received activity, just send a regular heartbeat

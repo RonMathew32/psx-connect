@@ -1069,20 +1069,6 @@ function createFixClient(options) {
                     disconnect();
                     return;
                 }
-                // Send test request
-                try {
-                    const message = (0, message_helpers_1.createTestRequestMessage)({
-                        senderCompId: options.senderCompId,
-                        targetCompId: options.targetCompId,
-                        username: options.username,
-                        password: options.password,
-                        heartbeatIntervalSecs: options.heartbeatIntervalSecs
-                    }, sequenceManager);
-                    sendMessage(message);
-                }
-                catch (error) {
-                    logger_1.default.error(`Error sending test request: ${error instanceof Error ? error.message : String(error)}`);
-                }
             }
             else {
                 // If we've received activity, just send a regular heartbeat
