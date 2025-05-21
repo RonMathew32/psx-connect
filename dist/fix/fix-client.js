@@ -447,6 +447,10 @@ function createFixClient(options) {
             return;
         }
         try {
+            // Reset sequence numbers before sending logout
+            logger_1.logger.info("[SESSION:LOGOUT] Resetting all sequence numbers before logout");
+            sequenceManager.resetAll();
+            logger_1.logger.info(`[SESSION:LOGOUT] After reset, sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
             logger_1.logger.info("[SESSION:LOGOUT] Creating logout message");
             const builder = (0, message_builder_1.createLogoutMessageBuilder)(options, sequenceManager, text);
             const message = builder.buildMessage();

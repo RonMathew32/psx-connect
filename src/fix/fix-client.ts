@@ -575,6 +575,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
 
     try {
+      // Reset sequence numbers before sending logout
+      logger.info("[SESSION:LOGOUT] Resetting all sequence numbers before logout");
+      sequenceManager.resetAll();
+      logger.info(`[SESSION:LOGOUT] After reset, sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
+
       logger.info("[SESSION:LOGOUT] Creating logout message");
       const builder = createLogoutMessageBuilder(
         options,

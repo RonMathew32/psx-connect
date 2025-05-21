@@ -167,7 +167,8 @@ export function createLogoutMessageBuilder(
     .setMsgType(MessageType.LOGOUT)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextAndIncrement());
+    .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+    .addField(FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
 
   if (text) {
     builder.addField(FieldTag.TEXT, text);

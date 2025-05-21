@@ -137,7 +137,8 @@ function createLogoutMessageBuilder(options, sequenceManager, text) {
         .setMsgType(constants_1.MessageType.LOGOUT)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextAndIncrement());
+        .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+        .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
     if (text) {
         builder.addField(constants_1.FieldTag.TEXT, text);
     }
