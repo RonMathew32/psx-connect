@@ -50,11 +50,12 @@ function createFixClient(options) {
             return;
         }
         try {
+            logger_1.logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
             socket = new net_1.Socket();
-            // Improve socket stability with more robust settings
-            socket.setKeepAlive(true, 10000); // More aggressive keepalive
+            socket.setKeepAlive(true, 10000);
             socket.setNoDelay(true);
-            socket.setTimeout(options.connectTimeoutMs || 60000); // Increased timeout
+            socket.setTimeout(options.connectTimeoutMs || 60000);
+            socket.connect(fixPort, fixHost);
             // Add error handling for socket errors
             socket.on('error', (error) => {
                 logger_1.logger.error(`Socket error: ${error.message}`);
@@ -70,12 +71,12 @@ function createFixClient(options) {
                     socket = null;
                 }
                 state.setConnected(false); // Update state
-                emitter.emit('error', new Error('Connection timed out'));
+                // emitter.emit('error', new Error('Connection timed out'));
             });
             socket.on('close', (hadError) => {
                 logger_1.logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
                 state.reset(); // Reset all states on disconnect
-                emitter.emit('disconnected');
+                // emitter.emit('disconnected');
                 // Only schedule reconnect if not during normal shutdown
                 if (!state.isShuttingDown()) {
                     scheduleReconnect();
@@ -99,9 +100,8 @@ function createFixClient(options) {
                         disconnect();
                     }
                 }, 500);
-                emitter.emit('connected');
+                // emitter.emit('connected');
             });
-            // Handle received data
             socket.on('data', (data) => {
                 logger_1.logger.info('--------------------------------');
                 try {
@@ -185,8 +185,6 @@ function createFixClient(options) {
                     logger_1.logger.error(`Error pre-parsing data: ${err}`);
                 }
             });
-            logger_1.logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
-            socket.connect(fixPort, fixHost);
         }
         catch (error) {
             logger_1.logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);

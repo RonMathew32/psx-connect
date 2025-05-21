@@ -75,6 +75,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     const fixPort = parseInt(process.env.FIX_PORT || '7001', 10);
     const fixHost = process.env.FIX_HOST || '127.0.0.1';
 
+
     if (isNaN(fixPort) || !fixHost) {
       logger.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
       emitter.emit('error', new Error('Invalid FIX_PORT or FIX_HOST environment variable.'));
@@ -82,12 +83,12 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
 
     try {
+      logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
       socket = new Socket();
-
-      // Improve socket stability with more robust settings
-      socket.setKeepAlive(true, 10000); // More aggressive keepalive
+      socket.setKeepAlive(true, 10000);
       socket.setNoDelay(true);
-      socket.setTimeout(options.connectTimeoutMs || 60000); // Increased timeout
+      socket.setTimeout(options.connectTimeoutMs || 60000);
+      socket.connect(fixPort, fixHost);
 
       // Add error handling for socket errors
       socket.on('error', (error) => {
@@ -105,13 +106,13 @@ export function createFixClient(options: FixClientOptions): FixClient {
           socket = null;
         }
         state.setConnected(false); // Update state
-        emitter.emit('error', new Error('Connection timed out'));
+        // emitter.emit('error', new Error('Connection timed out'));
       });
 
       socket.on('close', (hadError) => {
         logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
         state.reset(); // Reset all states on disconnect
-        emitter.emit('disconnected');
+        // emitter.emit('disconnected');
 
         // Only schedule reconnect if not during normal shutdown
         if (!state.isShuttingDown()) {
@@ -136,10 +137,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
             disconnect();
           }
         }, 500);
-        emitter.emit('connected');
+        // emitter.emit('connected');
       });
 
-      // Handle received data
       socket.on('data', (data) => {
         logger.info('--------------------------------');
         try {
@@ -238,8 +238,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
         }
       });
 
-      logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
-      socket.connect(fixPort, fixHost);
     } catch (error) {
       logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);
       emitter.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
