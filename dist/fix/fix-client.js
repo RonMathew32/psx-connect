@@ -195,11 +195,11 @@ function createFixClient(options) {
         return new Promise((resolve) => {
             clearTimers();
             // Use state.isConnected() and state.isLoggedIn()
-            if (state.isConnected() && state.isLoggedIn()) {
-                logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
-                sendLogout();
-            }
-            logger_1.logger.info('[CONNECTION] Resetting all sequence numbers due to disconnect');
+            // if (state.isConnected() && state.isLoggedIn()) {
+            logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
+            sendLogout();
+            // }
+            logger_1.logger.info('[CONNECTION] Resetting all sequence numbers');
             sequenceManager.resetAll();
             if (socket) {
                 socket.destroy();
