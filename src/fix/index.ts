@@ -818,6 +818,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.info("[SECURITY_LIST:EQUITY] Equity securities already requested, skipping duplicate request");
         return null;
       }
+      
+      // Reset the security list sequence number to 2 before sending the request
+      sequenceManager.setSecurityListSeqNum(2);
+      logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 2");
 
       const requestId = uuidv4();
       logger.info(
@@ -864,6 +868,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
         );
         return null;
       }
+      
+      // Reset the security list sequence number to 2 before sending the request
+      sequenceManager.setSecurityListSeqNum(2);
+      logger.info("[SECURITY_LIST:INDEX] Reset security list sequence number to 2");
 
       const requestId = uuidv4();
       logger.info(
@@ -919,6 +927,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.info("[SECURITY_LIST:FUT] FUT securities already requested, skipping duplicate request");
         return null;
       }
+
+      // Reset the security list sequence number to 2 before sending the request
+      sequenceManager.setSecurityListSeqNum(2);
+      logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 2");
 
       const requestId = uuidv4();
       logger.info(
