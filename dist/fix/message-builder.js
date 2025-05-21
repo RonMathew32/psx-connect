@@ -225,6 +225,7 @@ function createSecurityListRequestForFutBuilder(options, sequenceManager, reques
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
+        .addField(constants_1.FieldTag.SYMBOL, 'NA')
         .addField(constants_1.FieldTag.PRODUCT, '4')
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT');
 }

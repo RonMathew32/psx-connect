@@ -929,7 +929,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       }
 
       // Reset the security list sequence number to 2 before sending the request
-      sequenceManager.setSecurityListSeqNum(3);
+      sequenceManager.setSecurityListSeqNum(2);
       logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 2");
 
       const requestId = uuidv4();

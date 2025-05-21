@@ -290,6 +290,7 @@ export function createSecurityListRequestForFutBuilder(
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
+    .addField(FieldTag.SYMBOL, 'NA')
     .addField(FieldTag.PRODUCT, '4')
     .addField(FieldTag.TRADING_SESSION_ID, 'FUT');
 }
