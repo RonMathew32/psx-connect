@@ -82,6 +82,8 @@ function createFixClient(options) {
                 }
             });
             socket.on('connect', () => {
+                logger_1.logger.info('--------------------------------', fixHost);
+                logger_1.logger.info('--------------------------------', fixPort);
                 logger_1.logger.info(`Connected to ${fixHost}:${fixPort}`);
                 state.setConnected(true); // Update state
                 if (logonTimer) {
@@ -194,12 +196,11 @@ function createFixClient(options) {
     const disconnect = () => {
         return new Promise((resolve) => {
             clearTimers();
-            // Use state.isConnected() and state.isLoggedIn()
-            // if (state.isConnected() && state.isLoggedIn()) {
-            logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
-            sendLogout();
-            // }
-            logger_1.logger.info('[CONNECTION] Resetting all sequence numbers');
+            if (state.isConnected() && state.isLoggedIn()) {
+                logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
+                sendLogout();
+            }
+            logger_1.logger.info('[CONNECTION] Resetting all sequence numbers due to disconnect');
             sequenceManager.resetAll();
             if (socket) {
                 socket.destroy();

@@ -120,6 +120,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
       });
 
       socket.on('connect', () => {
+        logger.info('--------------------------------', fixHost);
+        logger.info('--------------------------------', fixPort);
         logger.info(`Connected to ${fixHost}:${fixPort}`);
         state.setConnected(true); // Update state
         if (logonTimer) {
@@ -247,12 +249,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
   const disconnect = (): Promise<void> => {
     return new Promise((resolve) => {
       clearTimers();
-      // Use state.isConnected() and state.isLoggedIn()
-      // if (state.isConnected() && state.isLoggedIn()) {
-      logger.info("[SESSION:LOGOUT] Sending logout message");
-      sendLogout();
-      // }
-      logger.info('[CONNECTION] Resetting all sequence numbers');
+      if (state.isConnected() && state.isLoggedIn()) {
+        logger.info("[SESSION:LOGOUT] Sending logout message");
+        sendLogout();
+      }
+      logger.info('[CONNECTION] Resetting all sequence numbers due to disconnect');
       sequenceManager.resetAll();
 
       if (socket) {
