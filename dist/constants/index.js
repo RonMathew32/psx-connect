@@ -102,7 +102,18 @@ var FieldTag;
     FieldTag["NO_PARTY_IDS"] = "453";
     FieldTag["PARTY_ID"] = "448";
     FieldTag["PARTY_ID_SOURCE"] = "447";
-    FieldTag["PARTY_ROLE"] = "452"; // Added for PKF-50
+    FieldTag["PARTY_ROLE"] = "452";
+    // Additional fields for security list processing
+    FieldTag["LAST_FRAGMENT"] = "893";
+    FieldTag["ISIN"] = "48";
+    FieldTag["SECURITY_ID"] = "48";
+    FieldTag["CURRENCY"] = "15";
+    FieldTag["ISSUER"] = "106";
+    FieldTag["CFI_CODE"] = "461";
+    FieldTag["ROUND_LOT"] = "561";
+    FieldTag["MIN_TRADE_VOL"] = "562";
+    FieldTag["NO_TRADING_SESSION_RULES"] = "1309";
+    FieldTag["TRADING_SESSION_RULES_GROUP"] = "1310"; // Trading session rules
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;

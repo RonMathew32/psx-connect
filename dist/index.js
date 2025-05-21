@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = require("./utils/logger");
 const websocket_server_1 = require("./utils/websocket-server");
-const fix_client_1 = require("./fix/fix-client");
+const fix_1 = require("./fix");
 const validate_fix_options_1 = require("./utils/validate-fix-options");
 // Load environment variables
 dotenv_1.default.config();
@@ -41,7 +41,7 @@ function initializeWebSocketServer() {
  */
 function initializeFixClient(options) {
     (0, validate_fix_options_1.validateFixOptions)(options);
-    const fixClient = (0, fix_client_1.createFixClient)(options);
+    const fixClient = (0, fix_1.createFixClient)(options);
     // Set up FIX client event listeners
     fixClient.on('connected', () => {
         logger_1.logger.info('TCP connection established to PSX server.');

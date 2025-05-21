@@ -46,6 +46,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
   let lastActivityTime = 0;
   let testRequestCount = 0;
   let logonTimer: NodeJS.Timeout | null = null;
+  let lastSecurityListRefresh: number | null = null;
 
   const sequenceManager = new SequenceManager();
   const state = new ConnectionState(); // Initialize ConnectionState
@@ -214,10 +215,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
             );
           } else {
             logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
-          }
-          //main ye chaa rha hon k agr message type A receive hota hai toh securityList ko subsribe kry 
-          if(dataStr.includes('35=A')){
-            sendSecurityListRequestForEquity();
           }
 
           // If we received test request, respond immediately with heartbeat
@@ -993,39 +990,60 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  // // Add event listener for logon to send market data request and setup heartbeat
-  // emitter.on('logon', () => {
-  //   logger.info('[MARKET_DATA:LOGON] Logon successful, requesting market data...');
+  // Add event listener for logon to automatically request security list data
+  emitter.on('logon', () => {
+    logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
+    
+    // Request equity security list
+    sendSecurityListRequestForEquity();
+    
+    // Request index security list after a slight delay
+    setTimeout(() => {
+      sendSecurityListRequestForIndex();
+    }, 2000);
+    
+    // Set up heartbeat timer
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+    }
+    
+    heartbeatTimer = setInterval(() => {
+      try {
+        // Don't send heartbeat if not connected
+        if (!state.isConnected()) return;
+        
+        sendHeartbeat();
+        logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
+        
+        // Every 5 minutes refresh security lists to ensure we have the latest data
+        const currentTime = Date.now();
+        if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
+          logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
+          lastSecurityListRefresh = currentTime;
+          
+          // Reset request flags to allow refreshing
+          state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
+          state.setRequestSent("indexSecurities", false);
+          
+          // Request security lists again
+          sendSecurityListRequestForEquity();
+          setTimeout(() => {
+            sendSecurityListRequestForIndex();
+          }, 2000);
+        }
+      } catch (error) {
+        logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }, (options.heartbeatIntervalSecs * 1000) || 30000);
+    
+    logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
+  });
 
-  //   // Send market data request for some symbols - modify these as needed
-  //   const symbols = ['PTC', 'NBP', 'PAEL', 'JVDC', 'KESC'];
-  //   sendMarketDataRequest(symbols);
-
-  //   // Also request security list for equity 
-  //   sendSecurityListRequestForEquity();
-
-  //   // Set up heartbeat timer to keep connection alive
-  //   if (heartbeatTimer) {
-  //     clearInterval(heartbeatTimer);
-  //   }
-
-  //   heartbeatTimer = setInterval(() => {
-  //     try {
-  //       sendHeartbeat();
-  //       logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
-  //     } catch (error) {
-  //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
-  //     }
-  //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
-
-  //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
-  // });
-
-  // // Add handler for requestTradingSessionStatus event
-  // emitter.on('requestTradingSessionStatus', () => {
-  //   logger.info('[TRADING_STATUS] Received request for trading session status');
-  //   sendTradingSessionStatusRequest();
-  // });
+  // Add handler for requestTradingSessionStatus event
+  emitter.on('requestTradingSessionStatus', () => {
+    logger.info('[TRADING_STATUS] Received request for trading session status');
+    sendTradingSessionStatusRequest();
+  });
 
   const client = {
     on: (event: string, listener: (...args: any[]) => void) => {
@@ -1107,7 +1125,19 @@ export function createFixClient(options: FixClientOptions): FixClient {
       return client;
     },
     requestAllSecurities: () => {
-      // Implementation
+      logger.info('[SECURITY_LIST] Requesting all securities data');
+      
+      // Reset request flags to allow refreshing
+      state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
+      state.setRequestSent("indexSecurities", false);
+      
+      // Request security lists
+      sendSecurityListRequestForEquity();
+      setTimeout(() => {
+        sendSecurityListRequestForIndex();
+      }, 1000);
+      
+      lastSecurityListRefresh = Date.now();
       return client;
     },
     setupComplete: () => {

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createWebSocketServer = createWebSocketServer;
 const ws_1 = require("ws");
-const fix_client_1 = require("../fix/fix-client");
+const fix_1 = require("../fix");
 const logger_1 = require("./logger");
 function createWebSocketServer(port, fixConfig = {
     host: '172.21.101.36',
@@ -43,7 +43,7 @@ function createWebSocketServer(port, fixConfig = {
     // Initialize the FIX client
     const initializeFixClient = () => {
         try {
-            fixClient = (0, fix_client_1.createFixClient)(fixConfig);
+            fixClient = (0, fix_1.createFixClient)(fixConfig);
             setupFixClientListeners();
             fixClient?.start();
             isFixConnected = true;

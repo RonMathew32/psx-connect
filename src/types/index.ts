@@ -53,8 +53,14 @@ export interface FixClientOptions {
     tickSize?: number;
     exchange?: string;
     isin?: string;
+    securityId?: string;  // Added for PSX unique identifier
     currency?: string;
     product?: string;
+    issuer?: string;
+    cfiCode?: string;
+    tradingSessionId?: string;  // Which trading session this security belongs to (REG, FUT, etc.)
+    roundLot?: number;          // Trading lot size
+    minTradeVolume?: number;    // Minimum trading volume
   }
   
   export interface MarketDataItem {

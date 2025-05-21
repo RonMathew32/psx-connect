@@ -100,7 +100,19 @@ export enum FieldTag {
   NO_PARTY_IDS = '453',   // Added for PKF-50
   PARTY_ID = '448',       // Added for PKF-50
   PARTY_ID_SOURCE = '447', // Added for PKF-50
-  PARTY_ROLE = '452'      // Added for PKF-50
+  PARTY_ROLE = '452',      // Added for PKF-50
+  
+  // Additional fields for security list processing
+  LAST_FRAGMENT = '893',  // Indicates whether this is the last message in a sequence of messages
+  ISIN = '48',            // International Securities Identification Number
+  SECURITY_ID = '48',     // Duplicate of ISIN but kept for clarity
+  CURRENCY = '15',        // Currency of the security
+  ISSUER = '106',         // Issuer of the security
+  CFI_CODE = '461',       // Classification of Financial Instrument code
+  ROUND_LOT = '561',      // Trading lot size of a security
+  MIN_TRADE_VOL = '562',  // Minimum trading volume for a security
+  NO_TRADING_SESSION_RULES = '1309', // Number of trading session rules
+  TRADING_SESSION_RULES_GROUP = '1310' // Trading session rules
 }
 
 // Subscription Request Types

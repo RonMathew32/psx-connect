@@ -197,33 +197,67 @@ const handleSecurityList = (parsedMessage, emitter, securityCache) => {
         const securities = [];
         const noRelatedSym = parseInt(parsedMessage[constants_1.FieldTag.NO_RELATED_SYM] || "0", 10);
         const product = parsedMessage["460"] || "4"; // Default to EQUITY if not specified
+        const productType = product === "5" ? "INDEX" : "EQUITY";
+        const isFinalFragment = parsedMessage[constants_1.FieldTag.LAST_FRAGMENT] === "Y";
+        const reqId = parsedMessage[constants_1.FieldTag.SECURITY_REQ_ID] || "";
+        logger_1.logger.info(`[SECURITY_LIST:${productType}] Processing ${noRelatedSym} securities, fragment is ${isFinalFragment ? 'final' : 'partial'}, reqId: ${reqId}`);
         for (let i = 1; i <= noRelatedSym; i++) {
             const symPrefix = `RELATED SYM ${i}`;
             const symbol = parsedMessage[`${symPrefix}:${constants_1.FieldTag.SYMBOL}`];
             const securityDesc = parsedMessage[`${symPrefix}:${constants_1.FieldTag.SECURITY_DESC}`];
+            const isin = parsedMessage[`${symPrefix}:${constants_1.FieldTag.ISIN}`] || "";
+            const securityId = parsedMessage[`${symPrefix}:${constants_1.FieldTag.SECURITY_ID}`] || "";
+            const currency = parsedMessage[`${symPrefix}:${constants_1.FieldTag.CURRENCY}`] || "PKR";
+            const issuer = parsedMessage[`${symPrefix}:${constants_1.FieldTag.ISSUER}`] || "";
+            const cfiCode = parsedMessage[`${symPrefix}:${constants_1.FieldTag.CFI_CODE}`] || "";
+            const securityType = parsedMessage[`${symPrefix}:167`] || ""; // SecurityType
+            // Trading session info
+            let tradingSessionId = "REG";
+            const noTradingSessionRules = parseInt(parsedMessage[`${symPrefix}:1309`] || "0", 10);
+            if (noTradingSessionRules > 0) {
+                tradingSessionId = parsedMessage[`${symPrefix}:TRD SESS RULES 1:${constants_1.FieldTag.TRADING_SESSION_ID}`] || "REG";
+            }
             if (symbol) {
                 securities.push({
                     symbol,
                     securityDesc: securityDesc || "",
-                    product: product === "5" ? "INDEX" : "EQUITY",
+                    product: productType,
+                    isin,
+                    securityId,
+                    currency,
+                    issuer,
+                    cfiCode,
+                    securityType,
+                    tradingSessionId
                 });
+                logger_1.logger.debug(`[SECURITY_LIST:${productType}] Processed symbol: ${symbol}, desc: ${securityDesc || 'N/A'}`);
             }
         }
-        // Update cache based on product type
-        const securityType = product === "5" ? "INDEX" : "EQUITY";
-        securityCache[securityType] = securities;
+        // If we received securities, update cache based on product type
+        if (securities.length > 0) {
+            if (isFinalFragment || securityCache[productType].length === 0) {
+                // If this is the final fragment or we have no existing data, replace the cache
+                securityCache[productType] = securities;
+                logger_1.logger.info(`[SECURITY_LIST:${productType}] Replaced cache with ${securities.length} securities`);
+            }
+            else {
+                // Otherwise append to existing cache
+                securityCache[productType] = [...securityCache[productType], ...securities];
+                logger_1.logger.info(`[SECURITY_LIST:${productType}] Added ${securities.length} securities to cache, total now: ${securityCache[productType].length}`);
+            }
+        }
         // Emit events
         emitter.emit("securityList", securities);
-        emitter.emit(`${securityType.toLowerCase()}SecurityList`, securities);
+        emitter.emit(`${productType.toLowerCase()}SecurityList`, securities);
         // Emit an additional categorized event
         emitter.emit("categorizedData", {
             category: "SECURITY_LIST",
-            type: securityType,
+            type: productType,
             count: noRelatedSym,
             data: parsedMessage,
             timestamp: new Date().toISOString(),
         });
-        logger_1.logger.info(`[SECURITY_LIST:${securityType}] Processing complete for ${noRelatedSym} securities`);
+        logger_1.logger.info(`[SECURITY_LIST:${productType}] Processing complete for ${noRelatedSym} securities ${isFinalFragment ? '(final fragment)' : ''}`);
     }
     catch (error) {
         logger_1.logger.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);

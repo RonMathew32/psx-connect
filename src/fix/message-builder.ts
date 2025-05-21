@@ -269,7 +269,8 @@ export function createSecurityListRequestForEquityBuilder(
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
+    .addField(FieldTag.SYMBOL, 'NA')
     .addField(FieldTag.PRODUCT, '4')
     .addField(FieldTag.TRADING_SESSION_ID, 'REG');
 }
@@ -288,7 +289,7 @@ export function createSecurityListRequestForIndexBuilder(
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
     .addField(FieldTag.SYMBOL, 'NA')
     .addField(FieldTag.PRODUCT, '5')
     .addField(FieldTag.TRADING_SESSION_ID, 'REG');

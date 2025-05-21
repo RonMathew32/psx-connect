@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { logger } from './utils/logger';
 import { createWebSocketServer } from './utils/websocket-server';
 import { FixClientOptions } from './types';
-import { createFixClient } from './fix/fix-client';
+import { createFixClient } from './fix';
 import { validateFixOptions } from './utils/validate-fix-options';
 
 // Load environment variables

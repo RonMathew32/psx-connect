@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import { createFixClient, FixClient } from '../fix/fix-client';
+import { createFixClient, FixClient } from '../fix';
 import { MarketDataItem, TradingSessionInfo, SecurityInfo } from '../types';
 import { logger } from './logger';
 
