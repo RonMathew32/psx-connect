@@ -937,7 +937,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         `[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`
       );
 
-      const builder = createSecurityListRequestForFutBuilder(
+      const builder = createSecurityListRequestForEquityBuilder(
         options,
         sequenceManager,
         requestId

@@ -674,7 +674,7 @@ function createFixClient(options) {
             logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForFutBuilder)(options, sequenceManager, requestId);
+            const builder = (0, message_builder_1.createSecurityListRequestForEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
                 socket.write(rawMessage);
