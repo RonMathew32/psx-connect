@@ -669,9 +669,9 @@ function createFixClient(options) {
                 logger_1.logger.info("[SECURITY_LIST:FUT] FUT securities already requested, skipping duplicate request");
                 return null;
             }
-            // Reset the security list sequence number to 2 before sending the request
+            // Reset the security list sequence number to 3 (don't use 2 to avoid possible collision)
             sequenceManager.setSecurityListSeqNum(3);
-            logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 2");
+            logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`);
             const builder = (0, message_builder_1.createSecurityListRequestForFutBuilder)(options, sequenceManager, requestId);

@@ -289,12 +289,10 @@ export function createSecurityListRequestForFutBuilder(
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '2')
     .addField(FieldTag.SYMBOL, 'NA')
     .addField(FieldTag.PRODUCT, '4')
-    .addField(FieldTag.TRADING_SESSION_ID, 'FUT')
-    .addField('207', 'UBL') // Add SecurityExchange field
-    .addField('167', 'FUT'); // Add SecurityType field (167 = SecurityType)
+    .addField(FieldTag.TRADING_SESSION_ID, 'FUT');
 }
 
 /**
