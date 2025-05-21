@@ -366,6 +366,21 @@ function createFixClient(options) {
                     state.setLoggedIn(true); // Update state
                     logger_1.logger.info(`[SESSION:LOGON] Processing complete`);
                     break;
+                case constants_1.MessageType.REJECT:
+                    // Enhanced logging for reject messages to identify missing fields
+                    const refTagId = parsedMessage[constants_1.FieldTag.REF_TAG_ID];
+                    const refSeqNum = parsedMessage[constants_1.FieldTag.REF_SEQ_NUM];
+                    const rejectText = parsedMessage[constants_1.FieldTag.TEXT];
+                    const rejectReason = parsedMessage['373']; // SessionRejectReason
+                    logger_1.logger.error(`[REJECT] Detailed reject information:`);
+                    logger_1.logger.error(`[REJECT] Reason code: ${rejectReason}`);
+                    logger_1.logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
+                    logger_1.logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
+                    logger_1.logger.error(`[REJECT] Text: ${rejectText || 'No text provided'}`);
+                    if (refTagId) {
+                        logger_1.logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
+                    }
+                    break;
                 case constants_1.MessageType.LOGOUT:
                     logger_1.logger.info(`[SESSION:LOGOUT] Handling logout message`);
                     const logoutResult = (0, message_handler_1.handleLogout)(parsedMessage, emitter, sequenceManager, { value: false }, socket, connect);
@@ -674,7 +689,7 @@ function createFixClient(options) {
             logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForEquityBuilder)(options, sequenceManager, requestId);
+            const builder = (0, message_builder_1.createSecurityListRequestForFutBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
                 socket.write(rawMessage);

@@ -291,10 +291,13 @@ export function createSecurityListRequestForFutBuilder(
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '3') // 3 = TRADINGSESSIONID
-    .addField(FieldTag.SYMBOL, 'NA')                    // Required for TRADINGSESSIONID requests
-    .addField(FieldTag.PRODUCT, '4')                    // 4 = EQUITY  
-    .addField(FieldTag.TRADING_SESSION_ID, 'FUT')       // FUT market
-    .addField('1128', '9');                            // ApplVerID = FIX50SP2 (9)
+    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
+    .addField(FieldTag.PRODUCT, '4')                   // 4 = EQUITY as in fixpkf-50
+    .addField(FieldTag.TRADING_SESSION_ID, 'FUT')      // FUT session
+    .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
+    .addField('15', '')                               // Currency (sometimes required)
+    .addField('1128', '9')                            // ApplVerID (FIX50SP2 = 9)
+    .addField('263', '0');                            // SubscriptionRequestType (snapshot = 0)
 }
 
 /**

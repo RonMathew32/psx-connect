@@ -455,6 +455,23 @@ export function createFixClient(options: FixClientOptions): FixClient {
           state.setLoggedIn(true); // Update state
           logger.info(`[SESSION:LOGON] Processing complete`);
           break;
+        case MessageType.REJECT:
+          // Enhanced logging for reject messages to identify missing fields
+          const refTagId = parsedMessage[FieldTag.REF_TAG_ID];
+          const refSeqNum = parsedMessage[FieldTag.REF_SEQ_NUM];
+          const rejectText = parsedMessage[FieldTag.TEXT];
+          const rejectReason = parsedMessage['373']; // SessionRejectReason
+          
+          logger.error(`[REJECT] Detailed reject information:`);
+          logger.error(`[REJECT] Reason code: ${rejectReason}`);
+          logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
+          logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
+          logger.error(`[REJECT] Text: ${rejectText || 'No text provided'}`);
+          
+          if (refTagId) {
+            logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
+          }
+          break;
         case MessageType.LOGOUT:
           logger.info(`[SESSION:LOGOUT] Handling logout message`);
           const logoutResult = handleLogout(
@@ -937,7 +954,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         `[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`
       );
 
-      const builder = createSecurityListRequestForEquityBuilder(
+      const builder = createSecurityListRequestForFutBuilder(
         options,
         sequenceManager,
         requestId
