@@ -272,7 +272,8 @@ export function createSecurityListRequestForEquityBuilder(
     .addField(FieldTag.SYMBOL, 'NA')
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '2') // All securities
     .addField(FieldTag.PRODUCT, '4') // Futures
-    .addField(FieldTag.TRADING_SESSION_ID, 'FUT'); // Futures market
+    .addField(FieldTag.TRADING_SESSION_ID, 'FUT') // Futures market
+    .addField('1128', '9');
 }
 
 /**
@@ -289,10 +290,11 @@ export function createSecurityListRequestForFutBuilder(
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // All securities
-    .addField(FieldTag.PRODUCT, '2') // Futures
-    .addField(FieldTag.SECURITY_TYPE, 'FUT') // SecurityType = Futures
-    .addField(FieldTag.TRADING_SESSION_ID, 'FUT'); // Futures market
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '3') // 3 = TRADINGSESSIONID
+    .addField(FieldTag.SYMBOL, 'NA')                    // Required for TRADINGSESSIONID requests
+    .addField(FieldTag.PRODUCT, '4')                    // 4 = EQUITY  
+    .addField(FieldTag.TRADING_SESSION_ID, 'FUT')       // FUT market
+    .addField('1128', '9');                            // ApplVerID = FIX50SP2 (9)
 }
 
 /**
