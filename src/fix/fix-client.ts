@@ -83,12 +83,12 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
     try {
       socket = new Socket();
-      
+
       // Improve socket stability with more robust settings
       socket.setKeepAlive(true, 10000); // More aggressive keepalive
       socket.setNoDelay(true);
       socket.setTimeout(options.connectTimeoutMs || 60000); // Increased timeout
-      
+
       // Add error handling for socket errors
       socket.on('error', (error) => {
         logger.error(`Socket error: ${error.message}`);
@@ -112,7 +112,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
         state.reset(); // Reset all states on disconnect
         emitter.emit('disconnected');
-        
+
         // Only schedule reconnect if not during normal shutdown
         if (!state.isShuttingDown()) {
           scheduleReconnect();
@@ -143,7 +143,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         try {
           // Update last activity time to reset heartbeat timer
           lastActivityTime = Date.now();
-          
+
           const dataStr = data.toString();
           const messageTypes = [];
           const symbolsFound = [];
@@ -203,7 +203,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
           } else {
             logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
           }
-          
+
           // If we received test request, respond immediately with heartbeat
           if (dataStr.includes('35=1')) { // Test request
             const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
@@ -213,7 +213,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
               sendHeartbeat(testReqId);
             }
           }
-          
+
           logger.info(data);
 
           logger.info(`[DATA:PROCESSING] Starting message processing...`);
@@ -249,6 +249,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       clearTimers();
       // Use state.isConnected() and state.isLoggedIn()
       if (state.isConnected() && state.isLoggedIn()) {
+        logger.info("[SESSION:LOGOUT] Sending logout message");
         sendLogout();
       }
 
@@ -259,8 +260,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
         socket.destroy();
         socket = null;
       }
-      state.reset(); // Reset all states
-
       resolve();
     });
   };
@@ -981,19 +980,19 @@ export function createFixClient(options: FixClientOptions): FixClient {
   // // Add event listener for logon to send market data request and setup heartbeat
   // emitter.on('logon', () => {
   //   logger.info('[MARKET_DATA:LOGON] Logon successful, requesting market data...');
-    
+
   //   // Send market data request for some symbols - modify these as needed
   //   const symbols = ['PTC', 'NBP', 'PAEL', 'JVDC', 'KESC'];
   //   sendMarketDataRequest(symbols);
-    
+
   //   // Also request security list for equity 
   //   sendSecurityListRequestForEquity();
-    
+
   //   // Set up heartbeat timer to keep connection alive
   //   if (heartbeatTimer) {
   //     clearInterval(heartbeatTimer);
   //   }
-    
+
   //   heartbeatTimer = setInterval(() => {
   //     try {
   //       sendHeartbeat();
@@ -1002,7 +1001,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
   //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
   //     }
   //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
-    
+
   //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
   // });
 

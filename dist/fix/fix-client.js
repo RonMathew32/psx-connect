@@ -196,6 +196,7 @@ function createFixClient(options) {
             clearTimers();
             // Use state.isConnected() and state.isLoggedIn()
             if (state.isConnected() && state.isLoggedIn()) {
+                logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
                 sendLogout();
             }
             logger_1.logger.info('[CONNECTION] Resetting all sequence numbers due to disconnect');
@@ -204,7 +205,6 @@ function createFixClient(options) {
                 socket.destroy();
                 socket = null;
             }
-            state.reset(); // Reset all states
             resolve();
         });
     };
