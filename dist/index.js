@@ -14,8 +14,8 @@ dotenv_1.default.config();
  * Configuration for the FIX client
  */
 const DEFAULT_FIX_CONFIG = {
-    host: process.env.PSX_HOST || '172.21.101.36',
-    port: parseInt(process.env.PSX_PORT || '8016', 10),
+    host: process.env.PSX_HOST || '127.0.0.1',
+    port: parseInt(process.env.PSX_PORT || '7001', 10),
     senderCompId: process.env.SENDER_COMP_ID || 'realtime',
     targetCompId: process.env.TARGET_COMP_ID || 'NMDUFISQ0001',
     username: process.env.FIX_USERNAME || 'realtime',

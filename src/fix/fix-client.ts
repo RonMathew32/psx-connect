@@ -72,8 +72,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
 
     // Ensure environment variables are defined and valid
-    const fixPort = parseInt(process.env.FIX_PORT || '8016', 10);
-    const fixHost = process.env.FIX_HOST || '172.21.101.36';
+    const fixPort = parseInt(process.env.FIX_PORT || '7001', 10);
+    const fixHost = process.env.FIX_HOST || '127.0.0.1';
 
     if (isNaN(fixPort) || !fixHost) {
       logger.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
