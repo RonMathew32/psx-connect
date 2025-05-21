@@ -8,6 +8,7 @@ export const SOH = String.fromCharCode(1);
 /**
  * FIX message types
  */
+
 export enum MessageType {
   HEARTBEAT = '0',
   TEST_REQUEST = '1',
