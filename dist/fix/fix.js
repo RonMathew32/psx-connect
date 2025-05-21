@@ -109,7 +109,7 @@ function createFixClient(options) {
                 handleData(data);
             });
             // Connect to the server
-            logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
+            logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}`);
             socket.connect(options.port, options.host);
         }
         catch (error) {

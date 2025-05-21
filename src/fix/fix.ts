@@ -124,7 +124,7 @@ export function createFixClient(options: FixClientOptions) {
       });
 
       // Connect to the server
-      logger.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
+      logger.info(`Establishing TCP connection to ${options.host}:${options.port}`);
       socket.connect(options.port, options.host);
     } catch (error) {
       logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);
