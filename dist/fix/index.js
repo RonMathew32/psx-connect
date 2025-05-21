@@ -670,7 +670,7 @@ function createFixClient(options) {
                 return null;
             }
             // Reset the security list sequence number to 2 before sending the request
-            sequenceManager.setSecurityListSeqNum(2);
+            sequenceManager.setSecurityListSeqNum(3);
             logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 2");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`);
