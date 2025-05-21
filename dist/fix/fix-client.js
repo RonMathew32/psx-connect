@@ -165,7 +165,7 @@ function createFixClient(options) {
                 logger_1.default.info('Received security list:', securities);
             });
             // Connect to the server
-            logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}...`);
+            logger_1.default.info(`Establishing TCP connection to ${options.host}:${options.port}`);
             socket.connect(options.port, options.host);
         }
         catch (error) {
