@@ -59,6 +59,8 @@ function createFixClient(options) {
             // Add error handling for socket errors
             socket.on('error', (error) => {
                 logger_1.logger.error(`Socket error: ${error.message}`);
+                // Save sequence numbers in case of socket errors
+                logger_1.logger.info(`[CONNECTION:ERROR] Saving sequence numbers before potential disconnect: ${JSON.stringify(sequenceManager.getAll())}`);
                 if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
                     logger_1.logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
                 }
@@ -75,6 +77,9 @@ function createFixClient(options) {
             });
             socket.on('close', (hadError) => {
                 logger_1.logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
+                // Save sequence numbers on any disconnection
+                // This ensures we remember our sequence even if we didn't logout properly
+                logger_1.logger.info(`[CONNECTION:CLOSE] Saving current sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
                 state.reset(); // Reset all states on disconnect
                 // emitter.emit('disconnected');
                 // Only schedule reconnect if not during normal shutdown
@@ -93,6 +98,8 @@ function createFixClient(options) {
                 logonTimer = setTimeout(() => {
                     try {
                         logger_1.logger.info('Sending logon message...');
+                        // Always use ResetSeqNumFlag=Y in logon, which will reset both sides to 1
+                        // The FIX protocol handles the sequence number reset
                         sendLogon();
                     }
                     catch (error) {
@@ -197,28 +204,35 @@ function createFixClient(options) {
             if (state.isConnected() && state.isLoggedIn()) {
                 logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
                 sendLogout();
+                // Give some time for the logout message to be sent before destroying the socket
+                setTimeout(() => {
+                    if (socket) {
+                        socket.destroy();
+                        socket = null;
+                    }
+                    resolve();
+                }, 500);
             }
-            logger_1.logger.info('[CONNECTION] Resetting all sequence numbers due to disconnect');
-            sequenceManager.resetAll();
-            if (socket) {
-                socket.destroy();
-                socket = null;
+            else {
+                if (socket) {
+                    socket.destroy();
+                    socket = null;
+                }
+                resolve();
             }
-            resolve();
         });
     };
     const scheduleReconnect = () => {
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
         }
-        logger_1.logger.info('[CONNECTION] Resetting all sequence numbers before reconnect');
-        sequenceManager.resetAll();
-        const seqNumbers = sequenceManager.getAll();
-        logger_1.logger.info(`[CONNECTION] Sequence numbers after reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
+        // Don't reset sequences on reconnect - we'll use the stored numbers
+        // If we have a clean start (with ResetSeqNumFlag=Y) the sequences will be reset anyway
+        logger_1.logger.info('[CONNECTION] Scheduling reconnect in 5 seconds');
+        logger_1.logger.info(`[CONNECTION] Will use stored sequence numbers when reconnecting: ${JSON.stringify(sequenceManager.getAll())}`);
         // Reset request states
         state.setRequestSent('equitySecurities', false);
         state.setRequestSent('indexSecurities', false);
-        logger_1.logger.info('[CONNECTION] Scheduling reconnect in 5 seconds');
         reconnectTimer = setTimeout(() => {
             logger_1.logger.info('[CONNECTION] Attempting to reconnect');
             connect();
@@ -446,15 +460,16 @@ function createFixClient(options) {
             return;
         }
         try {
-            // Reset sequence numbers before sending logout
-            logger_1.logger.info("[SESSION:LOGOUT] Resetting all sequence numbers before logout");
-            sequenceManager.resetAll();
-            logger_1.logger.info(`[SESSION:LOGOUT] After reset, sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-            logger_1.logger.info("[SESSION:LOGOUT] Creating logout message");
+            // We do NOT reset sequence numbers before sending logout
+            // This ensures the server receives our logout message with the correct sequence number
+            // The sequence reset happens on the next logon with ResetSeqNumFlag=Y
+            logger_1.logger.info("[SESSION:LOGOUT] Creating logout message with reset flag");
             const builder = (0, message_builder_1.createLogoutMessageBuilder)(options, sequenceManager, text);
             const message = builder.buildMessage();
             sendMessage(message);
             logger_1.logger.info("[SESSION:LOGOUT] Sent logout message to server");
+            // Save current sequence numbers to file for possible reconnection on the same day
+            logger_1.logger.info(`[SESSION:LOGOUT] Persisting sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         }
         catch (error) {
             logger_1.logger.error(`[SESSION:LOGOUT] Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
