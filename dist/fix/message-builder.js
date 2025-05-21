@@ -227,7 +227,9 @@ function createSecurityListRequestForFutBuilder(options, sequenceManager, reques
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
         .addField(constants_1.FieldTag.SYMBOL, 'NA')
         .addField(constants_1.FieldTag.PRODUCT, '4')
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT');
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT')
+        .addField('207', 'UBL') // Add SecurityExchange field
+        .addField('167', 'FUT'); // Add SecurityType field (167 = SecurityType)
 }
 /**
  * Creates a Security List Request message builder for Index
