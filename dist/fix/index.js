@@ -734,6 +734,7 @@ function createFixClient(options) {
     emitter.on('logon', () => {
         logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
         sendTradingSessionStatusRequest();
+        sendSecurityStatusRequest('UBL');
     });
     const client = {
         on: (event, listener) => {

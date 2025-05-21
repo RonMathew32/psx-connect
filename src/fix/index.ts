@@ -1043,6 +1043,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
   emitter.on('logon', () => {
     logger.info('[TRADING_STATUS] Received request for trading session status');
     sendTradingSessionStatusRequest();
+    sendSecurityStatusRequest('UBL');
   });
 
   const client = {
