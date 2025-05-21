@@ -114,6 +114,7 @@ function createFixClient(options) {
                 try {
                     // Update last activity time to reset heartbeat timer
                     lastActivityTime = Date.now();
+                    let category = 'UNKNOWN';
                     const dataStr = data.toString();
                     const messageTypes = [];
                     const symbolsFound = [];
@@ -129,7 +130,6 @@ function createFixClient(options) {
                             symbolsFound.push(symbol);
                     }
                     const categorizedMessages = messageTypes.map((type) => {
-                        let category = 'UNKNOWN';
                         if (type === constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
                             type === constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH ||
                             type === 'Y') {
@@ -162,6 +162,10 @@ function createFixClient(options) {
                     }
                     else {
                         logger_1.logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
+                    }
+                    //main ye chaa rha hon k agr message type A receive hota hai toh securityList ko subsribe kry 
+                    if (dataStr.includes('35=A')) {
+                        sendSecurityListRequestForEquity();
                     }
                     // If we received test request, respond immediately with heartbeat
                     if (dataStr.includes('35=1')) { // Test request

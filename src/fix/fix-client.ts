@@ -155,6 +155,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         try {
           // Update last activity time to reset heartbeat timer
           lastActivityTime = Date.now();
+          let category = 'UNKNOWN';
 
           const dataStr = data.toString();
           const messageTypes = [];
@@ -173,7 +174,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
           }
 
           const categorizedMessages = messageTypes.map((type) => {
-            let category = 'UNKNOWN';
             if (
               type === MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
               type === MessageType.MARKET_DATA_INCREMENTAL_REFRESH ||
@@ -214,6 +214,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
             );
           } else {
             logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
+          }
+          //main ye chaa rha hon k agr message type A receive hota hai toh securityList ko subsribe kry 
+          if(dataStr.includes('35=A')){
+            sendSecurityListRequestForEquity();
           }
 
           // If we received test request, respond immediately with heartbeat
@@ -560,7 +564,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
       );
       logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
       sendMessage(message);
-
       logger.info(
         `[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(
           sequenceManager.getAll()
