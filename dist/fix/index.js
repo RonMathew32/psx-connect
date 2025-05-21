@@ -110,6 +110,9 @@ function createFixClient(options) {
                 }, 500);
                 // emitter.emit('connected');
             });
+            socket.on('drain', () => {
+                logger_1.logger.info('Drained');
+            });
             socket.on('data', (data) => {
                 logger_1.logger.info('--------------------------------');
                 try {
@@ -489,9 +492,6 @@ function createFixClient(options) {
             logger_1.logger.error(`[HEARTBEAT:SEND] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
-    const sendSecurityStatusRequest = (symbol) => {
-        return null;
-    };
     const sendMessage = (message) => {
         if (!state.isConnected()) {
             logger_1.logger.warn("Cannot send message, not connected");
@@ -734,7 +734,10 @@ function createFixClient(options) {
     emitter.on('logon', () => {
         logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
         sendTradingSessionStatusRequest();
-        sendSecurityStatusRequest('UBL');
+        sendSecurityListRequestForEquity();
+        setTimeout(() => {
+            sendSecurityListRequestForIndex();
+        }, 1000);
     });
     const client = {
         on: (event, listener) => {
@@ -749,7 +752,6 @@ function createFixClient(options) {
         sendSecurityListRequestForIndex,
         sendIndexMarketDataRequest,
         sendSymbolMarketDataSubscription,
-        sendSecurityStatusRequest,
         sendLogon,
         sendLogout,
         start,

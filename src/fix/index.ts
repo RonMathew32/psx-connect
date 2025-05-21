@@ -96,7 +96,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.error(`Socket error: ${error.message}`);
         // Save sequence numbers in case of socket errors
         logger.info(`[CONNECTION:ERROR] Saving sequence numbers before potential disconnect: ${JSON.stringify(sequenceManager.getAll())}`);
-        
+
         if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
           logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
         }
@@ -115,11 +115,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       socket.on('close', (hadError) => {
         logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
-        
+
         // Save sequence numbers on any disconnection
         // This ensures we remember our sequence even if we didn't logout properly
         logger.info(`[CONNECTION:CLOSE] Saving current sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-        
+
         state.reset(); // Reset all states on disconnect
         // emitter.emit('disconnected');
 
@@ -149,6 +149,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
           }
         }, 500);
         // emitter.emit('connected');
+      });
+
+      socket.on('drain', () => {
+        logger.info('Drained');
       });
 
       socket.on('data', (data) => {
@@ -261,7 +265,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       if (state.isConnected() && state.isLoggedIn()) {
         logger.info("[SESSION:LOGOUT] Sending logout message");
         sendLogout();
-        
+
         // Give some time for the logout message to be sent before destroying the socket
         setTimeout(() => {
           if (socket) {
@@ -289,11 +293,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
     // If we have a clean start (with ResetSeqNumFlag=Y) the sequences will be reset anyway
     logger.info('[CONNECTION] Scheduling reconnect in 5 seconds');
     logger.info(`[CONNECTION] Will use stored sequence numbers when reconnecting: ${JSON.stringify(sequenceManager.getAll())}`);
-    
+
     // Reset request states
     state.setRequestSent('equitySecurities', false);
     state.setRequestSent('indexSecurities', false);
-    
+
     reconnectTimer = setTimeout(() => {
       logger.info('[CONNECTION] Attempting to reconnect');
       connect();
@@ -589,7 +593,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // This ensures the server receives our logout message with the correct sequence number
       // The sequence reset happens on the next logon with ResetSeqNumFlag=Y
       logger.info("[SESSION:LOGOUT] Creating logout message with reset flag");
-     
+
       const builder = createLogoutMessageBuilder(
         options,
         sequenceManager,
@@ -598,7 +602,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const message = builder.buildMessage();
       sendMessage(message);
       logger.info("[SESSION:LOGOUT] Sent logout message to server");
-      
+
       // Save current sequence numbers to file for possible reconnection on the same day
       logger.info(`[SESSION:LOGOUT] Persisting sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
     } catch (error) {
@@ -630,10 +634,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
         }`
       );
     }
-  };
-
-  const sendSecurityStatusRequest = (symbol: string): string | null => {
-    return null;
   };
 
   const sendMessage = (message: string): void => {
@@ -993,38 +993,38 @@ export function createFixClient(options: FixClientOptions): FixClient {
   // Add event listener for logon to automatically request security list data
   // emitter.on('logon', () => {
   //   logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
-    
+
   //   // Request equity security list
   //   sendSecurityListRequestForEquity();
-    
+
   //   // Request index security list after a slight delay
   //   setTimeout(() => {
   //     sendSecurityListRequestForIndex();
   //   }, 2000);
-    
+
   //   // Set up heartbeat timer
   //   if (heartbeatTimer) {
   //     clearInterval(heartbeatTimer);
   //   }
-    
+
   //   heartbeatTimer = setInterval(() => {
   //     try {
   //       // Don't send heartbeat if not connected
   //       if (!state.isConnected()) return;
-        
+
   //       sendHeartbeat();
   //       logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
-        
+
   //       // Every 5 minutes refresh security lists to ensure we have the latest data
   //       const currentTime = Date.now();
   //       if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
   //         logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
   //         lastSecurityListRefresh = currentTime;
-          
+
   //         // Reset request flags to allow refreshing
   //         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
   //         state.setRequestSent("indexSecurities", false);
-          
+
   //         // Request security lists again
   //         sendSecurityListRequestForEquity();
   //         setTimeout(() => {
@@ -1035,7 +1035,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
   //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
   //     }
   //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
-    
+
   //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
   // });
 
@@ -1043,7 +1043,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
   emitter.on('logon', () => {
     logger.info('[TRADING_STATUS] Received request for trading session status');
     sendTradingSessionStatusRequest();
-    sendSecurityStatusRequest('UBL');
+    sendSecurityListRequestForEquity();
+    setTimeout(() => {
+      sendSecurityListRequestForIndex();
+    }, 1000);
   });
 
   const client = {
@@ -1059,7 +1062,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
     sendSecurityListRequestForIndex,
     sendIndexMarketDataRequest,
     sendSymbolMarketDataSubscription,
-    sendSecurityStatusRequest,
     sendLogon,
     sendLogout,
     start,
@@ -1127,17 +1129,17 @@ export function createFixClient(options: FixClientOptions): FixClient {
     },
     requestAllSecurities: () => {
       logger.info('[SECURITY_LIST] Requesting all securities data');
-      
+
       // Reset request flags to allow refreshing
       state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
       state.setRequestSent("indexSecurities", false);
-      
+
       // Request security lists
       sendSecurityListRequestForEquity();
       setTimeout(() => {
         sendSecurityListRequestForIndex();
       }, 1000);
-      
+
       lastSecurityListRefresh = Date.now();
       return client;
     },
@@ -1230,7 +1232,6 @@ export interface FixClient {
   sendSecurityListRequestForIndex(): string | null;
   sendIndexMarketDataRequest(symbols: string[]): string | null;
   sendSymbolMarketDataSubscription(symbols: string[]): string | null;
-  sendSecurityStatusRequest(symbol: string): string | null;
   sendLogon(): void;
   sendLogout(text?: string): void;
   start(): void;
