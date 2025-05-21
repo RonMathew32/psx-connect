@@ -209,10 +209,10 @@ function createSecurityListRequestForEquityBuilder(options, sequenceManager, req
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
-        .addField(constants_1.FieldTag.SYMBOL, 'NA')
-        .addField(constants_1.FieldTag.PRODUCT, '4')
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG');
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // All securities
+        .addField(constants_1.FieldTag.PRODUCT, '2') // Futures
+        .addField(constants_1.FieldTag.SECURITY_TYPE, 'FUT') // SecurityType = Futures
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT'); // Futures market
 }
 /**
  * Creates a Security List Request message builder for FUT market
@@ -224,10 +224,10 @@ function createSecurityListRequestForFutBuilder(options, sequenceManager, reques
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '2')
-        .addField(constants_1.FieldTag.SYMBOL, 'NA')
-        .addField(constants_1.FieldTag.PRODUCT, '4')
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT');
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0') // All securities
+        .addField(constants_1.FieldTag.PRODUCT, '2') // Futures
+        .addField(constants_1.FieldTag.SECURITY_TYPE, 'FUT') // SecurityType = Futures
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT'); // Futures market
 }
 /**
  * Creates a Security List Request message builder for Index
