@@ -735,9 +735,9 @@ function createFixClient(options) {
         logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
         sendTradingSessionStatusRequest();
         sendSecurityListRequestForEquity();
-        setTimeout(() => {
-            sendSecurityListRequestForIndex();
-        }, 1000);
+        // setTimeout(() => {
+        //   sendSecurityListRequestForIndex();
+        // }, 1000);
     });
     const client = {
         on: (event, listener) => {
