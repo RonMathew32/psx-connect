@@ -9,6 +9,7 @@ import {
   createLogoutMessageBuilder,
   createMarketDataRequestBuilder,
   createSecurityListRequestForEquityBuilder,
+  createSecurityListRequestForFutBuilder,
   createSecurityListRequestForIndexBuilder,
   createSymbolMarketDataSubscriptionBuilder,
   createTradingSessionStatusRequestBuilder,
@@ -297,6 +298,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     // Reset request states
     state.setRequestSent('equitySecurities', false);
     state.setRequestSent('indexSecurities', false);
+    state.setRequestSent('futSecurities', false);
 
     reconnectTimer = setTimeout(() => {
       logger.info('[CONNECTION] Attempting to reconnect');
@@ -900,6 +902,61 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
+  const sendSecurityListRequestForFut = (): string | null => {
+    try {
+      if (!socket || !state.isConnected()) {
+        logger.info(
+          `Connection state - Socket: ${socket ? "present" : "null"
+          }, Connected: ${state.isConnected()}`
+        );
+        logger.error(
+          "[SECURITY_LIST:FUT] Cannot send FUT market security list request: not connected or not logged in"
+        );
+        return null;
+      }
+
+      if (state.hasRequestBeenSent("futSecurities")) {
+        logger.info("[SECURITY_LIST:FUT] FUT securities already requested, skipping duplicate request");
+        return null;
+      }
+
+      const requestId = uuidv4();
+      logger.info(
+        `[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`
+      );
+
+      const builder = createSecurityListRequestForFutBuilder(
+        options,
+        sequenceManager,
+        requestId
+      );
+      const rawMessage = builder.buildMessage();
+
+      if (socket) {
+        socket.write(rawMessage);
+        state.setRequestSent("futSecurities", true);
+        logger.info(
+          `[SECURITY_LIST:FUT] Request sent successfully with ID: ${requestId}`
+        );
+        logger.info(
+          `[SECURITY_LIST:FUT] Product: EQUITY | Market: FUT | Using sequence: ${sequenceManager.getSecurityListSeqNum()}`
+        );
+        return requestId;
+      } else {
+        logger.error(
+          `[SECURITY_LIST:FUT] Failed to send request - socket not available`
+        );
+        return null;
+      }
+    } catch (error) {
+      logger.error(
+        `[SECURITY_LIST:FUT] Error sending request: ${error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  };
+
   const sendIndexMarketDataRequest = (symbols: string[]): string | null => {
     try {
       if (!socket || !state.isConnected()) {
@@ -990,63 +1047,15 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  // Add event listener for logon to automatically request security list data
-  // emitter.on('logon', () => {
-  //   logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
-
-  //   // Request equity security list
-  //   sendSecurityListRequestForEquity();
-
-  //   // Request index security list after a slight delay
-  //   setTimeout(() => {
-  //     sendSecurityListRequestForIndex();
-  //   }, 2000);
-
-  //   // Set up heartbeat timer
-  //   if (heartbeatTimer) {
-  //     clearInterval(heartbeatTimer);
-  //   }
-
-  //   heartbeatTimer = setInterval(() => {
-  //     try {
-  //       // Don't send heartbeat if not connected
-  //       if (!state.isConnected()) return;
-
-  //       sendHeartbeat();
-  //       logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
-
-  //       // Every 5 minutes refresh security lists to ensure we have the latest data
-  //       const currentTime = Date.now();
-  //       if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
-  //         logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
-  //         lastSecurityListRefresh = currentTime;
-
-  //         // Reset request flags to allow refreshing
-  //         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
-  //         state.setRequestSent("indexSecurities", false);
-
-  //         // Request security lists again
-  //         sendSecurityListRequestForEquity();
-  //         setTimeout(() => {
-  //           sendSecurityListRequestForIndex();
-  //         }, 2000);
-  //       }
-  //     } catch (error) {
-  //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
-  //     }
-  //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
-
-  //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
-  // });
-
-  // Add handler for requestTradingSessionStatus event
   emitter.on('logon', () => {
     logger.info('[TRADING_STATUS] Received request for trading session status');
     sendTradingSessionStatusRequest();
-    sendSecurityListRequestForEquity();
-    // setTimeout(() => {
-    //   sendSecurityListRequestForIndex();
-    // }, 1000);
+    // sendSecurityListRequestForEquity();
+    
+    // Request FUT market security list with a slight delay to avoid overwhelming the server
+    setTimeout(() => {
+      sendSecurityListRequestForFut();
+    }, 500);
   });
 
   const client = {
@@ -1060,6 +1069,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     sendTradingSessionStatusRequest,
     sendSecurityListRequestForEquity,
     sendSecurityListRequestForIndex,
+    sendSecurityListRequestForFut,
     sendIndexMarketDataRequest,
     sendSymbolMarketDataSubscription,
     sendLogon,
@@ -1103,7 +1113,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       // Reset flag for requested securities
       state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
-      logger.info("[RESET] Reset securities request flag");
+      state.setRequestSent("indexSecurities", false);
+      state.setRequestSent("futSecurities", false);
+      logger.info("[RESET] Reset securities request flags");
 
       // Disconnect and clean up
       if (socket) {
@@ -1133,9 +1145,15 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // Reset request flags to allow refreshing
       state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
       state.setRequestSent("indexSecurities", false);
+      state.setRequestSent("futSecurities", false);
 
-      // Request security lists
+      // Request security lists with staggered timing to avoid overwhelming the server
       sendSecurityListRequestForEquity();
+      
+      setTimeout(() => {
+        sendSecurityListRequestForFut();
+      }, 500);
+      
       setTimeout(() => {
         sendSecurityListRequestForIndex();
       }, 1000);
@@ -1230,6 +1248,7 @@ export interface FixClient {
   sendTradingSessionStatusRequest(tradingSessionID?: string): string | null;
   sendSecurityListRequestForEquity(): string | null;
   sendSecurityListRequestForIndex(): string | null;
+  sendSecurityListRequestForFut(): string | null;
   sendIndexMarketDataRequest(symbols: string[]): string | null;
   sendSymbolMarketDataSubscription(symbols: string[]): string | null;
   sendLogon(): void;

@@ -7,6 +7,7 @@ exports.createHeartbeatMessageBuilder = createHeartbeatMessageBuilder;
 exports.createMarketDataRequestBuilder = createMarketDataRequestBuilder;
 exports.createTradingSessionStatusRequestBuilder = createTradingSessionStatusRequestBuilder;
 exports.createSecurityListRequestForEquityBuilder = createSecurityListRequestForEquityBuilder;
+exports.createSecurityListRequestForFutBuilder = createSecurityListRequestForFutBuilder;
 exports.createSecurityListRequestForIndexBuilder = createSecurityListRequestForIndexBuilder;
 exports.createIndexMarketDataRequestBuilder = createIndexMarketDataRequestBuilder;
 exports.createSymbolMarketDataSubscriptionBuilder = createSymbolMarketDataSubscriptionBuilder;
@@ -212,6 +213,20 @@ function createSecurityListRequestForEquityBuilder(options, sequenceManager, req
         .addField(constants_1.FieldTag.SYMBOL, 'NA')
         .addField(constants_1.FieldTag.PRODUCT, '4')
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG');
+}
+/**
+ * Creates a Security List Request message builder for FUT market
+ */
+function createSecurityListRequestForFutBuilder(options, sequenceManager, requestId) {
+    return createMessageBuilder()
+        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
+        .addField(constants_1.FieldTag.PRODUCT, '4')
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT');
 }
 /**
  * Creates a Security List Request message builder for Index

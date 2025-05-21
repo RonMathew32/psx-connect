@@ -276,6 +276,25 @@ export function createSecurityListRequestForEquityBuilder(
 }
 
 /**
+ * Creates a Security List Request message builder for FUT market
+ */
+export function createSecurityListRequestForFutBuilder(
+  options: FixClientOptions,
+  sequenceManager: SequenceManager,
+  requestId: string
+): MessageBuilder {
+  return createMessageBuilder()
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4')
+    .addField(FieldTag.PRODUCT, '4')
+    .addField(FieldTag.TRADING_SESSION_ID, 'FUT');
+}
+
+/**
  * Creates a Security List Request message builder for Index
  */
 export function createSecurityListRequestForIndexBuilder(
