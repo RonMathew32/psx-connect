@@ -29,8 +29,8 @@ export class SequenceManager {
       // If no stored sequences or explicitly provided, use defaults or provided values
       this.mainSeqNum = initialSeq?.main ?? 1;
       this.marketDataSeqNum = initialSeq?.marketData ?? 1;
-      this.securityListSeqNum = initialSeq?.securityList ?? 1; // Changed from 2 to 1
-      this.tradingStatusSeqNum = initialSeq?.tradingStatus ?? 1; // Changed from 2 to 1
+      this.securityListSeqNum = initialSeq?.securityList ?? 2;
+      this.tradingStatusSeqNum = initialSeq?.tradingStatus ?? 2
     }
     
     logger.info('[SEQUENCE] Initializing sequence manager with:', this.getAll());
@@ -213,8 +213,8 @@ export class SequenceManager {
     if (resetFlag) {
       // If reset flag is Y, set our next sequence number to 1
       this.mainSeqNum = 1;
-      this.securityListSeqNum = 1;
-      this.tradingStatusSeqNum = 1;
+      this.securityListSeqNum = 2;
+      this.tradingStatusSeqNum = 2;
       this.marketDataSeqNum = 1;
       logger.info(`[SEQUENCE] Reset sequence flag is Y, setting all sequence numbers to 1`);
     } else {
@@ -260,8 +260,8 @@ export class SequenceManager {
     this.mainSeqNum = 1;
     this.serverSeqNum = 1;
     this.marketDataSeqNum = 1;
-    this.securityListSeqNum = 1; // Changed from 2 to 1
-    this.tradingStatusSeqNum = 1; // Changed from 2 to 1
+    this.securityListSeqNum = 2;
+    this.tradingStatusSeqNum = 2;
     
     // Store reset sequence numbers
     this.saveToStore();
