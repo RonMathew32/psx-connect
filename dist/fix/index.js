@@ -692,48 +692,46 @@ function createFixClient(options) {
         }
     };
     // Add event listener for logon to automatically request security list data
-    emitter.on('logon', () => {
-        logger_1.logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
-        // Request equity security list
-        sendSecurityListRequestForEquity();
-        // Request index security list after a slight delay
-        setTimeout(() => {
-            sendSecurityListRequestForIndex();
-        }, 2000);
-        // Set up heartbeat timer
-        if (heartbeatTimer) {
-            clearInterval(heartbeatTimer);
-        }
-        heartbeatTimer = setInterval(() => {
-            try {
-                // Don't send heartbeat if not connected
-                if (!state.isConnected())
-                    return;
-                sendHeartbeat();
-                logger_1.logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
-                // Every 5 minutes refresh security lists to ensure we have the latest data
-                const currentTime = Date.now();
-                if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
-                    logger_1.logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
-                    lastSecurityListRefresh = currentTime;
-                    // Reset request flags to allow refreshing
-                    state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
-                    state.setRequestSent("indexSecurities", false);
-                    // Request security lists again
-                    sendSecurityListRequestForEquity();
-                    setTimeout(() => {
-                        sendSecurityListRequestForIndex();
-                    }, 2000);
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        }, (options.heartbeatIntervalSecs * 1000) || 30000);
-        logger_1.logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
-    });
+    // emitter.on('logon', () => {
+    //   logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
+    //   // Request equity security list
+    //   sendSecurityListRequestForEquity();
+    //   // Request index security list after a slight delay
+    //   setTimeout(() => {
+    //     sendSecurityListRequestForIndex();
+    //   }, 2000);
+    //   // Set up heartbeat timer
+    //   if (heartbeatTimer) {
+    //     clearInterval(heartbeatTimer);
+    //   }
+    //   heartbeatTimer = setInterval(() => {
+    //     try {
+    //       // Don't send heartbeat if not connected
+    //       if (!state.isConnected()) return;
+    //       sendHeartbeat();
+    //       logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
+    //       // Every 5 minutes refresh security lists to ensure we have the latest data
+    //       const currentTime = Date.now();
+    //       if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
+    //         logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
+    //         lastSecurityListRefresh = currentTime;
+    //         // Reset request flags to allow refreshing
+    //         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
+    //         state.setRequestSent("indexSecurities", false);
+    //         // Request security lists again
+    //         sendSecurityListRequestForEquity();
+    //         setTimeout(() => {
+    //           sendSecurityListRequestForIndex();
+    //         }, 2000);
+    //       }
+    //     } catch (error) {
+    //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+    //     }
+    //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
+    //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
+    // });
     // Add handler for requestTradingSessionStatus event
-    emitter.on('requestTradingSessionStatus', () => {
+    emitter.on('logon', () => {
         logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
         sendTradingSessionStatusRequest();
     });

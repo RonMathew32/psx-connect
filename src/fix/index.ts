@@ -991,56 +991,56 @@ export function createFixClient(options: FixClientOptions): FixClient {
   };
 
   // Add event listener for logon to automatically request security list data
-  emitter.on('logon', () => {
-    logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
+  // emitter.on('logon', () => {
+  //   logger.info('[SESSION:LOGON] Successfully logged in, requesting security data...');
     
-    // Request equity security list
-    sendSecurityListRequestForEquity();
+  //   // Request equity security list
+  //   sendSecurityListRequestForEquity();
     
-    // Request index security list after a slight delay
-    setTimeout(() => {
-      sendSecurityListRequestForIndex();
-    }, 2000);
+  //   // Request index security list after a slight delay
+  //   setTimeout(() => {
+  //     sendSecurityListRequestForIndex();
+  //   }, 2000);
     
-    // Set up heartbeat timer
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-    }
+  //   // Set up heartbeat timer
+  //   if (heartbeatTimer) {
+  //     clearInterval(heartbeatTimer);
+  //   }
     
-    heartbeatTimer = setInterval(() => {
-      try {
-        // Don't send heartbeat if not connected
-        if (!state.isConnected()) return;
+  //   heartbeatTimer = setInterval(() => {
+  //     try {
+  //       // Don't send heartbeat if not connected
+  //       if (!state.isConnected()) return;
         
-        sendHeartbeat();
-        logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
+  //       sendHeartbeat();
+  //       logger.debug('[HEARTBEAT] Sending heartbeat to keep connection alive');
         
-        // Every 5 minutes refresh security lists to ensure we have the latest data
-        const currentTime = Date.now();
-        if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
-          logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
-          lastSecurityListRefresh = currentTime;
+  //       // Every 5 minutes refresh security lists to ensure we have the latest data
+  //       const currentTime = Date.now();
+  //       if (!lastSecurityListRefresh || (currentTime - lastSecurityListRefresh) > 300000) { // 5 minutes
+  //         logger.info('[SECURITY_LIST] Scheduled refresh of security lists');
+  //         lastSecurityListRefresh = currentTime;
           
-          // Reset request flags to allow refreshing
-          state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
-          state.setRequestSent("indexSecurities", false);
+  //         // Reset request flags to allow refreshing
+  //         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
+  //         state.setRequestSent("indexSecurities", false);
           
-          // Request security lists again
-          sendSecurityListRequestForEquity();
-          setTimeout(() => {
-            sendSecurityListRequestForIndex();
-          }, 2000);
-        }
-      } catch (error) {
-        logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }, (options.heartbeatIntervalSecs * 1000) || 30000);
+  //         // Request security lists again
+  //         sendSecurityListRequestForEquity();
+  //         setTimeout(() => {
+  //           sendSecurityListRequestForIndex();
+  //         }, 2000);
+  //       }
+  //     } catch (error) {
+  //       logger.error(`[HEARTBEAT] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+  //     }
+  //   }, (options.heartbeatIntervalSecs * 1000) || 30000);
     
-    logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
-  });
+  //   logger.info(`[HEARTBEAT] Heartbeat timer started with interval: ${options.heartbeatIntervalSecs || 30} seconds`);
+  // });
 
   // Add handler for requestTradingSessionStatus event
-  emitter.on('requestTradingSessionStatus', () => {
+  emitter.on('logon', () => {
     logger.info('[TRADING_STATUS] Received request for trading session status');
     sendTradingSessionStatusRequest();
   });
