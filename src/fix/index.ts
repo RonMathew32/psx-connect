@@ -960,6 +960,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         requestId
       );
       const rawMessage = builder.buildMessage();
+      logger.info(rawMessage, 'CHECKING MESSAGE FOR FUT SECURITY LIST');
 
       if (socket) {
         socket.write(rawMessage);
