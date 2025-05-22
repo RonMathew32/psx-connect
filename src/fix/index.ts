@@ -964,7 +964,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const rawMessage = builder.buildMessage();
 
       if (socket) {
-        logger.info('CHECKING MESSAGE FOR FUT SECURITY LIST', rawMessage);
+        logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
         socket.write(rawMessage);
         state.setRequestSent("futSecurities", true);
         logger.info(

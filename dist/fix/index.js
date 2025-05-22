@@ -693,7 +693,7 @@ function createFixClient(options) {
             const builder = (0, message_builder_1.createSecurityListRequestForFutEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
-                logger_1.logger.info('CHECKING MESSAGE FOR FUT SECURITY LIST', rawMessage);
+                logger_1.logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
                 socket.write(rawMessage);
                 state.setRequestSent("futSecurities", true);
                 logger_1.logger.info(`[SECURITY_LIST:FUT] Request sent successfully with ID: ${requestId}`);
