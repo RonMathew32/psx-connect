@@ -753,11 +753,11 @@ function createFixClient(options) {
     emitter.on('logon', () => {
         logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
         sendTradingSessionStatusRequest();
-        sendSecurityListRequestForFut();
         // sendSecurityListRequestForEquity();
         // // Request FUT market security list with a slight delay to avoid overwhelming the server
-        // setTimeout(() => {
-        // }, 500);
+        setTimeout(() => {
+            sendSecurityListRequestForFut();
+        }, 500);
     });
     const client = {
         on: (event, listener) => {
