@@ -628,7 +628,7 @@ function createFixClient(options) {
             const rawMessage = builder.buildMessage();
             if (socket) {
                 logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
-                socket.write("8=FIX.4.49=11735=x34=349=FFU6001252=20220722-12:14:44.73456=PSX115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=104");
+                socket.write("8=FIX.1.19=11735=x34=349=FFU6001252=20220722-12:14:44.73456=PSX115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=104");
                 // socket.write(rawMessage);
                 state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
                 logger_1.logger.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);
