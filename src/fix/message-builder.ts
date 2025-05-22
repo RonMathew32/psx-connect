@@ -272,7 +272,8 @@ export function createSecurityListRequestForEquityBuilder(
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
     .addField(FieldTag.TRADING_SESSION_ID, 'REG')
     .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-    .addField('1128', '9');                            // ApplVerID (FIX50SP2 = 9)
+    .addField('1128', '9')                           // ApplVerID (FIX50SP2 = 9)
+    .addField('263', '1');
 }
 
 /**
