@@ -627,6 +627,7 @@ function createFixClient(options) {
             const builder = (0, message_builder_1.createSecurityListRequestForEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
+                logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
                 socket.write(rawMessage);
                 state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
                 logger_1.logger.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);

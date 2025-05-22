@@ -853,6 +853,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const rawMessage = builder.buildMessage();
 
       if (socket) {
+        logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
         socket.write(rawMessage);
         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
         logger.info(
