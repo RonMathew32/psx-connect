@@ -293,7 +293,7 @@ export function createSecurityListRequestForFutBuilder(
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 3 = All Securities
     .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
     .addField(FieldTag.PRODUCT, '5')                   // 4 = EQUITY as in fixpkf-50
-    .addField(FieldTag.TRADING_SESSION_ID, 'REG')      // FUT session
+    .addField(FieldTag.TRADING_SESSION_ID, 'FUT')      // FUT session
     .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
     .addField('1128', '9')                            // ApplVerID (FIX50SP2 = 9)
 }
