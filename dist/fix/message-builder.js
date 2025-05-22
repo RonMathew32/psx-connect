@@ -221,11 +221,10 @@ function createSecurityListRequestForEquityBuilder(options, sequenceManager, req
         .addField('207', 'PSX')
         .addField(constants_1.FieldTag.ON_BEHALF_OF_COMP_ID, '600') // OnBehalfOfCompID
         .addField(constants_1.FieldTag.SYMBOL, 'NA') // Symbol
-        .addField(constants_1.FieldTag.RAW_DATA_LENGTH, '3') // RawDataLength
-        .addField(constants_1.FieldTag.RAW_DATA, 'kse') // RawData
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId) // SecurityReqID / custom ID
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG') // TradingSessionID
-        .addField(constants_1.FieldTag.PRODUCT, '5') // Product: 5 = FUTURE
+        .addField(constants_1.FieldTag.PRODUCT, '5')
+        .addField(constants_1.FieldTag.SECURITY_TYPE, 'CS') // Product: 5 = FUTURE
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '3'); // SecurityListRequestType: 3 = market segment
 }
 /**
