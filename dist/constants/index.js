@@ -47,12 +47,14 @@ var FieldTag;
     FieldTag["CHECK_SUM"] = "10";
     FieldTag["TEXT"] = "58";
     FieldTag["TEST_REQ_ID"] = "112";
+    FieldTag["APPL_VER_ID"] = "1128";
     FieldTag["ON_BEHALF_OF_COMP_ID"] = "115";
     FieldTag["ENCRYPT_METHOD"] = "98";
     FieldTag["HEART_BT_INT"] = "108";
     FieldTag["RESET_SEQ_NUM_FLAG"] = "141";
     FieldTag["USERNAME"] = "553";
     FieldTag["PASSWORD"] = "554";
+    FieldTag["SECURITY_EXCHANGE"] = "207";
     FieldTag["DEFAULT_APPL_VER_ID"] = "1137";
     FieldTag["POSS_DUP_FLAG"] = "43";
     FieldTag["REF_SEQ_NUM"] = "45";
@@ -163,8 +165,19 @@ var SecurityType;
 // PKF-50 Specific Product Types
 var ProductType;
 (function (ProductType) {
-    ProductType["EQUITY"] = "4";
-    ProductType["INDEX"] = "5";
+    ProductType["AGENCY"] = "1";
+    ProductType["COMMODITY"] = "2";
+    ProductType["CORPORATE"] = "3";
+    ProductType["CURRENCY"] = "4";
+    ProductType["EQUITY"] = "5";
+    ProductType["GOVERNMENT"] = "6";
+    ProductType["INDEX"] = "7";
+    ProductType["LOAN"] = "8";
+    ProductType["MONEYMARKET"] = "9";
+    ProductType["MORTGAGE"] = "10";
+    ProductType["MUNICIPAL"] = "11";
+    ProductType["OTHER"] = "12";
+    ProductType["FINANCING"] = "13";
 })(ProductType || (exports.ProductType = ProductType = {}));
 // PKF-50 Specific Party Roles
 var PartyRole;

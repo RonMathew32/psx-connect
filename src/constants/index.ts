@@ -45,12 +45,14 @@ export enum FieldTag {
   CHECK_SUM = '10',
   TEXT = '58',
   TEST_REQ_ID = '112',
+  APPL_VER_ID = '1128',
   ON_BEHALF_OF_COMP_ID = '115',
   ENCRYPT_METHOD = '98',
   HEART_BT_INT = '108',
   RESET_SEQ_NUM_FLAG = '141',
   USERNAME = '553',
   PASSWORD = '554',
+  SECURITY_EXCHANGE = '207',
   DEFAULT_APPL_VER_ID = '1137',
   POSS_DUP_FLAG = '43',
   REF_SEQ_NUM = '45',
@@ -162,8 +164,19 @@ export enum SecurityType {
 
 // PKF-50 Specific Product Types
 export enum ProductType {
-  EQUITY = '4',
-  INDEX = '5'
+  AGENCY = '1',
+  COMMODITY = '2',
+  CORPORATE = '3',
+  CURRENCY = '4',
+  EQUITY = '5',
+  GOVERNMENT = '6',
+  INDEX = '7',
+  LOAN = '8',
+  MONEYMARKET = '9',
+  MORTGAGE = '10',
+  MUNICIPAL = '11',
+  OTHER = '12',
+  FINANCING = '13'
 }
 
 // PKF-50 Specific Party Roles
