@@ -620,8 +620,8 @@ function createFixClient(options) {
                 return null;
             }
             // Reset the security list sequence number to 2 before sending the request
-            sequenceManager.setSecurityListSeqNum(2);
-            logger_1.logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 2");
+            sequenceManager.setSecurityListSeqNum(3);
+            logger_1.logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
             const builder = (0, message_builder_1.createSecurityListRequestForEquityBuilder)(options, sequenceManager, requestId);
