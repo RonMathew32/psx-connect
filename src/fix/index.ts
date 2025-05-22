@@ -8,9 +8,10 @@ import {
   createLogonMessageBuilder,
   createLogoutMessageBuilder,
   createMarketDataRequestBuilder,
-  createSecurityListRequestForEquityBuilder,
-  createSecurityListRequestForFutBuilder,
-  createSecurityListRequestForIndexBuilder,
+  createSecurityListRequestForREGEquityBuilder,
+  createSecurityListRequestForFutEquityBuilder,
+  createSecurityListRequestForRegIndexBuilder,
+  createSecurityListRequestForFutIndexBuilder,
   createSymbolMarketDataSubscriptionBuilder,
   createTradingSessionStatusRequestBuilder,
   getMessageTypeName
@@ -818,7 +819,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  const sendSecurityListRequestForEquity = (): string | null => {
+  const sendSecurityListRequestForREGEquity = (): string | null => {
     try {
       if (!socket || !state.isConnected()) {
         logger.info(
@@ -845,7 +846,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         `[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`
       );
 
-      const builder = createSecurityListRequestForEquityBuilder(
+      const builder = createSecurityListRequestForREGEquityBuilder(
         options,
         sequenceManager,
         requestId
@@ -878,7 +879,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  const sendSecurityListRequestForIndex = (): string | null => {
+  const sendSecurityListRequestForREGIndex = (): string | null => {
     try {
       if (!socket || !state.isConnected()) {
         logger.error(
@@ -896,7 +897,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         `[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`
       );
 
-      const builder = createSecurityListRequestForIndexBuilder(
+      const builder = createSecurityListRequestForRegIndexBuilder(
         options,
         sequenceManager,
         requestId
@@ -928,7 +929,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  const sendSecurityListRequestForFut = (): string | null => {
+  const sendSecurityListRequestForFutEquity = (): string | null => {
     try {
       if (!socket || !state.isConnected()) {
         logger.info(
@@ -955,7 +956,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         `[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`
       );
 
-      const builder = createSecurityListRequestForFutBuilder(
+      const builder = createSecurityListRequestForFutEquityBuilder(
         options,
         sequenceManager,
         requestId
@@ -1085,7 +1086,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     
     // // Request FUT market security list with a slight delay to avoid overwhelming the server
     setTimeout(() => {
-    sendSecurityListRequestForFut();
+    sendSecurityListRequestForFutEquity();
     }, 500);
   });
 
@@ -1098,9 +1099,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
     disconnect,
     sendMarketDataRequest,
     sendTradingSessionStatusRequest,
-    sendSecurityListRequestForEquity,
-    sendSecurityListRequestForIndex,
-    sendSecurityListRequestForFut,
+    sendSecurityListRequestForREGEquity,
+    sendSecurityListRequestForREGIndex,
+    sendSecurityListRequestForFutEquity,
     sendIndexMarketDataRequest,
     sendSymbolMarketDataSubscription,
     sendLogon,
@@ -1179,14 +1180,14 @@ export function createFixClient(options: FixClientOptions): FixClient {
       state.setRequestSent("futSecurities", false);
 
       // Request security lists with staggered timing to avoid overwhelming the server
-      sendSecurityListRequestForEquity();
+      sendSecurityListRequestForREGEquity();
       
       setTimeout(() => {
-        sendSecurityListRequestForFut();
+        sendSecurityListRequestForFutEquity();
       }, 500);
       
       setTimeout(() => {
-        sendSecurityListRequestForIndex();
+        sendSecurityListRequestForREGIndex();
       }, 1000);
 
       lastSecurityListRefresh = Date.now();
@@ -1196,6 +1197,16 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // Implementation
       return client;
     },
+    // Add aliases to match the interface
+    sendSecurityListRequestForEquity: function() {
+      return this.sendSecurityListRequestForREGEquity();
+    },
+    sendSecurityListRequestForIndex: function() {
+      return this.sendSecurityListRequestForREGIndex();
+    },
+    sendSecurityListRequestForFut: function() {
+      return this.sendSecurityListRequestForFutEquity();
+    }
   };
 
   return client;

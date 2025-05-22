@@ -608,7 +608,7 @@ function createFixClient(options) {
             return null;
         }
     };
-    const sendSecurityListRequestForEquity = () => {
+    const sendSecurityListRequestForREGEquity = () => {
         try {
             if (!socket || !state.isConnected()) {
                 logger_1.logger.info(`Connection state - Socket: ${socket ? "present" : "null"}, Connected: ${state.isConnected()}`);
@@ -624,7 +624,7 @@ function createFixClient(options) {
             logger_1.logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForEquityBuilder)(options, sequenceManager, requestId);
+            const builder = (0, message_builder_1.createSecurityListRequestForREGEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
                 logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
@@ -644,7 +644,7 @@ function createFixClient(options) {
             return null;
         }
     };
-    const sendSecurityListRequestForIndex = () => {
+    const sendSecurityListRequestForREGIndex = () => {
         try {
             if (!socket || !state.isConnected()) {
                 logger_1.logger.error("[SECURITY_LIST:INDEX] Cannot send index security list request: not connected or not logged in");
@@ -655,7 +655,7 @@ function createFixClient(options) {
             logger_1.logger.info("[SECURITY_LIST:INDEX] Reset security list sequence number to 2");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForIndexBuilder)(options, sequenceManager, requestId);
+            const builder = (0, message_builder_1.createSecurityListRequestForRegIndexBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
                 socket.write(rawMessage);
@@ -674,7 +674,7 @@ function createFixClient(options) {
             return null;
         }
     };
-    const sendSecurityListRequestForFut = () => {
+    const sendSecurityListRequestForFutEquity = () => {
         try {
             if (!socket || !state.isConnected()) {
                 logger_1.logger.info(`Connection state - Socket: ${socket ? "present" : "null"}, Connected: ${state.isConnected()}`);
@@ -690,7 +690,7 @@ function createFixClient(options) {
             logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForFutBuilder)(options, sequenceManager, requestId);
+            const builder = (0, message_builder_1.createSecurityListRequestForFutEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR FUT SECURITY LIST');
             if (socket) {
@@ -756,7 +756,7 @@ function createFixClient(options) {
         // sendSecurityListRequestForEquity();
         // // Request FUT market security list with a slight delay to avoid overwhelming the server
         setTimeout(() => {
-            sendSecurityListRequestForFut();
+            sendSecurityListRequestForFutEquity();
         }, 500);
     });
     const client = {
@@ -768,9 +768,9 @@ function createFixClient(options) {
         disconnect,
         sendMarketDataRequest,
         sendTradingSessionStatusRequest,
-        sendSecurityListRequestForEquity,
-        sendSecurityListRequestForIndex,
-        sendSecurityListRequestForFut,
+        sendSecurityListRequestForREGEquity,
+        sendSecurityListRequestForREGIndex,
+        sendSecurityListRequestForFutEquity,
         sendIndexMarketDataRequest,
         sendSymbolMarketDataSubscription,
         sendLogon,
@@ -831,12 +831,12 @@ function createFixClient(options) {
             state.setRequestSent("indexSecurities", false);
             state.setRequestSent("futSecurities", false);
             // Request security lists with staggered timing to avoid overwhelming the server
-            sendSecurityListRequestForEquity();
+            sendSecurityListRequestForREGEquity();
             setTimeout(() => {
-                sendSecurityListRequestForFut();
+                sendSecurityListRequestForFutEquity();
             }, 500);
             setTimeout(() => {
-                sendSecurityListRequestForIndex();
+                sendSecurityListRequestForREGIndex();
             }, 1000);
             lastSecurityListRefresh = Date.now();
             return client;
@@ -845,6 +845,16 @@ function createFixClient(options) {
             // Implementation
             return client;
         },
+        // Add aliases to match the interface
+        sendSecurityListRequestForEquity: function () {
+            return this.sendSecurityListRequestForREGEquity();
+        },
+        sendSecurityListRequestForIndex: function () {
+            return this.sendSecurityListRequestForREGIndex();
+        },
+        sendSecurityListRequestForFut: function () {
+            return this.sendSecurityListRequestForFutEquity();
+        }
     };
     return client;
 }
