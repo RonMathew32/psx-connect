@@ -756,7 +756,7 @@ function createFixClient(options) {
         // sendSecurityListRequestForEquity();
         // Request FUT market security list with a slight delay to avoid overwhelming the server
         setTimeout(() => {
-            sendSecurityListRequestForEquity();
+            sendSecurityListRequestForFut();
         }, 500);
     });
     const client = {
