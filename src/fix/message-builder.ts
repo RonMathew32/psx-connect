@@ -296,7 +296,7 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.PRODUCT, ProductType.EQUITY)                   // 4 = EQUITY as in fixpkf-50
     .addField(FieldTag.SECURITY_TYPE, SecurityType.FUTURE)      // FUT session
     .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                            // ApplVerID (FIX50SP2 = 9)
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID)                        // ApplVerID (FIX50SP2 = 9)
 }
 
 /**
