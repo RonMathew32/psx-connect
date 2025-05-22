@@ -1081,12 +1081,12 @@ export function createFixClient(options: FixClientOptions): FixClient {
   emitter.on('logon', () => {
     logger.info('[TRADING_STATUS] Received request for trading session status');
     sendTradingSessionStatusRequest();
+    sendSecurityListRequestForFut();
     // sendSecurityListRequestForEquity();
     
-    // Request FUT market security list with a slight delay to avoid overwhelming the server
-    setTimeout(() => {
-      sendSecurityListRequestForFut();
-    }, 500);
+    // // Request FUT market security list with a slight delay to avoid overwhelming the server
+    // setTimeout(() => {
+    // }, 500);
   });
 
   const client = {
