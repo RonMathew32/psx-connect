@@ -462,13 +462,13 @@ export function createFixClient(options: FixClientOptions): FixClient {
           const refSeqNum = parsedMessage[FieldTag.REF_SEQ_NUM];
           const rejectText = parsedMessage[FieldTag.TEXT];
           const rejectReason = parsedMessage['373']; // SessionRejectReason
-          
+
           logger.error(`[REJECT] Detailed reject information:`);
           logger.error(`[REJECT] Reason code: ${rejectReason}`);
           logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
           logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
           logger.error(`[REJECT] Text: ${rejectText || 'No text provided'}`);
-          
+
           if (refTagId) {
             logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
           }
@@ -836,7 +836,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.info("[SECURITY_LIST:EQUITY] Equity securities already requested, skipping duplicate request");
         return null;
       }
-      
+
       // Reset the security list sequence number to 2 before sending the request
       sequenceManager.setSecurityListSeqNum(3);
       logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 3");
@@ -887,7 +887,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         );
         return null;
       }
-      
+
       // Reset the security list sequence number to 2 before sending the request
       sequenceManager.setSecurityListSeqNum(3);
       logger.info("[SECURITY_LIST:INDEX] Reset security list sequence number to 2");
@@ -962,9 +962,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
         requestId
       );
       const rawMessage = builder.buildMessage();
-      logger.info(rawMessage, 'CHECKING MESSAGE FOR FUT SECURITY LIST');
 
       if (socket) {
+        logger.info('CHECKING MESSAGE FOR FUT SECURITY LIST', rawMessage);
         socket.write(rawMessage);
         state.setRequestSent("futSecurities", true);
         logger.info(
@@ -1083,10 +1083,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
     logger.info('[TRADING_STATUS] Received request for trading session status');
     sendTradingSessionStatusRequest();
     // sendSecurityListRequestForEquity();
-    
+
     // // Request FUT market security list with a slight delay to avoid overwhelming the server
     setTimeout(() => {
-    sendSecurityListRequestForFutEquity();
+      sendSecurityListRequestForFutEquity();
     }, 500);
   });
 
@@ -1181,11 +1181,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       // Request security lists with staggered timing to avoid overwhelming the server
       sendSecurityListRequestForREGEquity();
-      
+
       setTimeout(() => {
         sendSecurityListRequestForFutEquity();
       }, 500);
-      
+
       setTimeout(() => {
         sendSecurityListRequestForREGIndex();
       }, 1000);
@@ -1198,13 +1198,13 @@ export function createFixClient(options: FixClientOptions): FixClient {
       return client;
     },
     // Add aliases to match the interface
-    sendSecurityListRequestForEquity: function() {
+    sendSecurityListRequestForEquity: function () {
       return this.sendSecurityListRequestForREGEquity();
     },
-    sendSecurityListRequestForIndex: function() {
+    sendSecurityListRequestForIndex: function () {
       return this.sendSecurityListRequestForREGIndex();
     },
-    sendSecurityListRequestForFut: function() {
+    sendSecurityListRequestForFut: function () {
       return this.sendSecurityListRequestForFutEquity();
     }
   };
