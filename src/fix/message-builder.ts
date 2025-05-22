@@ -264,16 +264,29 @@ export function createSecurityListRequestForEquityBuilder(
   requestId: string
 ): MessageBuilder {
   return createMessageBuilder()
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-    .setSenderCompID(options.senderCompId)
-    .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
-    .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
-    // .addField(FieldTag.TRADING_SESSION_ID, 'REG')
-    // .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-    // .addField('1128', '9')                           // ApplVerID (FIX50SP2 = 9)
-    .addField('263', '1');
+    // .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    // .setSenderCompID(options.senderCompId)
+    // .setTargetCompID(options.targetCompId)
+    // .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    // .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    // .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
+    // // .addField(FieldTag.TRADING_SESSION_ID, 'REG')
+    // // .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
+    // // .addField('1128', '9')                           // ApplVerID (FIX50SP2 = 9)
+    // .addField('263', '1');
+
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // 35=x
+    .setSenderCompID(options.senderCompId)                    // 49
+    .setTargetCompID(options.targetCompId)                    // 56
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // 34
+    .addField(FieldTag.ON_BEHALF_OF_COMP_ID, '600')                                   // OnBehalfOfCompID
+    .addField(FieldTag.SYMBOL, 'NA')                                     // Symbol
+    .addField(FieldTag.RAW_DATA_LENGTH, '3')                                      // RawDataLength
+    .addField(FieldTag.RAW_DATA, 'kse')                                    // RawData
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)                       // SecurityReqID / custom ID
+    .addField(FieldTag.TRADING_SESSION_ID, 'REG')                                   // TradingSessionID
+    .addField(FieldTag.PRODUCT, '5')                                     // Product: 5 = FUTURE
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '3');                                    // SecurityListRequestType: 3 = market segment
 }
 
 /**

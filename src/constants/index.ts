@@ -45,6 +45,7 @@ export enum FieldTag {
   CHECK_SUM = '10',
   TEXT = '58',
   TEST_REQ_ID = '112',
+  ON_BEHALF_OF_COMP_ID = '115',
   ENCRYPT_METHOD = '98',
   HEART_BT_INT = '108',
   RESET_SEQ_NUM_FLAG = '141',

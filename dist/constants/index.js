@@ -47,6 +47,7 @@ var FieldTag;
     FieldTag["CHECK_SUM"] = "10";
     FieldTag["TEXT"] = "58";
     FieldTag["TEST_REQ_ID"] = "112";
+    FieldTag["ON_BEHALF_OF_COMP_ID"] = "115";
     FieldTag["ENCRYPT_METHOD"] = "98";
     FieldTag["HEART_BT_INT"] = "108";
     FieldTag["RESET_SEQ_NUM_FLAG"] = "141";

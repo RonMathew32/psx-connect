@@ -204,16 +204,28 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
  */
 function createSecurityListRequestForEquityBuilder(options, sequenceManager, requestId) {
     return createMessageBuilder()
-        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
-        .setSenderCompID(options.senderCompId)
-        .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
-        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
-        // .addField(FieldTag.TRADING_SESSION_ID, 'REG')
-        // .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-        // .addField('1128', '9')                           // ApplVerID (FIX50SP2 = 9)
-        .addField('263', '1');
+        // .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+        // .setSenderCompID(options.senderCompId)
+        // .setTargetCompID(options.targetCompId)
+        // .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        // .addField(FieldTag.SECURITY_REQ_ID, requestId)
+        // .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
+        // // .addField(FieldTag.TRADING_SESSION_ID, 'REG')
+        // // .addField('207', 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
+        // // .addField('1128', '9')                           // ApplVerID (FIX50SP2 = 9)
+        // .addField('263', '1');
+        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST) // 35=x
+        .setSenderCompID(options.senderCompId) // 49
+        .setTargetCompID(options.targetCompId) // 56
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // 34
+        .addField(constants_1.FieldTag.ON_BEHALF_OF_COMP_ID, '600') // OnBehalfOfCompID
+        .addField(constants_1.FieldTag.SYMBOL, 'NA') // Symbol
+        .addField(constants_1.FieldTag.RAW_DATA_LENGTH, '3') // RawDataLength
+        .addField(constants_1.FieldTag.RAW_DATA, 'kse') // RawData
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId) // SecurityReqID / custom ID
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG') // TradingSessionID
+        .addField(constants_1.FieldTag.PRODUCT, '5') // Product: 5 = FUTURE
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '3'); // SecurityListRequestType: 3 = market segment
 }
 /**
  * Creates a Security List Request message builder for FUT market
