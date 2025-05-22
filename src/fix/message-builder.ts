@@ -264,17 +264,13 @@ export function createSecurityListRequestForEquityBuilder(
   requestId: string
 ): MessageBuilder {
   return createMessageBuilder()
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
-    .setSenderCompID(options.senderCompId) // Sender Comp ID
-    .setTargetCompID(options.targetCompId) // Target Comp ID
-    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-    .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-    .addField(FieldTag.SYMBOL, 'NA') // Symbol is required
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // All securities
-    .addField(FieldTag.PRODUCT, '5') // Equity
-    .addField(FieldTag.TRADING_SESSION_ID, 'CS') // Equity
-    .addField('207', 'PSX') // SecurityExchange = Pakistan Stock Exchange
-    .addField('1128', '9');
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '0')
+    .addField(FieldTag.TRADING_SESSION_ID, 'REG');
 }
 
 /**
