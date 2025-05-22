@@ -279,6 +279,7 @@ export function createSecurityListRequestForEquityBuilder(
     .setSenderCompID(options.senderCompId)                    // 49
     .setTargetCompID(options.targetCompId)                    // 56
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // 34
+    .addField('207', 'PSX')
     .addField(FieldTag.ON_BEHALF_OF_COMP_ID, '600')                                   // OnBehalfOfCompID
     .addField(FieldTag.SYMBOL, 'NA')                                     // Symbol
     .addField(FieldTag.RAW_DATA_LENGTH, '3')                                      // RawDataLength

@@ -854,8 +854,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       if (socket) {
         logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
-        socket.write("8=FIX.1.19=11735=x34=349=FFU6001252=20220722-12:14:44.73456=PSX115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=98")
-        // socket.write(rawMessage);
+        socket.write(rawMessage);
         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
         logger.info(
           `[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`
