@@ -226,7 +226,8 @@ function createSecurityListRequestForEquityBuilder(options, sequenceManager, req
         .addField(constants_1.FieldTag.SECURITY_TYPE, 'CS') // Product: 5 = FUTURE
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId) // SecurityReqID / custom ID
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'REG') // TradingSessionID
-        .addField(constants_1.FieldTag.PRODUCT, '5') // Product: 5 = FUTURE
+        .addField(constants_1.FieldTag.PRODUCT, '5')
+        .addField('1300', 'EQUITY') // Product: 5 = FUTURE
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '3'); // SecurityListRequestType: 3 = market segment
 }
 /**

@@ -287,7 +287,8 @@ export function createSecurityListRequestForEquityBuilder(
     .addField(FieldTag.SECURITY_TYPE, 'CS')                          // Product: 5 = FUTURE
     .addField(FieldTag.SECURITY_REQ_ID, requestId)                       // SecurityReqID / custom ID
     .addField(FieldTag.TRADING_SESSION_ID, 'REG')                                   // TradingSessionID
-    .addField(FieldTag.PRODUCT, '5')                                     // Product: 5 = FUTURE
+    .addField(FieldTag.PRODUCT, '5')          
+    .addField('1300', 'EQUITY')                           // Product: 5 = FUTURE
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '3');                                    // SecurityListRequestType: 3 = market segment
 }
 
