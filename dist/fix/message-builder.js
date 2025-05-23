@@ -221,13 +221,14 @@ function createSecurityListRequestForREGEquityBuilder(options, sequenceManager, 
  * Creates a Security List Request message builder for FUT Equity
  */
 function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, requestId) {
-    return createMessageBuilder('FIX.5.0SP2')
+    return createMessageBuilder('FIXT.1.1')
         .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST) // Message Type
         .setSenderCompID(options.senderCompId) // Sender Comp ID
         .setTargetCompID(options.targetCompId) // Target Comp ID
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
+        .addField(constants_1.FieldTag.APPL_VER_ID, "9") // ApplVerID MUST come after header fields and before business fields
         .addField(constants_1.FieldTag.SYMBOL, 'NA')
         .addField(constants_1.FieldTag.PRODUCT, "4")
         .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")

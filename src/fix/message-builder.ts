@@ -285,13 +285,14 @@ export function createSecurityListRequestForFutEquityBuilder(
   sequenceManager: SequenceManager,
   requestId: string
 ): MessageBuilder {
-  return createMessageBuilder('FIX.5.0SP2')
+  return createMessageBuilder('FIXT.1.1')
     .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
     .setSenderCompID(options.senderCompId) // Sender Comp ID
     .setTargetCompID(options.targetCompId) // Target Comp ID
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
     .addField(FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
+    .addField(FieldTag.APPL_VER_ID, "9") // ApplVerID MUST come after header fields and before business fields
     .addField(FieldTag.SYMBOL, 'NA')  
     .addField(FieldTag.PRODUCT, "4")
     .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
