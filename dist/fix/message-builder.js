@@ -229,10 +229,9 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
         .addField(constants_1.FieldTag.SYMBOL, 'NA') // Symbol is required
-        .addField(constants_1.FieldTag.PRODUCT, constants_1.ProductType.EQUITY) // 4 = EQUITY as in fixpkf-50
-        .addField(constants_1.FieldTag.SECURITY_TYPE, constants_1.SecurityType.FUTURE) // FUT session
-        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, 'PSX') // SecurityExchange = Pakistan Stock Exchange
-        .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID); // ApplVerID (FIX50SP2 = 9)
+        .addField(constants_1.FieldTag.PRODUCT, "4") // 4 = EQUITY as in fixpkf-50
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, constants_1.SecurityType.FUTURE) // FUT session
+        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, 'PSX'); // SecurityExchange = Pakistan Stock Exchange
 }
 /**
  * Creates a Security List Request message builder for REG Index
