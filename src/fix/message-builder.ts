@@ -295,6 +295,7 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.SYMBOL, 'NA')  
     .addField(FieldTag.PRODUCT, "4")
     .addField(FieldTag.APPL_VER_ID, "9")                 // Symbol is required
+    .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
     .addField(FieldTag.TRADING_SESSION_ID, "FUT");      // FUT session
 }
 
