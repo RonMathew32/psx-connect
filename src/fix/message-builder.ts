@@ -290,10 +290,10 @@ export function createSecurityListRequestForFutEquityBuilder(
     .setSenderCompID(options.senderCompId) // Sender Comp ID
     .setTargetCompID(options.targetCompId) // Target Comp ID
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-    .addField(FieldTag.SECURITY_REQ_ID, "l_REG/sl_FUT") // Security Request ID
+    .addField(FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
     .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-    .addField(FieldTag.TRADING_SESSION_ID, "REG/FUT");      // FUT session
+    .addField(FieldTag.TRADING_SESSION_ID, "FUT");      // FUT session
 }
 
 /**
