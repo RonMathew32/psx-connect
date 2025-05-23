@@ -230,8 +230,8 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
         .addField(constants_1.FieldTag.SYMBOL, 'NA') // Symbol is required
         .addField(constants_1.FieldTag.PRODUCT, constants_1.ProductType.EQUITY) // 4 = EQUITY as in fixpkf-50
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, constants_1.SecurityType.FUTURE); // FUT session
-    // .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, constants_1.SecurityType.FUTURE) // FUT session
+        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, 'PSX'); // SecurityExchange = Pakistan Stock Exchange
     // .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                        // ApplVerID (FIX50SP2 = 9)
 }
 /**

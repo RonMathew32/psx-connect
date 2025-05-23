@@ -294,8 +294,8 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
     .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
     .addField(FieldTag.PRODUCT, ProductType.EQUITY)                   // 4 = EQUITY as in fixpkf-50
-    .addField(FieldTag.TRADING_SESSION_ID, SecurityType.FUTURE);      // FUT session
-    // .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
+    .addField(FieldTag.TRADING_SESSION_ID, SecurityType.FUTURE)      // FUT session
+    .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
     // .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                        // ApplVerID (FIX50SP2 = 9)
 }
 
