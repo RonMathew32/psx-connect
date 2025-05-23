@@ -163,23 +163,26 @@ export function createFixClient(options: FixClientOptions): FixClient {
           // Update last activity time to reset heartbeat timer
           lastActivityTime = Date.now();
           let category = 'UNKNOWN';
-
+      
           const dataStr = data.toString();
           const messageTypes = [];
           const symbolsFound = [];
-
+      
+          // Extract message types
           const msgTypeMatches = dataStr.match(/35=([A-Za-z0-9])/g) || [];
           for (const match of msgTypeMatches) {
             const msgType = match.substring(3);
             messageTypes.push(msgType);
           }
-
+      
+          // Extract symbols
           const symbolMatches = dataStr.match(/55=([^\x01]+)/g) || [];
           for (const match of symbolMatches) {
             const symbol = match.substring(3);
             if (symbol) symbolsFound.push(symbol);
           }
-
+      
+          // Handle reject messages
           const categorizedMessages = messageTypes.map((type) => {
             if (
               type === MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
@@ -210,21 +213,40 @@ export function createFixClient(options: FixClientOptions): FixClient {
               category = 'HEARTBEAT';
             } else if (type === MessageType.REJECT) {
               category = 'REJECT';
+              // Extract reject-specific fields
+              const rejectReasonMatch = dataStr.match(/373=([^\x01]+)/);
+              const refTagIdMatch = dataStr.match(/371=([^\x01]+)/);
+              const refSeqNumMatch = dataStr.match(/45=([^\x01]+)/);
+              const refMsgTypeMatch = dataStr.match(/372=([^\x01]+)/);
+              const textMatch = dataStr.match(/58=([^\x01]+)/);
+      
+              const rejectDetails = {
+                rejectReason: rejectReasonMatch ? rejectReasonMatch[1] : 'Unknown',
+                refTagId: refTagIdMatch ? refTagIdMatch[1] : 'Unknown',
+                refSeqNum: refSeqNumMatch ? refSeqNumMatch[1] : 'Unknown',
+                refMsgType: refMsgTypeMatch ? refMsgTypeMatch[1] : 'Unknown',
+                text: textMatch ? textMatch[1] : 'No error description provided',
+              };
+      
+              logger.error(
+                `[REJECT] Received reject message: Reason=${rejectDetails.rejectReason}, ` +
+                `RefTagID=${rejectDetails.refTagId}, RefSeqNum=${rejectDetails.refSeqNum}, ` +
+                `RefMsgType=${rejectDetails.refMsgType}, Text=${rejectDetails.text}`
+              );
             }
             return `${category}:${type}`;
           });
-
+      
           if (messageTypes.length > 0) {
             logger.info(
-              `[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''
-              }`
+              `[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''}`
             );
           } else {
             logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
           }
-
-          // If we received test request, respond immediately with heartbeat
-          if (dataStr.includes('35=1')) { // Test request
+      
+          // Handle test request
+          if (dataStr.includes('35=1')) {
             const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
             if (testReqIdMatch && testReqIdMatch[1]) {
               const testReqId = testReqIdMatch[1];
@@ -232,15 +254,15 @@ export function createFixClient(options: FixClientOptions): FixClient {
               sendHeartbeat(testReqId);
             }
           }
-
+      
           logger.info(data);
-
+      
           logger.info(`[DATA:PROCESSING] Starting message processing...`);
           let processingResult = false;
           try {
             handleData(data);
             processingResult = true;
-          } catch (error: any) {
+          } catch (error) {
             logger.error(
               `[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`
             );
