@@ -292,7 +292,8 @@ export function createSecurityListRequestForFutEquityBuilder(
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
     .addField(FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
+    .addField(FieldTag.SYMBOL, 'NA')  
+    .addField(FieldTag.PRODUCT, "4")                 // Symbol is required
     .addField(FieldTag.TRADING_SESSION_ID, "FUT");      // FUT session
 }
 
