@@ -232,8 +232,8 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.PRODUCT, "4")
         .addField(constants_1.FieldTag.APPL_VER_ID, "9") // Symbol is required
         .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")
-        .addField(constants_1.FieldTag.SECURITY_TYPE, "FUT");
-    // .addField(FieldTag.TRADING_SESSION_ID, "FUT");      // FUT session
+        .addField(constants_1.FieldTag.SECURITY_TYPE, "FUT")
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT"); // FUT session
 }
 /**
  * Creates a Security List Request message builder for REG Index
