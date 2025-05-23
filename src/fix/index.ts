@@ -163,25 +163,25 @@ export function createFixClient(options: FixClientOptions): FixClient {
           // Update last activity time to reset heartbeat timer
           lastActivityTime = Date.now();
           let category = 'UNKNOWN';
-      
+
           const dataStr = data.toString();
           const messageTypes = [];
           const symbolsFound = [];
-      
+
           // Extract message types
           const msgTypeMatches = dataStr.match(/35=([A-Za-z0-9])/g) || [];
           for (const match of msgTypeMatches) {
             const msgType = match.substring(3);
             messageTypes.push(msgType);
           }
-      
+
           // Extract symbols
           const symbolMatches = dataStr.match(/55=([^\x01]+)/g) || [];
           for (const match of symbolMatches) {
             const symbol = match.substring(3);
             if (symbol) symbolsFound.push(symbol);
           }
-      
+
           // Handle reject messages
           const categorizedMessages = messageTypes.map((type) => {
             if (
@@ -219,7 +219,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
               const refSeqNumMatch = dataStr.match(/45=([^\x01]+)/);
               const refMsgTypeMatch = dataStr.match(/372=([^\x01]+)/);
               const textMatch = dataStr.match(/58=([^\x01]+)/);
-      
+
               const rejectDetails = {
                 rejectReason: rejectReasonMatch ? rejectReasonMatch[1] : 'Unknown',
                 refTagId: refTagIdMatch ? refTagIdMatch[1] : 'Unknown',
@@ -227,7 +227,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
                 refMsgType: refMsgTypeMatch ? refMsgTypeMatch[1] : 'Unknown',
                 text: textMatch ? textMatch[1] : 'No error description provided',
               };
-      
+
               logger.error(
                 `[REJECT] Received reject message: Reason=${rejectDetails.rejectReason}, ` +
                 `RefTagID=${rejectDetails.refTagId}, RefSeqNum=${rejectDetails.refSeqNum}, ` +
@@ -236,7 +236,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
             }
             return `${category}:${type}`;
           });
-      
+
           if (messageTypes.length > 0) {
             logger.info(
               `[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''}`
@@ -244,7 +244,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
           } else {
             logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
           }
-      
+
           // Handle test request
           if (dataStr.includes('35=1')) {
             const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
@@ -254,9 +254,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
               sendHeartbeat(testReqId);
             }
           }
-      
+
           logger.info(data);
-      
+
           logger.info(`[DATA:PROCESSING] Starting message processing...`);
           let processingResult = false;
           try {
@@ -986,8 +986,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const rawMessage = builder.buildMessage();
 
       if (socket) {
-        logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
-        socket.write(rawMessage);
+        // logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
+        logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: 8=FIX.4.49=11735=x34=249=realtime52=20220722-12:14:44.73456=NMDUFISQ0001115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=103`);
+        socket.write("8=FIXT.1.19=11735=x34=249=realtime52=20220722-12:14:44.73456=NMDUFISQ0001115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=103");
         state.setRequestSent("futSecurities", true);
         logger.info(
           `[SECURITY_LIST:FUT] Request sent successfully with ID: ${requestId}`
@@ -1102,8 +1103,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
   };
 
   emitter.on('logon', () => {
-    logger.info('[TRADING_STATUS] Received request for trading session status');
-    sendTradingSessionStatusRequest();
+    // logger.info('[TRADING_STATUS] Received request for trading session status');
+    // sendTradingSessionStatusRequest();
     // sendSecurityListRequestForEquity();
 
     // // Request FUT market security list with a slight delay to avoid overwhelming the server

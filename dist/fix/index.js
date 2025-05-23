@@ -712,8 +712,9 @@ function createFixClient(options) {
             const builder = (0, message_builder_1.createSecurityListRequestForFutEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
             if (socket) {
-                logger_1.logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
-                socket.write(rawMessage);
+                // logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
+                logger_1.logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: 8=FIX.4.49=11735=x34=249=realtime52=20220722-12:14:44.73456=NMDUFISQ0001115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=103`);
+                socket.write("8=FIXT.1.19=11735=x34=249=realtime52=20220722-12:14:44.73456=NMDUFISQ0001115=60055=NA95=396=kse320=sl1444734REG336=REG460=5559=310=103");
                 state.setRequestSent("futSecurities", true);
                 logger_1.logger.info(`[SECURITY_LIST:FUT] Request sent successfully with ID: ${requestId}`);
                 logger_1.logger.info(`[SECURITY_LIST:FUT] Product: EQUITY | Market: FUT | Using sequence: ${sequenceManager.getSecurityListSeqNum()}`);
@@ -770,8 +771,8 @@ function createFixClient(options) {
         }
     };
     emitter.on('logon', () => {
-        logger_1.logger.info('[TRADING_STATUS] Received request for trading session status');
-        sendTradingSessionStatusRequest();
+        // logger.info('[TRADING_STATUS] Received request for trading session status');
+        // sendTradingSessionStatusRequest();
         // sendSecurityListRequestForEquity();
         // // Request FUT market security list with a slight delay to avoid overwhelming the server
         setTimeout(() => {
