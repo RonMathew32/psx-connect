@@ -395,7 +395,7 @@ function createFixClient(options) {
                     logger_1.logger.error(`[REJECT] Reason code: ${rejectReason}`);
                     logger_1.logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
                     logger_1.logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
-                    logger_1.logger.error(`[REJECT] Text: ${rejectText || 'No text provided'}`);
+                    logger_1.logger.error(`[REJECT] Response text: ${rejectText || 'No text provided'}`);
                     if (refTagId) {
                         logger_1.logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
                     }

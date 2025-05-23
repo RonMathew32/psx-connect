@@ -290,15 +290,10 @@ export function createSecurityListRequestForFutEquityBuilder(
     .setSenderCompID(options.senderCompId) // Sender Comp ID
     .setTargetCompID(options.targetCompId) // Target Comp ID
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-    .addField(FieldTag.ON_BEHALF_OF_COMP_ID, "600")
-    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-    .addField(FieldTag.RAW_DATA_LENGTH, "3")
-    .addField(FieldTag.RAW_DATA, "kse")
     .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-    .addField(FieldTag.TRADING_SESSION_ID, SecurityType.FUTURE)      // FUT session
-    .addField(FieldTag.PRODUCT, "5")                   // 4 = EQUITY as in fixpkf-50
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '3') // 4 = All Securities
-    .addField(FieldTag.APPL_VER_ID, "9");
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
+    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
+    .addField(FieldTag.TRADING_SESSION_ID, SecurityType.FUTURE);      // FUT session
     // .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
 }
 
@@ -318,10 +313,8 @@ export function createSecurityListRequestForRegIndexBuilder(
   .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
   .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
   .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-  .addField(FieldTag.PRODUCT, ProductType.INDEX)                   // 4 = EQUITY as in fixpkf-50
-  .addField(FieldTag.SECURITY_TYPE, SecurityType.COMMON_STOCK)      // FUT session
-  .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-  .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)   
+  .addField(FieldTag.PRODUCT, "5")                   // 5 = INDEX as in fixpkf-50
+  .addField(FieldTag.TRADING_SESSION_ID, "REG")
 }
 
 /**
