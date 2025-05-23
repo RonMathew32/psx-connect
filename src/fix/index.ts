@@ -970,7 +970,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       }
 
       // Reset the security list sequence number to 3 (don't use 2 to avoid possible collision)
-      sequenceManager.setSecurityListSeqNum(3);
+      sequenceManager.setSecurityListSeqNum(2);
       logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 3");
 
       const requestId = uuidv4();
