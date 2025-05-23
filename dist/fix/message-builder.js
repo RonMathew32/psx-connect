@@ -229,7 +229,8 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
         .addField(constants_1.FieldTag.SYMBOL, 'NA')
-        .addField(constants_1.FieldTag.PRODUCT, "4") // Symbol is required
+        .addField(constants_1.FieldTag.PRODUCT, "4")
+        .addField(constants_1.FieldTag.APPL_VER_ID, "9") // Symbol is required
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT"); // FUT session
 }
 /**
