@@ -295,8 +295,7 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
     .addField(FieldTag.PRODUCT, "4")                   // 4 = EQUITY as in fixpkf-50
     .addField(FieldTag.TRADING_SESSION_ID, SecurityType.FUTURE)      // FUT session
-    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID)
-    .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
+    // .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
 }
 
 /**
