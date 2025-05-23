@@ -285,20 +285,20 @@ export function createSecurityListRequestForFutEquityBuilder(
   sequenceManager: SequenceManager,
   requestId: string
 ): MessageBuilder {
-  return createMessageBuilder('FIXT.1.1')
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
-    .setSenderCompID(options.senderCompId) // Sender Comp ID
-    .setTargetCompID(options.targetCompId) // Target Comp ID
-    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-    .addField(FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-    .addField(FieldTag.APPL_VER_ID, "9") // ApplVerID MUST come after header fields and before business fields
-    .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0") // 0 = Snapshot
-    .addField(FieldTag.SYMBOL, 'NA')  
-    .addField(FieldTag.PRODUCT, "4")
+  // Build a message with an exact sequence of fields that matches a previously successful message
+  const builder = createMessageBuilder()
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .addField(FieldTag.SYMBOL, "NA")
     .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
-    .addField(FieldTag.SECURITY_TYPE, "FUT")
-    .addField(FieldTag.TRADING_SESSION_ID, "FUT");      // FUT session
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.TRADING_SESSION_ID, "FUT")
+    .addField(FieldTag.PRODUCT, "4")
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "4");
+    
+  return builder;
 }
 
 /**
