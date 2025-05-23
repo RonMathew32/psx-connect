@@ -231,15 +231,13 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
     message += `56=${options.targetCompId}${constants_1.SOH}`;
     message += `34=${sequenceManager.getNextSecurityListAndIncrement()}${constants_1.SOH}`;
     message += `52=${getCurrentTimestamp()}${constants_1.SOH}`;
-    // Header-level ApplVerID
-    message += `1128=9${constants_1.SOH}`;
-    // Body fields - stripped down to bare minimum
-    message += `55=NA${constants_1.SOH}`;
-    message += `207=PSX${constants_1.SOH}`;
-    message += `320=${requestId}${constants_1.SOH}`;
-    message += `336=FUT${constants_1.SOH}`;
-    message += `460=4${constants_1.SOH}`;
-    message += `559=4${constants_1.SOH}`;
+    // Body fields - match the Go implementation exactly
+    message += `320=${requestId}${constants_1.SOH}`; // SecurityReqID
+    message += `559=3${constants_1.SOH}`; // SecurityListRequestType: 3 = TradingSessionID
+    message += `55=NA${constants_1.SOH}`; // Symbol
+    message += `460=4${constants_1.SOH}`; // Product: 4 = EQUITY
+    message += `336=FUT${constants_1.SOH}`; // TradingSessionID
+    message += `207=PSX${constants_1.SOH}`; // SecurityExchange
     // Calculate body length (excluding 8=, 9=, and checksum fields)
     const bodyStart = message.indexOf("35=");
     const bodyLength = message.length - bodyStart;

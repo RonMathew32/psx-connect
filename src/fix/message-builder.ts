@@ -298,16 +298,13 @@ export function createSecurityListRequestForFutEquityBuilder(
   message += `34=${sequenceManager.getNextSecurityListAndIncrement()}${SOH}`;
   message += `52=${getCurrentTimestamp()}${SOH}`;
   
-  // Header-level ApplVerID
-  message += `1128=9${SOH}`;
-  
-  // Body fields - stripped down to bare minimum
-  message += `55=NA${SOH}`;
-  message += `207=PSX${SOH}`;
-  message += `320=${requestId}${SOH}`;
-  message += `336=FUT${SOH}`;
-  message += `460=4${SOH}`; 
-  message += `559=4${SOH}`;
+  // Body fields - match the Go implementation exactly
+  message += `320=${requestId}${SOH}`;  // SecurityReqID
+  message += `559=3${SOH}`;            // SecurityListRequestType: 3 = TradingSessionID
+  message += `55=NA${SOH}`;            // Symbol
+  message += `460=4${SOH}`;            // Product: 4 = EQUITY
+  message += `336=FUT${SOH}`;          // TradingSessionID
+  message += `207=PSX${SOH}`;          // SecurityExchange
   
   // Calculate body length (excluding 8=, 9=, and checksum fields)
   const bodyStart = message.indexOf("35=");
