@@ -32,9 +32,9 @@ function getCurrentTimestamp() {
 /**
  * Creates a generic FIX message builder
  */
-function createMessageBuilder() {
+function createMessageBuilder(beginString = 'FIXT.1.1') {
     let headerFields = {
-        [constants_1.FieldTag.BEGIN_STRING]: 'FIXT.1.1',
+        [constants_1.FieldTag.BEGIN_STRING]: beginString,
     };
     let bodyFields = {};
     const setMsgType = (msgType) => {
@@ -221,7 +221,7 @@ function createSecurityListRequestForREGEquityBuilder(options, sequenceManager, 
  * Creates a Security List Request message builder for FUT Equity
  */
 function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, requestId) {
-    return createMessageBuilder()
+    return createMessageBuilder('FIX.5.0SP2')
         .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST) // Message Type
         .setSenderCompID(options.senderCompId) // Sender Comp ID
         .setTargetCompID(options.targetCompId) // Target Comp ID
@@ -230,7 +230,6 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
         .addField(constants_1.FieldTag.SYMBOL, 'NA')
         .addField(constants_1.FieldTag.PRODUCT, "4")
-        .addField(constants_1.FieldTag.APPL_VER_ID, "9") // Symbol is required
         .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")
         .addField(constants_1.FieldTag.SECURITY_TYPE, "FUT")
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT"); // FUT session

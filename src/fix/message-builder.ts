@@ -34,9 +34,9 @@ interface MessageBuilder {
 /**
  * Creates a generic FIX message builder
  */
-export function createMessageBuilder(): MessageBuilder {
+export function createMessageBuilder(beginString: string = 'FIXT.1.1'): MessageBuilder {
   let headerFields: Record<string, string> = {
-    [FieldTag.BEGIN_STRING]: 'FIXT.1.1',
+    [FieldTag.BEGIN_STRING]: beginString,
   };
   let bodyFields: Record<string, string> = {};
 
@@ -285,7 +285,7 @@ export function createSecurityListRequestForFutEquityBuilder(
   sequenceManager: SequenceManager,
   requestId: string
 ): MessageBuilder {
-  return createMessageBuilder()
+  return createMessageBuilder('FIX.5.0SP2')
     .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
     .setSenderCompID(options.senderCompId) // Sender Comp ID
     .setTargetCompID(options.targetCompId) // Target Comp ID
@@ -294,7 +294,6 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
     .addField(FieldTag.SYMBOL, 'NA')  
     .addField(FieldTag.PRODUCT, "4")
-    .addField(FieldTag.APPL_VER_ID, "9")                 // Symbol is required
     .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
     .addField(FieldTag.SECURITY_TYPE, "FUT")
     .addField(FieldTag.TRADING_SESSION_ID, "FUT");      // FUT session
