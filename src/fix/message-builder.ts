@@ -285,19 +285,58 @@ export function createSecurityListRequestForFutEquityBuilder(
   sequenceManager: SequenceManager,
   requestId: string
 ): MessageBuilder {
-  // Build a message with an exact sequence of fields that matches a previously successful message
-  const builder = createMessageBuilder()
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-    .setSenderCompID(options.senderCompId)
-    .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
-    .addField(FieldTag.SYMBOL, "NA")
-    .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
-    .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.TRADING_SESSION_ID, "FUT")
-    .addField(FieldTag.PRODUCT, "4")
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "4");
-    
+  // Create a custom message with header-level ApplVerID
+  let message = `8=FIXT.1.1${SOH}`;
+  
+  // We'll calculate this later
+  message += `9=000${SOH}`;
+  
+  // Standard header fields
+  message += `35=x${SOH}`;
+  message += `49=${options.senderCompId}${SOH}`;
+  message += `56=${options.targetCompId}${SOH}`;
+  message += `34=${sequenceManager.getNextSecurityListAndIncrement()}${SOH}`;
+  message += `52=${getCurrentTimestamp()}${SOH}`;
+  
+  // Header-level ApplVerID
+  message += `1128=9${SOH}`;
+  
+  // Body fields - stripped down to bare minimum
+  message += `55=NA${SOH}`;
+  message += `207=PSX${SOH}`;
+  message += `320=${requestId}${SOH}`;
+  message += `336=FUT${SOH}`;
+  message += `460=4${SOH}`; 
+  message += `559=4${SOH}`;
+  
+  // Calculate body length (excluding 8=, 9=, and checksum fields)
+  const bodyStart = message.indexOf("35=");
+  const bodyLength = message.length - bodyStart;
+  
+  // Replace the placeholder length
+  message = message.replace("9=000", `9=${bodyLength}`);
+  
+  // Calculate checksum
+  let checksum = 0;
+  for (let i = 0; i < message.length; i++) {
+    checksum += message.charCodeAt(i);
+  }
+  checksum = checksum % 256;
+  const checksumStr = checksum.toString().padStart(3, '0');
+  
+  // Add checksum
+  message += `10=${checksumStr}${SOH}`;
+  
+  // Create a dummy builder that just returns our custom message
+  const builder: MessageBuilder = {
+    setMsgType: () => builder,
+    setSenderCompID: () => builder,
+    setTargetCompID: () => builder,
+    setMsgSeqNum: () => builder,
+    addField: () => builder,
+    buildMessage: () => message
+  };
+  
   return builder;
 }
 
