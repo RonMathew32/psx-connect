@@ -293,6 +293,7 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
     .addField(FieldTag.APPL_VER_ID, "9") // ApplVerID MUST come after header fields and before business fields
+    .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0") // 0 = Snapshot
     .addField(FieldTag.SYMBOL, 'NA')  
     .addField(FieldTag.PRODUCT, "4")
     .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
