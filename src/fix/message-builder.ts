@@ -290,11 +290,12 @@ export function createSecurityListRequestForFutEquityBuilder(
     .setSenderCompID(options.senderCompId) // Sender Comp ID
     .setTargetCompID(options.targetCompId) // Target Comp ID
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-    .addField(FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
+    .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
     .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
     .addField(FieldTag.PRODUCT, "4")                   // 4 = EQUITY as in fixpkf-50
     .addField(FieldTag.TRADING_SESSION_ID, SecurityType.FUTURE)      // FUT session
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_CSTM_APPL_VER_ID)
     .addField(FieldTag.SECURITY_EXCHANGE, 'PSX');                           // SecurityExchange = Pakistan Stock Exchange
 }
 
