@@ -226,7 +226,7 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .setSenderCompID(options.senderCompId) // Sender Comp ID
         .setTargetCompID(options.targetCompId) // Target Comp ID
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, "sl_FUT") // Security Request ID
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
         .addField(constants_1.FieldTag.SYMBOL, 'NA') // Symbol is required
         .addField(constants_1.FieldTag.PRODUCT, "4") // 4 = EQUITY as in fixpkf-50
