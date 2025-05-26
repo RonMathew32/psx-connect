@@ -229,7 +229,7 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .setTargetCompID(options.targetCompId)
         .addField(constants_1.FieldTag.TRANSACT_TIME, getCurrentTimestamp())
         .addField('15', '008')
-        .addField(constants_1.FieldTag.SYMBOL, "OGDC")
+        .addField(constants_1.FieldTag.SYMBOL, "NA")
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT")
         .addField(constants_1.FieldTag.PRODUCT, "5")
