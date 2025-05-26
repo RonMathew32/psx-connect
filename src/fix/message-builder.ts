@@ -292,9 +292,9 @@ export function createSecurityListRequestForFutEquityBuilder(
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "3")
     .addField(FieldTag.PRODUCT, "5")
-    .addField(FieldTag.SYMBOL, "UPP9")
+    .addField(FieldTag.SYMBOL, "NA")
     .addField(FieldTag.TRADING_SESSION_ID, "FUT");
     
   return builder;
