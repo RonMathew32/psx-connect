@@ -287,9 +287,9 @@ export function createSecurityListRequestForFutEquityBuilder(
 ): MessageBuilder {
   // Build a message with an exact sequence of fields that matches a previously successful message
   const builder = createMessageBuilder()
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .setSenderCompID(options.senderCompId)
-    // .setTargetCompID(options.targetCompId)
     .addField('56', 'PSX')
     .addField('15', '008')
     .addField(FieldTag.SYMBOL, "OGDC")
