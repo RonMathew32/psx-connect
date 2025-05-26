@@ -294,7 +294,7 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.TRANSACT_TIME, getCurrentTimestamp())
     .addField("15", "008")
     .addField(FieldTag.SYMBOL, "UPP9")
-    .addField(FieldTag.SECURITY_REQ_ID, "1121")
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
     .addField(FieldTag.TRADING_SESSION_ID, "FUT")
     .addField(FieldTag.PRODUCT, "5")
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")

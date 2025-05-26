@@ -230,7 +230,7 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.TRANSACT_TIME, getCurrentTimestamp())
         .addField("15", "008")
         .addField(constants_1.FieldTag.SYMBOL, "UPP9")
-        .addField(constants_1.FieldTag.SECURITY_REQ_ID, "1121")
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT")
         .addField(constants_1.FieldTag.PRODUCT, "5")
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
