@@ -33,7 +33,7 @@ function getCurrentTimestamp() {
 /**
  * Creates a generic FIX message builder
  */
-function createMessageBuilder(beginString = 'FIX.4.4') {
+function createMessageBuilder(beginString = 'FIXT.1.1') {
     let headerFields = {
         [constants_1.FieldTag.BEGIN_STRING]: beginString,
     };

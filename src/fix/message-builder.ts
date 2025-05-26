@@ -34,7 +34,7 @@ interface MessageBuilder {
 /**
  * Creates a generic FIX message builder
  */
-export function createMessageBuilder(beginString: string = 'FIX.4.4'): MessageBuilder {
+export function createMessageBuilder(beginString: string = 'FIXT.1.1'): MessageBuilder {
   let headerFields: Record<string, string> = {
     [FieldTag.BEGIN_STRING]: beginString,
   };
