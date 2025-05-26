@@ -222,7 +222,7 @@ function createSecurityListRequestForREGEquityBuilder(options, sequenceManager, 
  */
 function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, requestId) {
     // Build a message with an exact sequence of fields that matches a previously successful message
-    const builder = createMessageBuilder("FIX.4.4")
+    const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
