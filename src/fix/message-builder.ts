@@ -264,17 +264,17 @@ export function createSecurityListRequestForREGEquityBuilder(
   requestId: string
 ): MessageBuilder {
   return createMessageBuilder()
-  .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
-  .setSenderCompID(options.senderCompId) // Sender Comp ID
-  .setTargetCompID(options.targetCompId) // Target Comp ID
-  .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-  .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-  .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-  .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-  .addField(FieldTag.PRODUCT, ProductType.EQUITY)                   // 4 = EQUITY as in fixpkf-50
-  .addField(FieldTag.SECURITY_TYPE, SecurityType.COMMON_STOCK)      // FUT session
-  .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-  .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                                 // TradingSessionID
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
+    .setSenderCompID(options.senderCompId) // Sender Comp ID
+    .setTargetCompID(options.targetCompId) // Target Comp ID
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
+    .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
+    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
+    .addField(FieldTag.PRODUCT, ProductType.EQUITY)                   // 4 = EQUITY as in fixpkf-50
+    .addField(FieldTag.SECURITY_TYPE, SecurityType.COMMON_STOCK)      // FUT session
+    .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                                 // TradingSessionID
 }
 
 /**
@@ -287,16 +287,17 @@ export function createSecurityListRequestForFutEquityBuilder(
 ): MessageBuilder {
   // Build a message with an exact sequence of fields that matches a previously successful message
   const builder = createMessageBuilder()
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-    .setSenderCompID(options.senderCompId)
-    .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .setSenderCompID(options.senderCompId)
+    // .setTargetCompID(options.targetCompId)
+    .addField('56', 'PSX')
+    .addField('15', '008')
+    .addField(FieldTag.SYMBOL, "OGDC")
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "3")
+    .addField(FieldTag.TRADING_SESSION_ID, "FUT")
     .addField(FieldTag.PRODUCT, "5")
-    .addField(FieldTag.SYMBOL, "NA")
-    .addField(FieldTag.TRADING_SESSION_ID, "FUT");
-    
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+
   return builder;
 }
 
@@ -309,15 +310,15 @@ export function createSecurityListRequestForRegIndexBuilder(
   requestId: string
 ): MessageBuilder {
   return createMessageBuilder()
-  .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
-  .setSenderCompID(options.senderCompId) // Sender Comp ID
-  .setTargetCompID(options.targetCompId) // Target Comp ID
-  .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-  .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-  .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-  .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-  .addField(FieldTag.PRODUCT, "5")                   // 5 = INDEX as in fixpkf-50
-  .addField(FieldTag.TRADING_SESSION_ID, "REG")
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
+    .setSenderCompID(options.senderCompId) // Sender Comp ID
+    .setTargetCompID(options.targetCompId) // Target Comp ID
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
+    .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
+    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
+    .addField(FieldTag.PRODUCT, "5")                   // 5 = INDEX as in fixpkf-50
+    .addField(FieldTag.TRADING_SESSION_ID, "REG")
 }
 
 /**
@@ -329,17 +330,17 @@ export function createSecurityListRequestForFutIndexBuilder(
   requestId: string
 ): MessageBuilder {
   return createMessageBuilder()
-  .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
-  .setSenderCompID(options.senderCompId) // Sender Comp ID
-  .setTargetCompID(options.targetCompId) // Target Comp ID
-  .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-  .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-  .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-  .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-  .addField(FieldTag.PRODUCT, ProductType.INDEX)                   // 4 = EQUITY as in fixpkf-50
-  .addField(FieldTag.SECURITY_TYPE, SecurityType.FUTURE)      // FUT session
-  .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
-  .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)   
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
+    .setSenderCompID(options.senderCompId) // Sender Comp ID
+    .setTargetCompID(options.targetCompId) // Target Comp ID
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
+    .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
+    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
+    .addField(FieldTag.PRODUCT, ProductType.INDEX)                   // 4 = EQUITY as in fixpkf-50
+    .addField(FieldTag.SECURITY_TYPE, SecurityType.FUTURE)      // FUT session
+    .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')                           // SecurityExchange = Pakistan Stock Exchange
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
 }
 
 /**
