@@ -297,7 +297,6 @@ export function createSecurityListRequestForFutEquityBuilder(
     .addField(FieldTag.TRADING_SESSION_ID, "FUT")
     .addField(FieldTag.PRODUCT, "4")
     .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "4")
-    .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
     .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
     
   return builder;

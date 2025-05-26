@@ -233,7 +233,6 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT")
         .addField(constants_1.FieldTag.PRODUCT, "4")
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "4")
-        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")
         .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
     return builder;
 }
