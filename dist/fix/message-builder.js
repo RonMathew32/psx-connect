@@ -221,46 +221,20 @@ function createSecurityListRequestForREGEquityBuilder(options, sequenceManager, 
  * Creates a Security List Request message builder for FUT Equity
  */
 function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, requestId) {
-    // Create a custom message with header-level ApplVerID
-    let message = `8=FIXT.1.1${constants_1.SOH}`;
-    // We'll calculate this later
-    message += `9=000${constants_1.SOH}`;
-    // Standard header fields
-    message += `35=x${constants_1.SOH}`;
-    message += `49=${options.senderCompId}${constants_1.SOH}`;
-    message += `56=${options.targetCompId}${constants_1.SOH}`;
-    message += `34=${sequenceManager.getNextSecurityListAndIncrement()}${constants_1.SOH}`;
-    message += `52=${getCurrentTimestamp()}${constants_1.SOH}`;
-    // Body fields - match the Go implementation exactly
-    message += `320=${requestId}${constants_1.SOH}`; // SecurityReqID
-    message += `559=3${constants_1.SOH}`; // SecurityListRequestType: 3 = TradingSessionID
-    message += `55=NA${constants_1.SOH}`; // Symbol
-    message += `460=4${constants_1.SOH}`; // Product: 4 = EQUITY
-    message += `336=FUT${constants_1.SOH}`; // TradingSessionID
-    message += `207=PSX${constants_1.SOH}`; // SecurityExchange
-    // Calculate body length (excluding 8=, 9=, and checksum fields)
-    const bodyStart = message.indexOf("35=");
-    const bodyLength = message.length - bodyStart;
-    // Replace the placeholder length
-    message = message.replace("9=000", `9=${bodyLength}`);
-    // Calculate checksum
-    let checksum = 0;
-    for (let i = 0; i < message.length; i++) {
-        checksum += message.charCodeAt(i);
-    }
-    checksum = checksum % 256;
-    const checksumStr = checksum.toString().padStart(3, '0');
-    // Add checksum
-    message += `10=${checksumStr}${constants_1.SOH}`;
-    // Create a dummy builder that just returns our custom message
-    const builder = {
-        setMsgType: () => builder,
-        setSenderCompID: () => builder,
-        setTargetCompID: () => builder,
-        setMsgSeqNum: () => builder,
-        addField: () => builder,
-        buildMessage: () => message
-    };
+    // Build a message with an exact sequence of fields that matches a previously successful message
+    const builder = createMessageBuilder("FIX.4.4")
+        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .addField(constants_1.FieldTag.SYMBOL, "NA")
+        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT")
+        .addField(constants_1.FieldTag.PRODUCT, "4")
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "4")
+        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")
+        .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
     return builder;
 }
 /**

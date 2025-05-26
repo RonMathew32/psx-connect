@@ -285,55 +285,21 @@ export function createSecurityListRequestForFutEquityBuilder(
   sequenceManager: SequenceManager,
   requestId: string
 ): MessageBuilder {
-  // Create a custom message with header-level ApplVerID
-  let message = `8=FIXT.1.1${SOH}`;
-  
-  // We'll calculate this later
-  message += `9=000${SOH}`;
-  
-  // Standard header fields
-  message += `35=x${SOH}`;
-  message += `49=${options.senderCompId}${SOH}`;
-  message += `56=${options.targetCompId}${SOH}`;
-  message += `34=${sequenceManager.getNextSecurityListAndIncrement()}${SOH}`;
-  message += `52=${getCurrentTimestamp()}${SOH}`;
-  
-  // Body fields - match the Go implementation exactly
-  message += `320=${requestId}${SOH}`;  // SecurityReqID
-  message += `559=3${SOH}`;            // SecurityListRequestType: 3 = TradingSessionID
-  message += `55=NA${SOH}`;            // Symbol
-  message += `460=4${SOH}`;            // Product: 4 = EQUITY
-  message += `336=FUT${SOH}`;          // TradingSessionID
-  message += `207=PSX${SOH}`;          // SecurityExchange
-  
-  // Calculate body length (excluding 8=, 9=, and checksum fields)
-  const bodyStart = message.indexOf("35=");
-  const bodyLength = message.length - bodyStart;
-  
-  // Replace the placeholder length
-  message = message.replace("9=000", `9=${bodyLength}`);
-  
-  // Calculate checksum
-  let checksum = 0;
-  for (let i = 0; i < message.length; i++) {
-    checksum += message.charCodeAt(i);
-  }
-  checksum = checksum % 256;
-  const checksumStr = checksum.toString().padStart(3, '0');
-  
-  // Add checksum
-  message += `10=${checksumStr}${SOH}`;
-  
-  // Create a dummy builder that just returns our custom message
-  const builder: MessageBuilder = {
-    setMsgType: () => builder,
-    setSenderCompID: () => builder,
-    setTargetCompID: () => builder,
-    setMsgSeqNum: () => builder,
-    addField: () => builder,
-    buildMessage: () => message
-  };
-  
+  // Build a message with an exact sequence of fields that matches a previously successful message
+  const builder = createMessageBuilder("FIX.4.4")
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .addField(FieldTag.SYMBOL, "NA")
+    .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.TRADING_SESSION_ID, "FUT")
+    .addField(FieldTag.PRODUCT, "4")
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "4")
+    .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
+    
   return builder;
 }
 
