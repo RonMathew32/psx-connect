@@ -286,7 +286,7 @@ export function createSecurityListRequestForFutEquityBuilder(
   requestId: string
 ): MessageBuilder {
   // Build a message with an exact sequence of fields that matches a previously successful message
-  const builder = createMessageBuilder()
+  const builder = createMessageBuilder("FIX.4.4")
     .setMsgType(MessageType.SECURITY_LIST_REQUEST)
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .setSenderCompID(options.senderCompId)

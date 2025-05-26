@@ -222,12 +222,12 @@ function createSecurityListRequestForREGEquityBuilder(options, sequenceManager, 
  */
 function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, requestId) {
     // Build a message with an exact sequence of fields that matches a previously successful message
-    const builder = createMessageBuilder()
+    const builder = createMessageBuilder("FIX.4.4")
         .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        // .addField('56', 'PSX')
+        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, 'PSX')
         .addField('15', '008')
         .addField(constants_1.FieldTag.SYMBOL, "OGDC")
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
