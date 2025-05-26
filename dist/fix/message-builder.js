@@ -228,12 +228,12 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .addField(constants_1.FieldTag.SYMBOL, "NA")
-        .addField(constants_1.FieldTag.SECURITY_EXCHANGE, "PSX")
+        // .addField(FieldTag.SECURITY_EXCHANGE, "PSX")
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT")
+        // .addField(FieldTag.TRADING_SESSION_ID, "FUT")
         .addField(constants_1.FieldTag.PRODUCT, "4")
-        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "4")
-        .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "4");
+    // .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
     return builder;
 }
 /**
