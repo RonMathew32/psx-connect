@@ -291,7 +291,7 @@ export function createSecurityListRequestForFutEquityBuilder(
     .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
-    // .addField('56', 'PSX')
+    .addField(FieldTag.SECURITY_EXCHANGE, 'PSX')
     .addField('15', '008')
     .addField(FieldTag.SYMBOL, "OGDC")
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
