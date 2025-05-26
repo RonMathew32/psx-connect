@@ -6,6 +6,7 @@ exports.createLogoutMessageBuilder = createLogoutMessageBuilder;
 exports.createHeartbeatMessageBuilder = createHeartbeatMessageBuilder;
 exports.createMarketDataRequestBuilder = createMarketDataRequestBuilder;
 exports.createTradingSessionStatusRequestBuilder = createTradingSessionStatusRequestBuilder;
+exports.createSecurityStatusRequestBuilder = createSecurityStatusRequestBuilder;
 exports.createSecurityListRequestForREGEquityBuilder = createSecurityListRequestForREGEquityBuilder;
 exports.createSecurityListRequestForFutEquityBuilder = createSecurityListRequestForFutEquityBuilder;
 exports.createSecurityListRequestForRegIndexBuilder = createSecurityListRequestForRegIndexBuilder;
@@ -32,7 +33,7 @@ function getCurrentTimestamp() {
 /**
  * Creates a generic FIX message builder
  */
-function createMessageBuilder(beginString = 'FIXT.1.1') {
+function createMessageBuilder(beginString = 'FIX.4.4') {
     let headerFields = {
         [constants_1.FieldTag.BEGIN_STRING]: beginString,
     };
@@ -199,6 +200,22 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
+}
+/**
+ * Creates a Security Status Request message builder for FUT Equity
+ */
+function createSecurityStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = "FUT") {
+    // Build a message with an exact sequence of fields that matches a previously successful message
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.SYMBOL, "NA")
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID)
+        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0");
+    return builder;
 }
 /**
  * Creates a Security List Request message builder for REG Equity

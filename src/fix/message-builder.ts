@@ -34,7 +34,7 @@ interface MessageBuilder {
 /**
  * Creates a generic FIX message builder
  */
-export function createMessageBuilder(beginString: string = 'FIXT.1.1'): MessageBuilder {
+export function createMessageBuilder(beginString: string = 'FIX.4.4'): MessageBuilder {
   let headerFields: Record<string, string> = {
     [FieldTag.BEGIN_STRING]: beginString,
   };
@@ -255,6 +255,29 @@ export function createTradingSessionStatusRequestBuilder(
     .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID);
 }
 
+
+/**
+ * Creates a Security Status Request message builder for FUT Equity
+ */
+export function createSecurityStatusRequestBuilder(
+  options: FixClientOptions,
+  sequenceManager: SequenceManager,
+  requestId: string,
+  tradingSessionID: string = "FUT"
+): MessageBuilder {
+  // Build a message with an exact sequence of fields that matches a previously successful message
+  const builder = createMessageBuilder()
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.SYMBOL, "NA")
+    .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID)
+    .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0")
+
+  return builder;
+}
 /**
  * Creates a Security List Request message builder for REG Equity
  */
