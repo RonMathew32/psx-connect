@@ -713,7 +713,8 @@ function createFixClient(options) {
             const rawMessage = builder.buildMessage();
             if (socket) {
                 logger_1.logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
-                socket.write(rawMessage);
+                // socket.write(rawMessage);
+                socket.write(`8=FIX.4.4|9=134|35=x|34=381|49=FIX00801|52=20161208-12:18:21.077|56=PSX|15=008|55=OGDC|60=20161208-12:18:21.077|320=1121|336=REG|460=5|559=0|10=187|`);
                 state.setRequestSent("futSecurities", true);
                 logger_1.logger.info(`[SECURITY_LIST:FUT] Request sent successfully with ID: ${requestId}`);
                 logger_1.logger.info(`[SECURITY_LIST:FUT] Product: EQUITY | Market: FUT | Using sequence: ${sequenceManager.getSecurityListSeqNum()}`);
