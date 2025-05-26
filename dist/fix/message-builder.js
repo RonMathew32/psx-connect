@@ -227,13 +227,14 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
         .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        // .addField("56", 'PSX')
+        .addField(constants_1.FieldTag.TRANSACT_TIME, getCurrentTimestamp())
         .addField('15', '008')
         .addField(constants_1.FieldTag.SYMBOL, "OGDC")
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "FUT")
         .addField(constants_1.FieldTag.PRODUCT, "5")
-        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "0");
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+        .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
     return builder;
 }
 /**

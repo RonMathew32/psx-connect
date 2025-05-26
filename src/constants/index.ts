@@ -97,6 +97,7 @@ export enum FieldTag {
   PARTY_ROLE = '452',               // Party role
   NO_PARTY_IDS = '453',             // Number of party IDs
   PRODUCT = '460',                  // Product type
+  TRANSACT_TIME= '60',              // Transact time
   CFI_CODE = '461',                 // Classification of Financial Instrument code
   USERNAME = '553',                 // Username
   PASSWORD = '554',                 // Password

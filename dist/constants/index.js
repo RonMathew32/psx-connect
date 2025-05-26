@@ -99,6 +99,7 @@ var FieldTag;
     FieldTag["PARTY_ROLE"] = "452";
     FieldTag["NO_PARTY_IDS"] = "453";
     FieldTag["PRODUCT"] = "460";
+    FieldTag["TRANSACT_TIME"] = "60";
     FieldTag["CFI_CODE"] = "461";
     FieldTag["USERNAME"] = "553";
     FieldTag["PASSWORD"] = "554";
