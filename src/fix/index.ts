@@ -855,7 +855,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       logger.info(
         `[SECURITY_STATUS:REQUEST] Creating security status request`
       );
-
+      sequenceManager.setSecurityListSeqNum(2);
       const builder = createSecurityStatusRequestBuilder(
         options,
         sequenceManager,
@@ -863,6 +863,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
         "FUT"
       );
       const rawMessage = builder.buildMessage();
+      socket.write(rawMessage);
+      logger.info(
+        `[SECURITY_STATUS:REQUEST] Sent request for FUT market with ID: ${requestId} | Using sequence}`
+      );
+      return requestId;
     } catch (error) {
       logger.error(
         "[SECURITY_STATUS:REQUEST] Error sending security status request:",
