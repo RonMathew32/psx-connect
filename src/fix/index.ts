@@ -14,7 +14,8 @@ import {
   createSecurityListRequestForFutIndexBuilder,
   createSymbolMarketDataSubscriptionBuilder,
   createTradingSessionStatusRequestBuilder,
-  getMessageTypeName
+  getMessageTypeName,
+  createSecurityStatusRequestBuilder
 } from "./message-builder";
 import { parseFixMessage, ParsedFixMessage } from "./message-parser";
 import { SOH, MessageType, FieldTag } from "../constants";
@@ -841,6 +842,36 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
+  const sendSecurityStatusRequest = () => {
+    try {
+      if (!socket || !state.isConnected()) {
+        logger.error(
+          "[SECURITY_STATUS:REQUEST] Cannot send security status request: not connected or not logged in"
+        );
+        return null;
+      }
+
+      const requestId = uuidv4();
+      logger.info(
+        `[SECURITY_STATUS:REQUEST] Creating security status request`
+      );
+
+      const builder = createSecurityStatusRequestBuilder(
+        options,
+        sequenceManager,
+        requestId,
+        "FUT"
+      );
+      const rawMessage = builder.buildMessage();
+    } catch (error) {
+      logger.error(
+        "[SECURITY_STATUS:REQUEST] Error sending security status request:",
+        error
+      );
+      return null;
+    }
+  };
+
   const sendSecurityListRequestForREGEquity = (): string | null => {
     try {
       if (!socket || !state.isConnected()) {
@@ -1108,7 +1139,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
     // // Request FUT market security list with a slight delay to avoid overwhelming the server
     setTimeout(() => {
-      sendSecurityListRequestForFutEquity();
+      sendSecurityStatusRequest();
     }, 500);
   });
 
@@ -1121,6 +1152,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     disconnect,
     sendMarketDataRequest,
     sendTradingSessionStatusRequest,
+    sendSecurityStatusRequest,
     sendSecurityListRequestForREGEquity,
     sendSecurityListRequestForREGIndex,
     sendSecurityListRequestForFutEquity,

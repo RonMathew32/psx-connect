@@ -627,6 +627,22 @@ function createFixClient(options) {
             return null;
         }
     };
+    const sendSecurityStatusRequest = () => {
+        try {
+            if (!socket || !state.isConnected()) {
+                logger_1.logger.error("[SECURITY_STATUS:REQUEST] Cannot send security status request: not connected or not logged in");
+                return null;
+            }
+            const requestId = (0, uuid_1.v4)();
+            logger_1.logger.info(`[SECURITY_STATUS:REQUEST] Creating security status request`);
+            const builder = (0, message_builder_1.createSecurityStatusRequestBuilder)(options, sequenceManager, requestId, "FUT");
+            const rawMessage = builder.buildMessage();
+        }
+        catch (error) {
+            logger_1.logger.error("[SECURITY_STATUS:REQUEST] Error sending security status request:", error);
+            return null;
+        }
+    };
     const sendSecurityListRequestForREGEquity = () => {
         try {
             if (!socket || !state.isConnected()) {
@@ -775,7 +791,7 @@ function createFixClient(options) {
         // sendSecurityListRequestForEquity();
         // // Request FUT market security list with a slight delay to avoid overwhelming the server
         setTimeout(() => {
-            sendSecurityListRequestForFutEquity();
+            sendSecurityStatusRequest();
         }, 500);
     });
     const client = {
@@ -787,6 +803,7 @@ function createFixClient(options) {
         disconnect,
         sendMarketDataRequest,
         sendTradingSessionStatusRequest,
+        sendSecurityStatusRequest,
         sendSecurityListRequestForREGEquity,
         sendSecurityListRequestForREGIndex,
         sendSecurityListRequestForFutEquity,
