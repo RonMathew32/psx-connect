@@ -207,14 +207,14 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
 function createSecurityStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = "FUT") {
     // Build a message with an exact sequence of fields that matches a previously successful message
     const builder = createMessageBuilder()
-        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
-        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .setMsgType(constants_1.MessageType.SECURITY_STATUS_REQUEST)
+        // .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SYMBOL, "NA")
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID)
-        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0");
+        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0")
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
     return builder;
 }
 /**

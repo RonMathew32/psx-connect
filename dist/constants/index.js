@@ -28,6 +28,7 @@ var MessageType;
     MessageType["MARKET_DATA_INCREMENTAL_REFRESH"] = "X";
     MessageType["MARKET_DATA_REQUEST_REJECT"] = "Y";
     MessageType["SECURITY_LIST_REQUEST"] = "x";
+    MessageType["SECURITY_STATUS_REQUEST"] = "e";
     MessageType["SECURITY_LIST"] = "y";
     MessageType["TRADING_SESSION_STATUS_REQUEST"] = "g";
     MessageType["TRADING_SESSION_STATUS"] = "h";

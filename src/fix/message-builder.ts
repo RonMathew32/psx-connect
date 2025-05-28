@@ -267,14 +267,14 @@ export function createSecurityStatusRequestBuilder(
 ): MessageBuilder {
   // Build a message with an exact sequence of fields that matches a previously successful message
   const builder = createMessageBuilder()
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .setMsgType(MessageType.SECURITY_STATUS_REQUEST)
+    // .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
     .addField(FieldTag.SECURITY_REQ_ID, requestId)
     .addField(FieldTag.SYMBOL, "NA")
-    .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID)
     .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0")
+    .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID)
 
   return builder;
 }
