@@ -277,15 +277,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
     const now = new Date();
     const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
         now.toISOString().substring(11, 19).replace(/:/g, '');
-    // Map tradingSessionID to appropriate market code
-    let marketCode = exports.MarketCode.REGULAR; // Default to regular market
-    // Map session IDs to market codes if needed
-    if (tradingSessionID === 'FUT') {
-        marketCode = exports.MarketCode.STOCK_DELIVERABLE_FUTURE;
-    }
-    else if (tradingSessionID === 'ODDLOT') {
-        marketCode = exports.MarketCode.ODD_LOT;
-    }
+    // Use the original session ID instead of market code
     const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
@@ -296,7 +288,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         // Add the required fields from the specification
         .addField(constants_1.FieldTag.ORIG_TIME, origTime) // Tag 42: OrigTime
         .addField(constants_1.FieldTag.CHANNEL_NO, '1') // Tag 1020: ChannelNo
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, marketCode); // Tag 336: Use market code instead of session ID
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID); // Tag 336: Use original session ID
     return builder;
 }
 /**

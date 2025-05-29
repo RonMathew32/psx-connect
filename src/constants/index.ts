@@ -126,7 +126,7 @@ export enum FieldTag {
   TRADING_SESSION_RULES_GROUP = '1310', // Trading session rules
   DEFAULT_CSTM_APPL_VER_ID = '1408', // Default custom application version ID
   NEWS_ID = '1472',                 // News ID
-  CHANNEL_NO = '10201',              // Channel number
+  CHANNEL_NO = '1020',              // Channel number
   RAW_DATA_FORMAT = '10208',        // Number of market data stream IDs
   TRADING_PHASE_CODE = '8538',      // Trading phase code
 }

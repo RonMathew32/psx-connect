@@ -128,7 +128,7 @@ var FieldTag;
     FieldTag["TRADING_SESSION_RULES_GROUP"] = "1310";
     FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1408";
     FieldTag["NEWS_ID"] = "1472";
-    FieldTag["CHANNEL_NO"] = "10201";
+    FieldTag["CHANNEL_NO"] = "1020";
     FieldTag["RAW_DATA_FORMAT"] = "10208";
     FieldTag["TRADING_PHASE_CODE"] = "8538";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
