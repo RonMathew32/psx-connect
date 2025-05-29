@@ -879,7 +879,7 @@ function createFixClient(options) {
         setTimeout(() => {
             // sendNewsMessage("Test News", "This is a test news message", "1");
             // sendNewsMessage("Test News", "This is a test news message", "1");
-            sendSecurityListRequestForREGEquity();
+            sendMarketDataRequest(["KSE-100", "KMI-30"]);
         }, 500);
     });
     const client = {

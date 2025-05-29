@@ -332,7 +332,7 @@ function createSecurityListRequestForREGEquityBuilder(options, sequenceManager, 
         .addField(constants_1.FieldTag.SYMBOL, "NA")
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, "REG")
-        .addField(constants_1.FieldTag.PRODUCT, "4")
+        .addField(constants_1.FieldTag.PRODUCT, "5")
         .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
         .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID); // TradingSessionID
 }
@@ -360,16 +360,20 @@ function createSecurityListRequestForFutEquityBuilder(options, sequenceManager, 
  * Creates a Security List Request message builder for REG Index
  */
 function createSecurityListRequestForRegIndexBuilder(options, sequenceManager, requestId) {
-    return createMessageBuilder()
-        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST) // Message Type
-        .setSenderCompID(options.senderCompId) // Sender Comp ID
-        .setTargetCompID(options.targetCompId) // Target Comp ID
-        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-        .addField(constants_1.FieldTag.SYMBOL, 'NA') // Symbol is required
-        .addField(constants_1.FieldTag.PRODUCT, "5") // 5 = INDEX as in fixpkf-50
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, "REG");
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.SECURITY_LIST_REQUEST)
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .addField(constants_1.FieldTag.TRANSACT_TIME, getCurrentTimestamp())
+        .addField("15", "008")
+        .addField(constants_1.FieldTag.SYMBOL, "UPP9")
+        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, "REG")
+        .addField(constants_1.FieldTag.PRODUCT, "4")
+        .addField(constants_1.FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+        .addField(constants_1.FieldTag.APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID);
+    return builder;
 }
 /**
  * Creates a Security List Request message builder for FUT Index

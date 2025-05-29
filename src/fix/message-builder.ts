@@ -426,7 +426,7 @@ export function createSecurityListRequestForREGEquityBuilder(
   .addField(FieldTag.SYMBOL, "NA")
   .addField(FieldTag.SECURITY_REQ_ID, requestId)
   .addField(FieldTag.TRADING_SESSION_ID, "REG")
-  .addField(FieldTag.PRODUCT, "4")
+  .addField(FieldTag.PRODUCT, "5")
   .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
   .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                          // TradingSessionID
 }
@@ -465,16 +465,21 @@ export function createSecurityListRequestForRegIndexBuilder(
   sequenceManager: SequenceManager,
   requestId: string
 ): MessageBuilder {
-  return createMessageBuilder()
-    .setMsgType(MessageType.SECURITY_LIST_REQUEST) // Message Type
-    .setSenderCompID(options.senderCompId) // Sender Comp ID
-    .setTargetCompID(options.targetCompId) // Target Comp ID
-    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement()) // Sequence number
-    .addField(FieldTag.SECURITY_REQ_ID, requestId) // Security Request ID
-    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, '4') // 4 = All Securities
-    .addField(FieldTag.SYMBOL, 'NA')                   // Symbol is required
-    .addField(FieldTag.PRODUCT, "5")                   // 5 = INDEX as in fixpkf-50
-    .addField(FieldTag.TRADING_SESSION_ID, "REG")
+  const builder = createMessageBuilder()
+  .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+  .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+  .setSenderCompID(options.senderCompId)
+  .setTargetCompID(options.targetCompId)
+  .addField(FieldTag.TRANSACT_TIME, getCurrentTimestamp())
+  .addField("15", "008")
+  .addField(FieldTag.SYMBOL, "UPP9")
+  .addField(FieldTag.SECURITY_REQ_ID, requestId)
+  .addField(FieldTag.TRADING_SESSION_ID, "REG")
+  .addField(FieldTag.PRODUCT, "4")
+  .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+  .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
+
+  return builder;
 }
 
 /**
