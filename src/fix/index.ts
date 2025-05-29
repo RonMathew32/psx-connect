@@ -1177,6 +1177,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       );
       
       const rawMessage = builder.buildMessage();
+      logger.info(`[NEWS:SEND] Raw message: ${rawMessage}`);
       socket.write(rawMessage);
       
       logger.info(`[NEWS:SEND] Sent news message: ${headline}`);
@@ -1194,7 +1195,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
     // // Request FUT market security list with a slight delay to avoid overwhelming the server
     setTimeout(() => {
-      sendSecurityStatusRequest();
+      sendNewsMessage("Connection Established", "FIX client successfully connected to server");
     }, 500);
   });
 

@@ -815,6 +815,7 @@ function createFixClient(options) {
             const builder = (0, message_builder_1.createNewsMessageBuilder)(options, sequenceManager, headline, text, undefined, // Use default timestamp
             urgency);
             const rawMessage = builder.buildMessage();
+            logger_1.logger.info(`[NEWS:SEND] Raw message: ${rawMessage}`);
             socket.write(rawMessage);
             logger_1.logger.info(`[NEWS:SEND] Sent news message: ${headline}`);
             return true;
@@ -830,7 +831,7 @@ function createFixClient(options) {
         // sendSecurityListRequestForEquity();
         // // Request FUT market security list with a slight delay to avoid overwhelming the server
         setTimeout(() => {
-            sendSecurityStatusRequest();
+            sendNewsMessage("Connection Established", "FIX client successfully connected to server");
         }, 500);
     });
     const client = {
