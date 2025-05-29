@@ -1228,6 +1228,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       logger.info(`[TEST:REQUEST] Creating request with ID: ${requestId}`);
       const builder = createTestRequestMessageBuilder(options, requestId);
       const rawMessage = builder.buildMessage();
+      logger.info(`[TEST:REQUEST] Raw message: ${rawMessage}`);
       socket.write(rawMessage);
       logger.info(`[TEST:REQUEST] Sent test request with ID: ${requestId}`);
     } catch (error) {
@@ -1240,7 +1241,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     logger.info('[SESSION:LOGON] Requesting trading session status and security data');
     setTimeout(() => {
       // sendNewsMessage("Test News", "This is a test news message", "1");
-      sendTestRequest();
+      sendTradingSessionStatusRequest();
     }, 500);
   });
 
