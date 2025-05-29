@@ -290,7 +290,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextTradingStatusAndIncrement())
+        .setMsgSeqNum(2)
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
         // Add the required fields from the specification

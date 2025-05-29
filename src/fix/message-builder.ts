@@ -359,7 +359,7 @@ export function createTradingSessionStatusRequestBuilder(
     .setMsgType(MessageType.TRADING_SESSION_STATUS_REQUEST)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextTradingStatusAndIncrement())
+    .setMsgSeqNum(2)
     .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
     .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
     // Add the required fields from the specification
