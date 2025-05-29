@@ -1216,31 +1216,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  emitter.on('logon', () => {
-    // Request trading session status to get current market state
-    logger.info('[SESSION:LOGON] Requesting trading session status and security data');
-    
-    // Request trading session status
-    sendMarketDataRequest(["NA"]);
-    
-    // // Request security status with a slight delay to avoid overwhelming the server
-    // setTimeout(() => {
-    //   sendSecurityStatusRequest();
-    // }, 500);
-    
-    // // Request security lists with staggered timing
-    // setTimeout(() => {
-    //   sendSecurityListRequestForREGEquity();
-    // }, 1000);
-    
-    // setTimeout(() => {
-    //   sendSecurityListRequestForFutEquity();
-    // }, 1500);
-    
-    // setTimeout(() => {
-    //   sendSecurityListRequestForREGIndex();
-    // }, 2000);
-  });
+  // emitter.on('logon', () => {
+  //   logger.info('[SESSION:LOGON] Requesting trading session status and security data');
+  // });
 
   const client = {
     on: (event: string, listener: (...args: any[]) => void) => {

@@ -853,26 +853,9 @@ function createFixClient(options) {
             return false;
         }
     };
-    emitter.on('logon', () => {
-        // Request trading session status to get current market state
-        logger_1.logger.info('[SESSION:LOGON] Requesting trading session status and security data');
-        // Request trading session status
-        sendMarketDataRequest(["NA"]);
-        // // Request security status with a slight delay to avoid overwhelming the server
-        // setTimeout(() => {
-        //   sendSecurityStatusRequest();
-        // }, 500);
-        // // Request security lists with staggered timing
-        // setTimeout(() => {
-        //   sendSecurityListRequestForREGEquity();
-        // }, 1000);
-        // setTimeout(() => {
-        //   sendSecurityListRequestForFutEquity();
-        // }, 1500);
-        // setTimeout(() => {
-        //   sendSecurityListRequestForREGIndex();
-        // }, 2000);
-    });
+    // emitter.on('logon', () => {
+    //   logger.info('[SESSION:LOGON] Requesting trading session status and security data');
+    // });
     const client = {
         on: (event, listener) => {
             emitter.on(event, listener);
