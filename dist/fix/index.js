@@ -883,14 +883,11 @@ function createFixClient(options) {
             // sendNewsMessage("Test News", "This is a test news message", "1");
             // sendMarketDataRequest(["KSE-100", "KMI-30"]);
             setTimeout(() => {
-                sendSecurityStatusRequest();
+                sendSecurityListRequestForREGIndex();
             }, 500);
             setTimeout(() => {
-                sendSecurityListRequestForREGIndex();
-            }, 1000);
-            setTimeout(() => {
                 sendSecurityListRequestForFutEquity();
-            }, 1500);
+            }, 1000);
         }, 500);
     });
     const client = {
