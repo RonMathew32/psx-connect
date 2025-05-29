@@ -529,6 +529,33 @@ export function createFixClient(options: FixClientOptions): FixClient {
           handleNews(parsedMessage, emitter);
           logger.info(`[NEWS] Processing complete`);
           break;
+        case MessageType.SECURITY_LIST:
+          logger.info(`[SECURITY_LIST] Processing security list message from snapshot`);
+          // Create a cache object for security data if not already defined in your code
+          const securityCache = { EQUITY: [], INDEX: [] };
+          handleSecurityList(parsedMessage, emitter, securityCache);
+          logger.info(`[SECURITY_LIST] Processing complete for security list snapshot`);
+          break;
+        case MessageType.TRADING_SESSION_STATUS:
+          logger.info(`[TRADING_STATUS] Processing trading session status message from snapshot`);
+          handleTradingSessionStatus(parsedMessage, emitter);
+          logger.info(`[TRADING_STATUS] Processing complete for trading status snapshot`);
+          break;
+        case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+          logger.info(`[MARKET_DATA] Processing full market data snapshot`);
+          handleMarketDataSnapshot(parsedMessage, emitter);
+          logger.info(`[MARKET_DATA] Processing complete for market data snapshot`);
+          break;
+        case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+          logger.info(`[MARKET_DATA] Processing incremental market data update`);
+          handleMarketDataIncremental(parsedMessage, emitter);
+          logger.info(`[MARKET_DATA] Processing complete for incremental data`);
+          break;
+        case 'f': // Security Status message
+          logger.info(`[SECURITY_STATUS] Processing security status message`);
+          handleTradingStatus(parsedMessage, emitter);
+          logger.info(`[SECURITY_STATUS] Processing complete`);
+          break;
         // ... other cases remain unchanged ...
         default:
           logger.info(
@@ -1190,15 +1217,29 @@ export function createFixClient(options: FixClientOptions): FixClient {
   };
 
   emitter.on('logon', () => {
-    // logger.info('[TRADING_STATUS] Received request for trading session status');
-    // sendTradingSessionStatusRequest();
-    // sendSecurityListRequestForEquity();
-
-    // // Request FUT market security list with a slight delay to avoid overwhelming the server
+    // Request trading session status to get current market state
+    logger.info('[SESSION:LOGON] Requesting trading session status and security data');
+    
+    // Request trading session status
+    sendTradingSessionStatusRequest();
+    
+    // Request security status with a slight delay to avoid overwhelming the server
     setTimeout(() => {
-      // sendNewsMessage("Connection Established", "FIX client successfully connected to server");
-      sendTradingSessionStatusRequest();
+      sendSecurityStatusRequest();
     }, 500);
+    
+    // Request security lists with staggered timing
+    setTimeout(() => {
+      sendSecurityListRequestForREGEquity();
+    }, 1000);
+    
+    setTimeout(() => {
+      sendSecurityListRequestForFutEquity();
+    }, 1500);
+    
+    setTimeout(() => {
+      sendSecurityListRequestForREGIndex();
+    }, 2000);
   });
 
   const client = {

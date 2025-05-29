@@ -425,6 +425,33 @@ function createFixClient(options) {
                     (0, message_handler_1.handleNews)(parsedMessage, emitter);
                     logger_1.logger.info(`[NEWS] Processing complete`);
                     break;
+                case constants_1.MessageType.SECURITY_LIST:
+                    logger_1.logger.info(`[SECURITY_LIST] Processing security list message from snapshot`);
+                    // Create a cache object for security data if not already defined in your code
+                    const securityCache = { EQUITY: [], INDEX: [] };
+                    (0, message_handler_1.handleSecurityList)(parsedMessage, emitter, securityCache);
+                    logger_1.logger.info(`[SECURITY_LIST] Processing complete for security list snapshot`);
+                    break;
+                case constants_1.MessageType.TRADING_SESSION_STATUS:
+                    logger_1.logger.info(`[TRADING_STATUS] Processing trading session status message from snapshot`);
+                    (0, message_handler_1.handleTradingSessionStatus)(parsedMessage, emitter);
+                    logger_1.logger.info(`[TRADING_STATUS] Processing complete for trading status snapshot`);
+                    break;
+                case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+                    logger_1.logger.info(`[MARKET_DATA] Processing full market data snapshot`);
+                    (0, message_handler_1.handleMarketDataSnapshot)(parsedMessage, emitter);
+                    logger_1.logger.info(`[MARKET_DATA] Processing complete for market data snapshot`);
+                    break;
+                case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+                    logger_1.logger.info(`[MARKET_DATA] Processing incremental market data update`);
+                    (0, message_handler_1.handleMarketDataIncremental)(parsedMessage, emitter);
+                    logger_1.logger.info(`[MARKET_DATA] Processing complete for incremental data`);
+                    break;
+                case 'f': // Security Status message
+                    logger_1.logger.info(`[SECURITY_STATUS] Processing security status message`);
+                    (0, message_handler_1.handleTradingStatus)(parsedMessage, emitter);
+                    logger_1.logger.info(`[SECURITY_STATUS] Processing complete`);
+                    break;
                 // ... other cases remain unchanged ...
                 default:
                     logger_1.logger.info(`[UNKNOWN:${msgType}] Received unhandled message type: ${msgType} (${msgTypeName})`);
@@ -827,14 +854,24 @@ function createFixClient(options) {
         }
     };
     emitter.on('logon', () => {
-        // logger.info('[TRADING_STATUS] Received request for trading session status');
-        // sendTradingSessionStatusRequest();
-        // sendSecurityListRequestForEquity();
-        // // Request FUT market security list with a slight delay to avoid overwhelming the server
+        // Request trading session status to get current market state
+        logger_1.logger.info('[SESSION:LOGON] Requesting trading session status and security data');
+        // Request trading session status
+        sendTradingSessionStatusRequest();
+        // Request security status with a slight delay to avoid overwhelming the server
         setTimeout(() => {
-            // sendNewsMessage("Connection Established", "FIX client successfully connected to server");
-            sendTradingSessionStatusRequest();
+            sendSecurityStatusRequest();
         }, 500);
+        // Request security lists with staggered timing
+        setTimeout(() => {
+            sendSecurityListRequestForREGEquity();
+        }, 1000);
+        setTimeout(() => {
+            sendSecurityListRequestForFutEquity();
+        }, 1500);
+        setTimeout(() => {
+            sendSecurityListRequestForREGIndex();
+        }, 2000);
     });
     const client = {
         on: (event, listener) => {
