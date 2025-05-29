@@ -124,7 +124,10 @@ export enum FieldTag {
   MARKET_ID = '1301',               // Market ID
   NO_TRADING_SESSION_RULES = '1309', // Number of trading session rules
   TRADING_SESSION_RULES_GROUP = '1310', // Trading session rules
-  DEFAULT_CSTM_APPL_VER_ID = '1408' // Default custom application version ID
+  DEFAULT_CSTM_APPL_VER_ID = '1408', // Default custom application version ID
+  NEWS_ID = '1472',                 // News ID
+  CHANNEL_NO = '10201',              // Channel number
+  RAW_DATA_FORMAT = '10208',        // Number of market data stream IDs
 }
 
 // Subscription Request Types

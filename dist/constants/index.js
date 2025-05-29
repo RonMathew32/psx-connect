@@ -126,7 +126,10 @@ var FieldTag;
     FieldTag["MARKET_ID"] = "1301";
     FieldTag["NO_TRADING_SESSION_RULES"] = "1309";
     FieldTag["TRADING_SESSION_RULES_GROUP"] = "1310";
-    FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1408"; // Default custom application version ID
+    FieldTag["DEFAULT_CSTM_APPL_VER_ID"] = "1408";
+    FieldTag["NEWS_ID"] = "1472";
+    FieldTag["CHANNEL_NO"] = "10201";
+    FieldTag["RAW_DATA_FORMAT"] = "10208";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;

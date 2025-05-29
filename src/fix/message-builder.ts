@@ -1,3 +1,4 @@
+import { FIELDS } from 'fixparser/types/spec/SpecFields';
 import { SOH, FieldTag, MessageType, DEFAULT_CONNECTION, ProductType, SecurityType } from '../constants';
 import { FixClientOptions } from '../types';
 import { SequenceManager } from '../utils/sequence-manager';
@@ -588,11 +589,17 @@ export function createNewsMessageBuilder(
     .setMsgType(MessageType.NEWS)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
+    .addField(FieldTag.CHANNEL_NO, "")
+    .addField(FieldTag.NEWS_ID, "1")
+    .addField(FieldTag.ORIG_TIME, getCurrentTimestamp())
     .addField(FieldTag.MSG_SEQ_NUM, "2")
     .addField(FieldTag.HEADLINE, headline)
-    .addField(FieldTag.URGENCY, urgency)
-    .addField(FieldTag.LINES_OF_TEXT, '1') // Just using 1 line of text for simplicity
-    .addField(FieldTag.TEXT, text);
+    .addField(FieldTag.RAW_DATA_FORMAT, "0")
+    .addField(FieldTag.RAW_DATA_LENGTH, text.length.toString())
+    .addField(FieldTag.RAW_DATA, text);
+    // .addField(FieldTag.URGENCY, urgency)
+    // .addField(FieldTag.LINES_OF_TEXT, '1') // Just using 1 line of text for simplicity
+    // .addField(FieldTag.TEXT, text);
 
   // Add origination time if provided, otherwise it will use the standard sending time
   if (origTime) {

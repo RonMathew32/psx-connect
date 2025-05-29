@@ -853,9 +853,12 @@ function createFixClient(options) {
             return false;
         }
     };
-    // emitter.on('logon', () => {
-    //   logger.info('[SESSION:LOGON] Requesting trading session status and security data');
-    // });
+    emitter.on('logon', () => {
+        logger_1.logger.info('[SESSION:LOGON] Requesting trading session status and security data');
+        setTimeout(() => {
+            sendNewsMessage("Test News", "This is a test news message", "1");
+        }, 500);
+    });
     const client = {
         on: (event, listener) => {
             emitter.on(event, listener);
