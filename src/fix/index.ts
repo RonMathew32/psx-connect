@@ -16,7 +16,8 @@ import {
   createTradingSessionStatusRequestBuilder,
   getMessageTypeName,
   createSecurityStatusRequestBuilder,
-  createNewsMessageBuilder
+  createNewsMessageBuilder,
+  createTestRequestMessageBuilder
 } from "./message-builder";
 import { parseFixMessage, ParsedFixMessage } from "./message-parser";
 import { SOH, MessageType, FieldTag } from "../constants";
@@ -1216,10 +1217,30 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
+  const sendTestRequest = () => {
+    try {
+      if (!socket || !state.isConnected()) {
+        logger.error('[TEST:REQUEST] Cannot send test request: not connected');
+        return;
+      }
+      logger.info('[TEST:REQUEST] Sending test request');
+      const requestId = uuidv4();
+      logger.info(`[TEST:REQUEST] Creating request with ID: ${requestId}`);
+      const builder = createTestRequestMessageBuilder(options, requestId);
+      const rawMessage = builder.buildMessage();
+      socket.write(rawMessage);
+      logger.info(`[TEST:REQUEST] Sent test request with ID: ${requestId}`);
+    } catch (error) {
+      logger.error(`[TEST:REQUEST] Error sending test request: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+  }
+   
   emitter.on('logon', () => {
     logger.info('[SESSION:LOGON] Requesting trading session status and security data');
     setTimeout(() => {
-      sendNewsMessage("Test News", "This is a test news message", "1");
+      // sendNewsMessage("Test News", "This is a test news message", "1");
+      sendTestRequest();
     }, 500);
   });
 
@@ -1230,6 +1251,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     },
     connect,
     disconnect,
+    sendTestRequest,
     sendMarketDataRequest,
     sendTradingSessionStatusRequest,
     sendSecurityStatusRequest,
@@ -1422,6 +1444,7 @@ export interface FixClient {
     entryTypes?: string[],
     subscriptionType?: string
   ): string | null;
+  sendTestRequest(): void;
   sendTradingSessionStatusRequest(tradingSessionID?: string): string | null;
   sendSecurityListRequestForEquity(): string | null;
   sendSecurityListRequestForIndex(): string | null;

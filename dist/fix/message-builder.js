@@ -194,12 +194,12 @@ function createHeartbeatMessageBuilder(options, sequenceManager, testReqId) {
  * @param testReqId Test request ID
  *
  */
-function createTestRequestMessageBuilder(options, sequenceManager, testReqId) {
+function createTestRequestMessageBuilder(options, testReqId) {
     const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.TEST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextAndIncrement());
+        .addField(constants_1.FieldTag.MSG_SEQ_NUM, "2");
     if (testReqId) {
         builder.addField(constants_1.FieldTag.TEST_REQ_ID, testReqId);
     }
@@ -262,7 +262,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .addField(constants_1.FieldTag.MSG_SEQ_NUM, "2")
+        .setMsgSeqNum(sequenceManager.getNextTradingStatusAndIncrement())
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
@@ -299,7 +299,7 @@ function createMarketDataRequestBuilder(options, sequenceManager, symbols, entry
         .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .addField(constants_1.FieldTag.MSG_SEQ_NUM, "2")
+        .setMsgSeqNum(sequenceManager.getNextMarketDataAndIncrement())
         .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
         .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
@@ -451,17 +451,11 @@ function createNewsMessageBuilder(options, sequenceManager, headline, text, orig
         .setMsgType(constants_1.MessageType.NEWS)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .addField(constants_1.FieldTag.CHANNEL_NO, "")
-        .addField(constants_1.FieldTag.NEWS_ID, "1")
-        .addField(constants_1.FieldTag.ORIG_TIME, getCurrentTimestamp())
         .addField(constants_1.FieldTag.MSG_SEQ_NUM, "2")
         .addField(constants_1.FieldTag.HEADLINE, headline)
-        .addField(constants_1.FieldTag.RAW_DATA_FORMAT, "0")
-        .addField(constants_1.FieldTag.RAW_DATA_LENGTH, text.length.toString())
-        .addField(constants_1.FieldTag.RAW_DATA, text);
-    // .addField(FieldTag.URGENCY, urgency)
-    // .addField(FieldTag.LINES_OF_TEXT, '1') // Just using 1 line of text for simplicity
-    // .addField(FieldTag.TEXT, text);
+        .addField(constants_1.FieldTag.URGENCY, urgency)
+        .addField(constants_1.FieldTag.LINES_OF_TEXT, '1') // Just using 1 line of text for simplicity
+        .addField(constants_1.FieldTag.TEXT, text);
     // Add origination time if provided, otherwise it will use the standard sending time
     if (origTime) {
         builder.addField(constants_1.FieldTag.ORIG_TIME, origTime);

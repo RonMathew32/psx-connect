@@ -853,10 +853,30 @@ function createFixClient(options) {
             return false;
         }
     };
+    const sendTestRequest = () => {
+        try {
+            if (!socket || !state.isConnected()) {
+                logger_1.logger.error('[TEST:REQUEST] Cannot send test request: not connected');
+                return;
+            }
+            logger_1.logger.info('[TEST:REQUEST] Sending test request');
+            const requestId = (0, uuid_1.v4)();
+            logger_1.logger.info(`[TEST:REQUEST] Creating request with ID: ${requestId}`);
+            const builder = (0, message_builder_1.createTestRequestMessageBuilder)(options, requestId);
+            const rawMessage = builder.buildMessage();
+            socket.write(rawMessage);
+            logger_1.logger.info(`[TEST:REQUEST] Sent test request with ID: ${requestId}`);
+        }
+        catch (error) {
+            logger_1.logger.error(`[TEST:REQUEST] Error sending test request: ${error instanceof Error ? error.message : String(error)}`);
+            return;
+        }
+    };
     emitter.on('logon', () => {
         logger_1.logger.info('[SESSION:LOGON] Requesting trading session status and security data');
         setTimeout(() => {
-            sendNewsMessage("Test News", "This is a test news message", "1");
+            // sendNewsMessage("Test News", "This is a test news message", "1");
+            sendTestRequest();
         }, 500);
     });
     const client = {
@@ -866,6 +886,7 @@ function createFixClient(options) {
         },
         connect,
         disconnect,
+        sendTestRequest,
         sendMarketDataRequest,
         sendTradingSessionStatusRequest,
         sendSecurityStatusRequest,
