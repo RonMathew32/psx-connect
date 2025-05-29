@@ -39,7 +39,10 @@ export enum FieldTag {
   BEGIN_STRING = '8',               // Begin string
   BODY_LENGTH = '9',                // Body length
   CHECK_SUM = '10',                 // Checksum
+  BEGIN_SEQ_NO = '7',               // Begin sequence number
+  END_SEQ_NO = '16',                // End sequence number
   CURRENCY = '15',                  // Currency of the security
+  NEW_SEQ_NO = '36',                // New sequence number
   ORDER_ID = '37',                  // Order ID
   ORDER_QTY = '38',                 // Order quantity
   ORIG_TIME = '42',                 // Original time
@@ -56,6 +59,7 @@ export enum FieldTag {
   RAW_DATA_LENGTH = '95',           // Raw data length
   RAW_DATA = '96',                  // Raw data
   ENCRYPT_METHOD = '98',            // Encryption method
+  GAP_FILL_FLAG = '123',            // Gap Fill Flag
   ISSUER = '106',                   // Issuer of the security
   SECURITY_DESC = '107',            // Security description
   HEART_BT_INT = '108',             // Heartbeat interval
@@ -64,6 +68,7 @@ export enum FieldTag {
   PREV_CLOSE_PX = '140',            // Previous closing price
   RESET_SEQ_NUM_FLAG = '141',       // Reset sequence number flag
   NO_RELATED_SYM = '146',           // Number of related symbols
+  HEADLINE = '148',                 // News headline
   SECURITY_TYPE = '167',            // Security type
   SECURITY_EXCHANGE = '207',        // Security exchange
   MD_REQ_ID = '262',                // Market data request ID
@@ -78,18 +83,21 @@ export enum FieldTag {
   MD_ENTRY_DATE = '272',            // Market data entry date
   MD_ENTRY_TIME = '273',            // Market data entry time
   MD_ENTRY_POSITION_NO = '290',     // Market data entry position number
+  MD_REQ_REJ_REASON = '281',        // Market data request reject reason
   SECURITY_REQ_ID = '320',          // Security request ID
   SECURITY_STATUS_REQ_ID = '324',   // Security status request ID
   SECURITY_TRADING_STATUS = '326',  // Security trading status
   HALT_REASON = '327',              // Halt reason
   MSG_SEQ_NUM = '34',               // Message sequence number
   MSG_TYPE = '35',                  // Message type
+  LINES_OF_TEXT = '33',             // Number of lines in text message
   TRAD_SES_REQ_ID = '335',          // Trading session request ID
   TRADING_SESSION_ID = '336',       // Trading session ID
   TRAD_SES_STATUS = '340',          // Trading session status
   START_TIME = '341',               // Start time
   END_TIME = '342',                 // End time
   REF_TAG_ID = '371',               // Reference tag ID
+  NO_TRADING_SESSION = '386',
   TOTAL_VOLUME_TRADED = '387',      // Total volume traded
   TOT_NO_RELATED_SYM = '393',       // Total number of related symbols
   NO_SECURITIES = '393',            // Number of securities in a security list response, same as TOT_NO_RELATED_SYM
@@ -99,6 +107,7 @@ export enum FieldTag {
   NO_PARTY_IDS = '453',             // Number of party IDs
   PRODUCT = '460',                  // Product type
   TRANSACT_TIME= '60',              // Transact time
+  URGENCY = '61',                   // News message urgency
   CFI_CODE = '461',                 // Classification of Financial Instrument code
   USERNAME = '553',                 // Username
   PASSWORD = '554',                 // Password

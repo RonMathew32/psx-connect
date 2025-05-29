@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleMarketDataRequestReject = exports.handleReject = exports.handleTradingStatus = exports.handleTradingSessionStatus = exports.handleSecurityList = exports.handleMarketDataIncremental = exports.handleMarketDataSnapshot = exports.handleSequenceError = exports.handleLogout = exports.handleLogon = void 0;
+exports.handleNews = exports.handleMarketDataRequestReject = exports.handleReject = exports.handleTradingStatus = exports.handleTradingSessionStatus = exports.handleSecurityList = exports.handleMarketDataIncremental = exports.handleMarketDataSnapshot = exports.handleSequenceError = exports.handleLogout = exports.handleLogon = void 0;
 const logger_1 = require("../utils/logger");
 const constants_1 = require("../constants");
 function processMarketData(parsedMessage, emitter, type) {
@@ -316,28 +316,164 @@ const handleTradingStatus = (parsedMessage, emitter) => {
 exports.handleTradingStatus = handleTradingStatus;
 const handleReject = (parsedMessage) => {
     const text = parsedMessage[constants_1.FieldTag.TEXT] || "";
+    const rejectReasonCode = parsedMessage["373"]; // SessionRejectReason
+    const refTagId = parsedMessage[constants_1.FieldTag.REF_TAG_ID];
+    const refSeqNum = parsedMessage[constants_1.FieldTag.REF_SEQ_NUM];
+    logger_1.logger.error(`[REJECT] Detailed reject information:`);
+    logger_1.logger.error(`[REJECT] Reason code: ${rejectReasonCode}`);
+    logger_1.logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
+    logger_1.logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
+    logger_1.logger.error(`[REJECT] Response text: ${text || 'No text provided'}`);
+    if (refTagId) {
+        logger_1.logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
+    }
+    // Check for sequence error in text message
     const isSequenceError = text.includes("MsgSeqNum") ||
         text.includes("too large") ||
         text.includes("sequence");
+    // Get reject reason description based on code
+    let rejectReason = "Unknown reject reason";
+    if (rejectReasonCode) {
+        switch (rejectReasonCode) {
+            case "0":
+                rejectReason = "Invalid tag number";
+                break;
+            case "1":
+                rejectReason = "Required tag missing";
+                break;
+            case "2":
+                rejectReason = "Tag not defined for this message type";
+                break;
+            case "3":
+                rejectReason = "Undefined Tag";
+                break;
+            case "4":
+                rejectReason = "Tag specified without a value";
+                break;
+            case "5":
+                rejectReason = "Value is incorrect (out of range) for this tag";
+                break;
+            case "6":
+                rejectReason = "Incorrect data format for value";
+                break;
+            case "7":
+                rejectReason = "Decryption problem";
+                break;
+            case "8":
+                rejectReason = "Signature problem";
+                break;
+            case "9":
+                rejectReason = "CompID problem";
+                break;
+            case "10":
+                rejectReason = "SendingTime accuracy problem";
+                break;
+            default: rejectReason = `Unknown reject reason code: ${rejectReasonCode}`;
+        }
+    }
     if (isSequenceError) {
         const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
         if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
             const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
             if (!isNaN(expectedSeqNum)) {
-                return { isSequenceError: true, expectedSeqNum };
+                return { isSequenceError: true, expectedSeqNum, rejectReason };
             }
         }
-        return { isSequenceError: true };
+        return { isSequenceError: true, rejectReason };
     }
-    return { isSequenceError: false };
+    return { isSequenceError: false, rejectReason };
 };
 exports.handleReject = handleReject;
 const handleMarketDataRequestReject = (parsedMessage, emitter) => {
+    const mdReqId = parsedMessage[constants_1.FieldTag.MD_REQ_ID] || "UNKNOWN";
+    const rejReasonCode = parsedMessage[constants_1.FieldTag.MD_REQ_REJ_REASON];
+    const text = parsedMessage[constants_1.FieldTag.TEXT];
+    // Parse the rejection reason based on the code
+    let rejReason = "Unknown rejection reason";
+    if (rejReasonCode) {
+        switch (rejReasonCode) {
+            case "0":
+                rejReason = "Unknown symbol";
+                break;
+            case "1":
+                rejReason = "Duplicate MDReqID";
+                break;
+            case "2":
+                rejReason = "Insufficient bandwidth";
+                break;
+            case "3":
+                rejReason = "Insufficient permissions";
+                break;
+            case "4":
+                rejReason = "Unsupported SubscriptionRequestType";
+                break;
+            case "5":
+                rejReason = "Unsupported MarketDepth";
+                break;
+            case "6":
+                rejReason = "Unsupported MDUpdateType";
+                break;
+            case "7":
+                rejReason = "Unsupported AggregatedBook";
+                break;
+            case "8":
+                rejReason = "Unsupported MDEntryType";
+                break;
+            case "9":
+                rejReason = "Unsupported TradingSessionID";
+                break;
+            case "A":
+                rejReason = "Unsupported Scope";
+                break;
+            case "B":
+                rejReason = "Unsupported OpenCloseSettleFlag";
+                break;
+            case "C":
+                rejReason = "Unsupported MDImplicitDelete";
+                break;
+            default: rejReason = `Unknown rejection code: ${rejReasonCode}`;
+        }
+    }
     const rejectInfo = {
-        requestId: parsedMessage[constants_1.FieldTag.MD_REQ_ID] || "UNKNOWN",
-        reason: parsedMessage["58"] || "UNKNOWN", // Text
-        text: parsedMessage[constants_1.FieldTag.TEXT],
+        requestId: mdReqId,
+        reasonCode: rejReasonCode,
+        reason: rejReason,
+        text: text || ""
     };
     emitter.emit("marketDataReject", rejectInfo);
 };
 exports.handleMarketDataRequestReject = handleMarketDataRequestReject;
+/**
+ * Handle News messages
+ *
+ * @param parsedMessage The parsed FIX message
+ * @param emitter Event emitter to send events
+ */
+const handleNews = (parsedMessage, emitter) => {
+    try {
+        logger_1.logger.info('[NEWS] Processing news message...');
+        const newsInfo = {
+            headline: parsedMessage[constants_1.FieldTag.HEADLINE] || 'No headline',
+            text: parsedMessage[constants_1.FieldTag.TEXT] || 'No text provided',
+            urgency: parsedMessage[constants_1.FieldTag.URGENCY] || '1',
+            origTime: parsedMessage[constants_1.FieldTag.ORIG_TIME] || parsedMessage[constants_1.FieldTag.SENDING_TIME] || new Date().toISOString(),
+            timestamp: new Date().toISOString()
+        };
+        // Emit a news event
+        emitter.emit('news', newsInfo);
+        // Also emit as categorized data
+        emitter.emit('categorizedData', {
+            category: 'NEWS',
+            type: 'GENERAL',
+            urgency: newsInfo.urgency,
+            headline: newsInfo.headline,
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+        });
+        logger_1.logger.info(`[NEWS] Processed news message: ${newsInfo.headline}`);
+    }
+    catch (error) {
+        logger_1.logger.error(`[NEWS] Error handling news message: ${error instanceof Error ? error.message : String(error)}`);
+    }
+};
+exports.handleNews = handleNews;

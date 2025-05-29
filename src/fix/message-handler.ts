@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import {logger} from "../utils/logger";
+import { logger } from "../utils/logger";
 import { SequenceManager } from "../utils/sequence-manager";
 import { FieldTag } from "../constants";
 import { ParsedFixMessage } from "./message-parser";
@@ -9,48 +9,48 @@ function processMarketData(
     parsedMessage: ParsedFixMessage,
     emitter: EventEmitter,
     type: 'SNAPSHOT' | 'INCREMENTAL'
-  ): void {
+): void {
     try {
-      logger.info(`[MARKET_DATA:${type}] Processing market data...`);
-      const marketData: MarketDataItem[] = [];
-      const symbol = parsedMessage[FieldTag.SYMBOL] || 'UNKNOWN';
-      const noMDEntries = parseInt(parsedMessage[FieldTag.NO_MD_ENTRIES] || '0', 10);
-  
-      for (let i = 1; i <= noMDEntries; i++) {
-        const entryPrefix = `MD ENTRY ${i}`;
-        const entryType = parsedMessage[`${entryPrefix}:${FieldTag.MD_ENTRY_TYPE}`];
-        const entryPx = parsedMessage[`${entryPrefix}:${FieldTag.MD_ENTRY_PX}`];
-        const entrySize = parsedMessage[`${entryPrefix}:${FieldTag.MD_ENTRY_SIZE}`];
-  
-        if (entryType && entryPx) {
-          marketData.push({
-            symbol,
-            entryType,
-            price: parseFloat(entryPx),
-            size: entrySize ? parseInt(entrySize, 10) : undefined,
-            timestamp: parsedMessage[FieldTag.SENDING_TIME] || new Date().toISOString(),
-          });
+        logger.info(`[MARKET_DATA:${type}] Processing market data...`);
+        const marketData: MarketDataItem[] = [];
+        const symbol = parsedMessage[FieldTag.SYMBOL] || 'UNKNOWN';
+        const noMDEntries = parseInt(parsedMessage[FieldTag.NO_MD_ENTRIES] || '0', 10);
+
+        for (let i = 1; i <= noMDEntries; i++) {
+            const entryPrefix = `MD ENTRY ${i}`;
+            const entryType = parsedMessage[`${entryPrefix}:${FieldTag.MD_ENTRY_TYPE}`];
+            const entryPx = parsedMessage[`${entryPrefix}:${FieldTag.MD_ENTRY_PX}`];
+            const entrySize = parsedMessage[`${entryPrefix}:${FieldTag.MD_ENTRY_SIZE}`];
+
+            if (entryType && entryPx) {
+                marketData.push({
+                    symbol,
+                    entryType,
+                    price: parseFloat(entryPx),
+                    size: entrySize ? parseInt(entrySize, 10) : undefined,
+                    timestamp: parsedMessage[FieldTag.SENDING_TIME] || new Date().toISOString(),
+                });
+            }
         }
-      }
-  
-      if (marketData.length > 0) {
-        emitter.emit('marketData', marketData);
-        emitter.emit('kseData', marketData);
-      }
-  
-      emitter.emit('categorizedData', {
-        category: 'MARKET_DATA',
-        type,
-        symbol,
-        data: parsedMessage,
-        timestamp: new Date().toISOString(),
-      });
-  
-      logger.info(`[MARKET_DATA:${type}] Processing complete for symbol: ${symbol}`);
+
+        if (marketData.length > 0) {
+            emitter.emit('marketData', marketData);
+            emitter.emit('kseData', marketData);
+        }
+
+        emitter.emit('categorizedData', {
+            category: 'MARKET_DATA',
+            type,
+            symbol,
+            data: parsedMessage,
+            timestamp: new Date().toISOString(),
+        });
+
+        logger.info(`[MARKET_DATA:${type}] Processing complete for symbol: ${symbol}`);
     } catch (error) {
-      logger.error(`[MARKET_DATA:${type}] Error handling: ${error instanceof Error ? error.message : String(error)}`);
+        logger.error(`[MARKET_DATA:${type}] Error handling: ${error instanceof Error ? error.message : String(error)}`);
     }
-  }
+}
 
 export const handleLogon = (
     message: ParsedFixMessage,
@@ -285,11 +285,11 @@ export const handleSequenceError = (
 
 export const handleMarketDataSnapshot = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
     processMarketData(parsedMessage, emitter, 'SNAPSHOT');
-  };
+};
 
-  export const handleMarketDataIncremental = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
+export const handleMarketDataIncremental = (parsedMessage: ParsedFixMessage, emitter: EventEmitter): void => {
     processMarketData(parsedMessage, emitter, 'INCREMENTAL');
-  };
+};
 
 export const handleSecurityList = (
     parsedMessage: ParsedFixMessage,
@@ -308,7 +308,7 @@ export const handleSecurityList = (
         const productType = product === "5" ? "INDEX" : "EQUITY";
         const isFinalFragment = parsedMessage[FieldTag.LAST_FRAGMENT] === "Y";
         const reqId = parsedMessage[FieldTag.SECURITY_REQ_ID] || "";
-        
+
         logger.info(
             `[SECURITY_LIST:${productType}] Processing ${noRelatedSym} securities, fragment is ${isFinalFragment ? 'final' : 'partial'}, reqId: ${reqId}`
         );
@@ -323,11 +323,11 @@ export const handleSecurityList = (
             const issuer = parsedMessage[`${symPrefix}:${FieldTag.ISSUER}`] || "";
             const cfiCode = parsedMessage[`${symPrefix}:${FieldTag.CFI_CODE}`] || "";
             const securityType = parsedMessage[`${symPrefix}:167`] || ""; // SecurityType
-            
+
             // Trading session info
             let tradingSessionId = "REG";
             const noTradingSessionRules = parseInt(parsedMessage[`${symPrefix}:1309`] || "0", 10);
-            
+
             if (noTradingSessionRules > 0) {
                 tradingSessionId = parsedMessage[`${symPrefix}:TRD SESS RULES 1:${FieldTag.TRADING_SESSION_ID}`] || "REG";
             }
@@ -345,7 +345,7 @@ export const handleSecurityList = (
                     securityType,
                     tradingSessionId
                 });
-                
+
                 logger.debug(`[SECURITY_LIST:${productType}] Processed symbol: ${symbol}, desc: ${securityDesc || 'N/A'}`);
             }
         }
@@ -463,37 +463,137 @@ export const handleTradingStatus = (
 };
 
 export const handleReject = (
-    parsedMessage: ParsedFixMessage
-): { isSequenceError: boolean; expectedSeqNum?: number } => {
+    parsedMessage: ParsedFixMessage,
+): { isSequenceError: boolean; expectedSeqNum?: number; rejectReason?: string } => {
     const text = parsedMessage[FieldTag.TEXT] || "";
+    const rejectReasonCode = parsedMessage["373"]; // SessionRejectReason
+    const refTagId = parsedMessage[FieldTag.REF_TAG_ID];
+    const refSeqNum = parsedMessage[FieldTag.REF_SEQ_NUM];
+
+    logger.error(`[REJECT] Detailed reject information:`);
+    logger.error(`[REJECT] Reason code: ${rejectReasonCode}`);
+    logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
+    logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
+    logger.error(`[REJECT] Response text: ${text || 'No text provided'}`);
+
+    if (refTagId) {
+        logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
+    }
+
+    // Check for sequence error in text message
     const isSequenceError =
         text.includes("MsgSeqNum") ||
         text.includes("too large") ||
         text.includes("sequence");
+
+    // Get reject reason description based on code
+    let rejectReason = "Unknown reject reason";
+    if (rejectReasonCode) {
+        switch (rejectReasonCode) {
+            case "0": rejectReason = "Invalid tag number"; break;
+            case "1": rejectReason = "Required tag missing"; break;
+            case "2": rejectReason = "Tag not defined for this message type"; break;
+            case "3": rejectReason = "Undefined Tag"; break;
+            case "4": rejectReason = "Tag specified without a value"; break;
+            case "5": rejectReason = "Value is incorrect (out of range) for this tag"; break;
+            case "6": rejectReason = "Incorrect data format for value"; break;
+            case "7": rejectReason = "Decryption problem"; break;
+            case "8": rejectReason = "Signature problem"; break;
+            case "9": rejectReason = "CompID problem"; break;
+            case "10": rejectReason = "SendingTime accuracy problem"; break;
+            default: rejectReason = `Unknown reject reason code: ${rejectReasonCode}`;
+        }
+    }
 
     if (isSequenceError) {
         const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
         if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
             const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
             if (!isNaN(expectedSeqNum)) {
-                return { isSequenceError: true, expectedSeqNum };
+                return { isSequenceError: true, expectedSeqNum, rejectReason };
             }
         }
-        return { isSequenceError: true };
+        return { isSequenceError: true, rejectReason };
     }
 
-    return { isSequenceError: false };
+    return { isSequenceError: false, rejectReason };
 };
 
 export const handleMarketDataRequestReject = (
     parsedMessage: ParsedFixMessage,
     emitter: EventEmitter
 ): void => {
+    const mdReqId = parsedMessage[FieldTag.MD_REQ_ID] || "UNKNOWN";
+    const rejReasonCode = parsedMessage[FieldTag.MD_REQ_REJ_REASON];
+    const text = parsedMessage[FieldTag.TEXT];
+    
+    // Parse the rejection reason based on the code
+    let rejReason = "Unknown rejection reason";
+    if (rejReasonCode) {
+        switch (rejReasonCode) {
+            case "0": rejReason = "Unknown symbol"; break;
+            case "1": rejReason = "Duplicate MDReqID"; break;
+            case "2": rejReason = "Insufficient bandwidth"; break;
+            case "3": rejReason = "Insufficient permissions"; break;
+            case "4": rejReason = "Unsupported SubscriptionRequestType"; break;
+            case "5": rejReason = "Unsupported MarketDepth"; break;
+            case "6": rejReason = "Unsupported MDUpdateType"; break;
+            case "7": rejReason = "Unsupported AggregatedBook"; break;
+            case "8": rejReason = "Unsupported MDEntryType"; break;
+            case "9": rejReason = "Unsupported TradingSessionID"; break;
+            case "A": rejReason = "Unsupported Scope"; break;
+            case "B": rejReason = "Unsupported OpenCloseSettleFlag"; break;
+            case "C": rejReason = "Unsupported MDImplicitDelete"; break;
+            default: rejReason = `Unknown rejection code: ${rejReasonCode}`;
+        }
+    }
+
     const rejectInfo = {
-        requestId: parsedMessage[FieldTag.MD_REQ_ID] || "UNKNOWN",
-        reason: parsedMessage["58"] || "UNKNOWN", // Text
-        text: parsedMessage[FieldTag.TEXT],
+        requestId: mdReqId,
+        reasonCode: rejReasonCode,
+        reason: rejReason,
+        text: text || ""
     };
 
     emitter.emit("marketDataReject", rejectInfo);
+};
+
+/**
+ * Handle News messages
+ * 
+ * @param parsedMessage The parsed FIX message
+ * @param emitter Event emitter to send events
+ */
+export const handleNews = (
+    parsedMessage: ParsedFixMessage,
+    emitter: EventEmitter
+): void => {
+    try {
+        logger.info('[NEWS] Processing news message...');
+        
+        const newsInfo = {
+            headline: parsedMessage[FieldTag.HEADLINE] || 'No headline',
+            text: parsedMessage[FieldTag.TEXT] || 'No text provided',
+            urgency: parsedMessage[FieldTag.URGENCY] || '1',
+            origTime: parsedMessage[FieldTag.ORIG_TIME] || parsedMessage[FieldTag.SENDING_TIME] || new Date().toISOString(),
+            timestamp: new Date().toISOString()
+        };
+        
+        // Emit a news event
+        emitter.emit('news', newsInfo);
+        
+        // Also emit as categorized data
+        emitter.emit('categorizedData', {
+            category: 'NEWS',
+            type: 'GENERAL',
+            urgency: newsInfo.urgency,
+            headline: newsInfo.headline,
+            data: parsedMessage,
+            timestamp: new Date().toISOString()
+        });
+        
+        logger.info(`[NEWS] Processed news message: ${newsInfo.headline}`);
+    } catch (error) {
+        logger.error(`[NEWS] Error handling news message: ${error instanceof Error ? error.message : String(error)}`);
+    }
 };

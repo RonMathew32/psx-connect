@@ -386,18 +386,16 @@ function createFixClient(options) {
                     logger_1.logger.info(`[SESSION:LOGON] Processing complete`);
                     break;
                 case constants_1.MessageType.REJECT:
-                    // Enhanced logging for reject messages to identify missing fields
-                    const refTagId = parsedMessage[constants_1.FieldTag.REF_TAG_ID];
-                    const refSeqNum = parsedMessage[constants_1.FieldTag.REF_SEQ_NUM];
-                    const rejectText = parsedMessage[constants_1.FieldTag.TEXT];
-                    const rejectReason = parsedMessage['373']; // SessionRejectReason
-                    logger_1.logger.error(`[REJECT] Detailed reject information:`);
-                    logger_1.logger.error(`[REJECT] Reason code: ${rejectReason}`);
-                    logger_1.logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
-                    logger_1.logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
-                    logger_1.logger.error(`[REJECT] Response text: ${rejectText || 'No text provided'}`);
-                    if (refTagId) {
-                        logger_1.logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
+                    const rejectResult = (0, message_handler_1.handleReject)(parsedMessage);
+                    if (rejectResult.isSequenceError) {
+                        logger_1.logger.error(`[REJECT] Sequence error detected: ${rejectResult.rejectReason}`);
+                        handleSequenceError(rejectResult.expectedSeqNum);
+                    }
+                    else {
+                        logger_1.logger.error(`[REJECT] Session reject reason: ${rejectResult.rejectReason}`);
+                        emitter.emit('reject', {
+                            reason: rejectResult.rejectReason || ''
+                        });
                     }
                     break;
                 case constants_1.MessageType.LOGOUT:
@@ -416,6 +414,16 @@ function createFixClient(options) {
                         }
                     }
                     logger_1.logger.info(`[SESSION:LOGOUT] Processing complete`);
+                    break;
+                case constants_1.MessageType.MARKET_DATA_REQUEST_REJECT:
+                    logger_1.logger.info(`[MARKET_DATA:REJECT] Processing market data request reject message`);
+                    (0, message_handler_1.handleMarketDataRequestReject)(parsedMessage, emitter);
+                    logger_1.logger.info(`[MARKET_DATA:REJECT] Processing complete`);
+                    break;
+                case constants_1.MessageType.NEWS:
+                    logger_1.logger.info(`[NEWS] Received news message`);
+                    (0, message_handler_1.handleNews)(parsedMessage, emitter);
+                    logger_1.logger.info(`[NEWS] Processing complete`);
                     break;
                 // ... other cases remain unchanged ...
                 default:
@@ -789,6 +797,33 @@ function createFixClient(options) {
             return null;
         }
     };
+    /**
+     * Sends a News message to the counterparty
+     *
+     * @param headline News headline
+     * @param text News text body
+     * @param urgency News urgency (default: '1' Flash)
+     * @returns true if the message was sent successfully, false otherwise
+     */
+    const sendNewsMessage = (headline, text, urgency = '1') => {
+        try {
+            if (!socket || !state.isConnected() || !state.isLoggedIn()) {
+                logger_1.logger.error('[NEWS:SEND] Cannot send news message: not connected or not logged in');
+                return false;
+            }
+            logger_1.logger.info(`[NEWS:SEND] Creating news message with headline: ${headline}`);
+            const builder = (0, message_builder_1.createNewsMessageBuilder)(options, sequenceManager, headline, text, undefined, // Use default timestamp
+            urgency);
+            const rawMessage = builder.buildMessage();
+            socket.write(rawMessage);
+            logger_1.logger.info(`[NEWS:SEND] Sent news message: ${headline}`);
+            return true;
+        }
+        catch (error) {
+            logger_1.logger.error(`[NEWS:SEND] Error sending news message: ${error instanceof Error ? error.message : String(error)}`);
+            return false;
+        }
+    };
     emitter.on('logon', () => {
         // logger.info('[TRADING_STATUS] Received request for trading session status');
         // sendTradingSessionStatusRequest();
@@ -894,7 +929,8 @@ function createFixClient(options) {
         },
         sendSecurityListRequestForFut: function () {
             return this.sendSecurityListRequestForFutEquity();
-        }
+        },
+        sendNewsMessage
     };
     return client;
 }

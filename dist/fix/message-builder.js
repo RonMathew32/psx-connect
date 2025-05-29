@@ -4,19 +4,26 @@ exports.createMessageBuilder = createMessageBuilder;
 exports.createLogonMessageBuilder = createLogonMessageBuilder;
 exports.createLogoutMessageBuilder = createLogoutMessageBuilder;
 exports.createHeartbeatMessageBuilder = createHeartbeatMessageBuilder;
-exports.createMarketDataRequestBuilder = createMarketDataRequestBuilder;
+exports.createTestRequestMessageBuilder = createTestRequestMessageBuilder;
+exports.createResendRequestMessageBuilder = createResendRequestMessageBuilder;
+exports.createSequenceResetRequestMessageBuilder = createSequenceResetRequestMessageBuilder;
 exports.createTradingSessionStatusRequestBuilder = createTradingSessionStatusRequestBuilder;
 exports.createSecurityStatusRequestBuilder = createSecurityStatusRequestBuilder;
+exports.createMarketDataRequestBuilder = createMarketDataRequestBuilder;
 exports.createSecurityListRequestForREGEquityBuilder = createSecurityListRequestForREGEquityBuilder;
 exports.createSecurityListRequestForFutEquityBuilder = createSecurityListRequestForFutEquityBuilder;
 exports.createSecurityListRequestForRegIndexBuilder = createSecurityListRequestForRegIndexBuilder;
 exports.createSecurityListRequestForFutIndexBuilder = createSecurityListRequestForFutIndexBuilder;
 exports.createIndexMarketDataRequestBuilder = createIndexMarketDataRequestBuilder;
 exports.createSymbolMarketDataSubscriptionBuilder = createSymbolMarketDataSubscriptionBuilder;
+exports.createNewsMessageBuilder = createNewsMessageBuilder;
 exports.getMessageTypeName = getMessageTypeName;
 const constants_1 = require("../constants");
 /**
  * Get current timestamp in FIX format (YYYYMMDD-HH:MM:SS.sss)
+ *
+ * @returns Current timestamp in FIX format (YYYYMMDD-HH:MM:SS.sss)
+ *
  */
 function getCurrentTimestamp() {
     const now = new Date();
@@ -32,6 +39,10 @@ function getCurrentTimestamp() {
 }
 /**
  * Creates a generic FIX message builder
+ *
+ * @param beginString Begin string
+ * @returns Message builder
+ *
  */
 function createMessageBuilder(beginString = 'FIXT.1.1') {
     let headerFields = {
@@ -116,16 +127,20 @@ function createMessageBuilder(beginString = 'FIXT.1.1') {
 }
 /**
  * Creates a Logon message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ *
  */
 function createLogonMessageBuilder(options, sequenceManager) {
     const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.LOGON)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(1) // Always use sequence number 1 for initial logon
+        .setMsgSeqNum(1)
         .addField(constants_1.FieldTag.ENCRYPT_METHOD, constants_1.DEFAULT_CONNECTION.ENCRYPT_METHOD)
         .addField(constants_1.FieldTag.HEART_BT_INT, options.heartbeatIntervalSecs.toString())
-        .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y')
+        .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, constants_1.DEFAULT_CONNECTION.RESET_SEQ_NUM)
         .addField(constants_1.FieldTag.USERNAME, options.username)
         .addField(constants_1.FieldTag.PASSWORD, options.password)
         .addField(constants_1.FieldTag.DEFAULT_APPL_VER_ID, constants_1.DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
@@ -134,6 +149,11 @@ function createLogonMessageBuilder(options, sequenceManager) {
 }
 /**
  * Creates a Logout message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param text Text message
+ *
  */
 function createLogoutMessageBuilder(options, sequenceManager, text) {
     const builder = createMessageBuilder()
@@ -141,7 +161,7 @@ function createLogoutMessageBuilder(options, sequenceManager, text) {
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(sequenceManager.getNextAndIncrement())
-        .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, 'Y');
+        .addField(constants_1.FieldTag.RESET_SEQ_NUM_FLAG, constants_1.DEFAULT_CONNECTION.RESET_SEQ_NUM);
     if (text) {
         builder.addField(constants_1.FieldTag.TEXT, text);
     }
@@ -149,6 +169,11 @@ function createLogoutMessageBuilder(options, sequenceManager, text) {
 }
 /**
  * Creates a Heartbeat message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param testReqId Test request ID
+ *
  */
 function createHeartbeatMessageBuilder(options, sequenceManager, testReqId) {
     const builder = createMessageBuilder()
@@ -162,37 +187,78 @@ function createHeartbeatMessageBuilder(options, sequenceManager, testReqId) {
     return builder;
 }
 /**
- * Creates a Market Data Request message builder
+ * Creates a Test Request message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param testReqId Test request ID
+ *
  */
-function createMarketDataRequestBuilder(options, sequenceManager, symbols, entryTypes = ['0', '1'], subscriptionType = '1', requestId) {
+function createTestRequestMessageBuilder(options, sequenceManager, testReqId) {
     const builder = createMessageBuilder()
-        .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+        .setMsgType(constants_1.MessageType.TEST_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextMarketDataAndIncrement())
-        .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
-        .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
-        .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0')
-        .addField(constants_1.FieldTag.NO_PARTY_IDS, '1')
-        .addField(constants_1.FieldTag.PARTY_ID, options.partyId || options.senderCompId)
-        .addField(constants_1.FieldTag.PARTY_ID_SOURCE, 'D')
-        .addField(constants_1.FieldTag.PARTY_ROLE, '3')
-        .addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString());
-    symbols.forEach(symbol => {
-        builder.addField(constants_1.FieldTag.SYMBOL, symbol);
-    });
-    builder.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
-    for (const entryType of entryTypes) {
-        builder.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
+        .setMsgSeqNum(sequenceManager.getNextAndIncrement());
+    if (testReqId) {
+        builder.addField(constants_1.FieldTag.TEST_REQ_ID, testReqId);
+    }
+    return builder;
+}
+/**
+ * Creates a Resend Request message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param beginSeqNo Message sequence number of first message in range to be resent
+ * @param endSeqNo Message sequence number of last message in range to be resent.
+ *                 Use 0 to request all messages after beginSeqNo.
+ */
+function createResendRequestMessageBuilder(options, sequenceManager, beginSeqNo, endSeqNo) {
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.RESEND_REQUEST)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+        .addField(constants_1.FieldTag.BEGIN_SEQ_NO, beginSeqNo.toString())
+        .addField(constants_1.FieldTag.END_SEQ_NO, endSeqNo.toString());
+    return builder;
+}
+/**
+ * Creates a Sequence Reset message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param newSeqNo New sequence number
+ * @param gapFill If true, sets GapFillFlag to 'Y', otherwise 'N' or omitted
+ * @returns Message builder for Sequence Reset
+ *
+ */
+function createSequenceResetRequestMessageBuilder(options, sequenceManager, newSeqNo, gapFill = false) {
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.SEQUENCE_RESET)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+        .addField(constants_1.FieldTag.NEW_SEQ_NO, newSeqNo.toString());
+    // GapFillFlag is optional, include only if specified
+    if (gapFill) {
+        builder.addField(constants_1.FieldTag.GAP_FILL_FLAG, constants_1.DEFAULT_CONNECTION.RESET_SEQ_NUM);
     }
     return builder;
 }
 /**
  * Creates a Trading Session Status Request message builder
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param requestId Request ID
+ * @param tradingSessionID Trading session ID
+ * @returns Message builder for Trading Session Status Request
+ *
  */
 function createTradingSessionStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = 'REG') {
-    return createMessageBuilder()
+    const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
@@ -200,21 +266,56 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
+    return builder;
 }
 /**
  * Creates a Security Status Request message builder for FUT Equity
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param requestId Request ID
+ * @param tradingSessionID Trading session ID
+ * @returns Message builder for Security Status Request
+ *
  */
 function createSecurityStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = "FUT") {
     // Build a message with an exact sequence of fields that matches a previously successful message
     const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.SECURITY_STATUS_REQUEST)
-        // .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SYMBOL, "NA")
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0")
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
+    return builder;
+}
+/**
+ * Creates a Market Data Request message builder
+ */
+function createMarketDataRequestBuilder(options, sequenceManager, symbols, entryTypes = ['0', '1', '2', '3', '5', '6', '7', '8', '9', 'B'], subscriptionType = '1', requestId) {
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(sequenceManager.getNextMarketDataAndIncrement())
+        .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
+        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
+        .addField(constants_1.FieldTag.MD_UPDATE_TYPE, '0')
+        .addField(constants_1.FieldTag.SYMBOL, 'NA')
+        .addField(constants_1.FieldTag.NO_RELATED_SYM, symbols.length.toString())
+        .addField(constants_1.FieldTag.NO_TRADING_SESSION, '1')
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, 'FUT');
+    // .addField(FieldTag.NO_PARTY_IDS, '1')
+    // .addField(FieldTag.PARTY_ID, options.partyId || options.senderCompId)
+    // .addField(FieldTag.PARTY_ID_SOURCE, 'D')
+    // .addField(FieldTag.PARTY_ROLE, '3')
+    builder.addField(constants_1.FieldTag.NO_MD_ENTRY_TYPES, entryTypes.length.toString());
+    for (const entryType of entryTypes) {
+        builder.addField(constants_1.FieldTag.MD_ENTRY_TYPE, entryType);
+    }
     return builder;
 }
 /**
@@ -330,6 +431,35 @@ function createSymbolMarketDataSubscriptionBuilder(options, sequenceManager, sym
         .addField(constants_1.FieldTag.MD_ENTRY_TYPE, '0')
         .addField(constants_1.FieldTag.MD_ENTRY_TYPE, '1')
         .addField(constants_1.FieldTag.MD_ENTRY_TYPE, '2');
+    return builder;
+}
+/**
+ * Creates a News message builder
+ *
+ * The News (B) message is a general free format message used for abnormal situations.
+ *
+ * @param options Fix client options
+ * @param sequenceManager Sequence manager
+ * @param headline News headline
+ * @param text News text body
+ * @param origTime Message originating time (optional, defaults to current time)
+ * @param urgency News urgency (optional, defaults to '1' Flash)
+ * @returns Message builder for News message
+ */
+function createNewsMessageBuilder(options, sequenceManager, headline, text, origTime, urgency = '1') {
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.NEWS)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
+        .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+        .addField(constants_1.FieldTag.HEADLINE, headline)
+        .addField(constants_1.FieldTag.URGENCY, urgency)
+        .addField(constants_1.FieldTag.LINES_OF_TEXT, '1') // Just using 1 line of text for simplicity
+        .addField(constants_1.FieldTag.TEXT, text);
+    // Add origination time if provided, otherwise it will use the standard sending time
+    if (origTime) {
+        builder.addField(constants_1.FieldTag.ORIG_TIME, origTime);
+    }
     return builder;
 }
 function getMessageTypeName(msgType) {

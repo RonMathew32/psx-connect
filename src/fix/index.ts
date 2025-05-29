@@ -15,7 +15,8 @@ import {
   createSymbolMarketDataSubscriptionBuilder,
   createTradingSessionStatusRequestBuilder,
   getMessageTypeName,
-  createSecurityStatusRequestBuilder
+  createSecurityStatusRequestBuilder,
+  createNewsMessageBuilder
 } from "./message-builder";
 import { parseFixMessage, ParsedFixMessage } from "./message-parser";
 import { SOH, MessageType, FieldTag } from "../constants";
@@ -35,6 +36,9 @@ import {
   handleSecurityList,
   handleTradingSessionStatus,
   handleTradingStatus,
+  handleReject,
+  handleMarketDataRequestReject,
+  handleNews
 } from "./message-handler";
 import { ConnectionState } from "../utils/connection-state";
 
@@ -480,20 +484,15 @@ export function createFixClient(options: FixClientOptions): FixClient {
           logger.info(`[SESSION:LOGON] Processing complete`);
           break;
         case MessageType.REJECT:
-          // Enhanced logging for reject messages to identify missing fields
-          const refTagId = parsedMessage[FieldTag.REF_TAG_ID];
-          const refSeqNum = parsedMessage[FieldTag.REF_SEQ_NUM];
-          const rejectText = parsedMessage[FieldTag.TEXT];
-          const rejectReason = parsedMessage['373']; // SessionRejectReason
-
-          logger.error(`[REJECT] Detailed reject information:`);
-          logger.error(`[REJECT] Reason code: ${rejectReason}`);
-          logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
-          logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
-          logger.error(`[REJECT] Response text: ${rejectText || 'No text provided'}`);
-
-          if (refTagId) {
-            logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
+          const rejectResult = handleReject(parsedMessage);
+          if (rejectResult.isSequenceError) {
+            logger.error(`[REJECT] Sequence error detected: ${rejectResult.rejectReason}`);
+            handleSequenceError(rejectResult.expectedSeqNum);
+          } else {
+            logger.error(`[REJECT] Session reject reason: ${rejectResult.rejectReason}`);
+            emitter.emit('reject', {
+              reason: rejectResult.rejectReason || ''
+            });
           }
           break;
         case MessageType.LOGOUT:
@@ -519,6 +518,16 @@ export function createFixClient(options: FixClientOptions): FixClient {
             }
           }
           logger.info(`[SESSION:LOGOUT] Processing complete`);
+          break;
+        case MessageType.MARKET_DATA_REQUEST_REJECT:
+          logger.info(`[MARKET_DATA:REJECT] Processing market data request reject message`);
+          handleMarketDataRequestReject(parsedMessage, emitter);
+          logger.info(`[MARKET_DATA:REJECT] Processing complete`);
+          break;
+        case MessageType.NEWS:
+          logger.info(`[NEWS] Received news message`);
+          handleNews(parsedMessage, emitter);
+          logger.info(`[NEWS] Processing complete`);
           break;
         // ... other cases remain unchanged ...
         default:
@@ -1137,6 +1146,47 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
+  /**
+   * Sends a News message to the counterparty
+   * 
+   * @param headline News headline
+   * @param text News text body
+   * @param urgency News urgency (default: '1' Flash)
+   * @returns true if the message was sent successfully, false otherwise
+   */
+  const sendNewsMessage = (
+    headline: string,
+    text: string,
+    urgency: string = '1'
+  ): boolean => {
+    try {
+      if (!socket || !state.isConnected() || !state.isLoggedIn()) {
+        logger.error('[NEWS:SEND] Cannot send news message: not connected or not logged in');
+        return false;
+      }
+
+      logger.info(`[NEWS:SEND] Creating news message with headline: ${headline}`);
+      
+      const builder = createNewsMessageBuilder(
+        options,
+        sequenceManager,
+        headline,
+        text,
+        undefined, // Use default timestamp
+        urgency
+      );
+      
+      const rawMessage = builder.buildMessage();
+      socket.write(rawMessage);
+      
+      logger.info(`[NEWS:SEND] Sent news message: ${headline}`);
+      return true;
+    } catch (error) {
+      logger.error(`[NEWS:SEND] Error sending news message: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  };
+
   emitter.on('logon', () => {
     // logger.info('[TRADING_STATUS] Received request for trading session status');
     // sendTradingSessionStatusRequest();
@@ -1265,7 +1315,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
     },
     sendSecurityListRequestForFut: function () {
       return this.sendSecurityListRequestForFutEquity();
-    }
+    },
+    sendNewsMessage
   };
 
   return client;
@@ -1370,4 +1421,12 @@ export interface FixClient {
   reset(): this;
   requestAllSecurities(): this;
   setupComplete(): this;
+  /**
+   * Sends a news message to the counterparty
+   * @param headline News headline
+   * @param text News text body 
+   * @param urgency News urgency (default: '1' Flash)
+   * @returns true if the message was sent, false otherwise
+   */
+  sendNewsMessage(headline: string, text: string, urgency?: string): boolean;
 }
