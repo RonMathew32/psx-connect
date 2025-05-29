@@ -878,7 +878,8 @@ function createFixClient(options) {
         logger_1.logger.info('[SESSION:LOGON] Requesting trading session status and security data');
         setTimeout(() => {
             // sendNewsMessage("Test News", "This is a test news message", "1");
-            sendNewsMessage("Test News", "This is a test news message", "1");
+            // sendNewsMessage("Test News", "This is a test news message", "1");
+            sendSecurityListRequestForREGEquity();
         }, 500);
     });
     const client = {
