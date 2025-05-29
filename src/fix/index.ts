@@ -1166,7 +1166,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       }
 
       logger.info(`[NEWS:SEND] Creating news message with headline: ${headline}`);
-      
+
       const builder = createNewsMessageBuilder(
         options,
         sequenceManager,
@@ -1175,11 +1175,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
         undefined, // Use default timestamp
         urgency
       );
-      
+
       const rawMessage = builder.buildMessage();
       logger.info(`[NEWS:SEND] Raw message: ${rawMessage}`);
       socket.write(rawMessage);
-      
+
       logger.info(`[NEWS:SEND] Sent news message: ${headline}`);
       return true;
     } catch (error) {
@@ -1195,7 +1195,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
     // // Request FUT market security list with a slight delay to avoid overwhelming the server
     setTimeout(() => {
-      sendNewsMessage("Connection Established", "FIX client successfully connected to server");
+      // sendNewsMessage("Connection Established", "FIX client successfully connected to server");
+      sendTradingSessionStatusRequest();
     }, 500);
   });
 

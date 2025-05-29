@@ -831,7 +831,8 @@ function createFixClient(options) {
         // sendSecurityListRequestForEquity();
         // // Request FUT market security list with a slight delay to avoid overwhelming the server
         setTimeout(() => {
-            sendNewsMessage("Connection Established", "FIX client successfully connected to server");
+            // sendNewsMessage("Connection Established", "FIX client successfully connected to server");
+            sendTradingSessionStatusRequest();
         }, 500);
     });
     const client = {
