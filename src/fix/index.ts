@@ -1246,6 +1246,28 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // sendNewsMessage("Test News", "This is a test news message", "1");
       // sendNewsMessage("Test News", "This is a test news message", "1");
       sendMarketDataRequest(["KSE-100", "KMI-30"]);
+
+      setTimeout(() => {
+        sendTradingSessionStatusRequest("REG");
+      }, 500);
+
+      setTimeout(() => {
+        sendSecurityListRequestForREGEquity();
+
+      }, 1000);
+
+      setTimeout(() => {
+        sendSecurityStatusRequest();
+      }, 1500);
+
+      setTimeout(() => {
+        sendSecurityListRequestForREGIndex();
+      }, 2000);
+
+      setTimeout(() => {
+        sendSecurityListRequestForFutEquity();
+      }, 2500);
+
     }, 500);
   });
 
