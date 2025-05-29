@@ -1221,25 +1221,25 @@ export function createFixClient(options: FixClientOptions): FixClient {
     logger.info('[SESSION:LOGON] Requesting trading session status and security data');
     
     // Request trading session status
-    sendTradingSessionStatusRequest();
+    sendMarketDataRequest(["NA"]);
     
-    // Request security status with a slight delay to avoid overwhelming the server
-    setTimeout(() => {
-      sendSecurityStatusRequest();
-    }, 500);
+    // // Request security status with a slight delay to avoid overwhelming the server
+    // setTimeout(() => {
+    //   sendSecurityStatusRequest();
+    // }, 500);
     
-    // Request security lists with staggered timing
-    setTimeout(() => {
-      sendSecurityListRequestForREGEquity();
-    }, 1000);
+    // // Request security lists with staggered timing
+    // setTimeout(() => {
+    //   sendSecurityListRequestForREGEquity();
+    // }, 1000);
     
-    setTimeout(() => {
-      sendSecurityListRequestForFutEquity();
-    }, 1500);
+    // setTimeout(() => {
+    //   sendSecurityListRequestForFutEquity();
+    // }, 1500);
     
-    setTimeout(() => {
-      sendSecurityListRequestForREGIndex();
-    }, 2000);
+    // setTimeout(() => {
+    //   sendSecurityListRequestForREGIndex();
+    // }, 2000);
   });
 
   const client = {
