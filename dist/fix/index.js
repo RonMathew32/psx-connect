@@ -883,11 +883,8 @@ function createFixClient(options) {
             // sendNewsMessage("Test News", "This is a test news message", "1");
             // sendMarketDataRequest(["KSE-100", "KMI-30"]);
             setTimeout(() => {
-                sendTradingSessionStatusRequest("REG");
-            }, 500);
-            setTimeout(() => {
                 sendSecurityListRequestForREGEquity();
-            }, 1000);
+            }, 500);
             setTimeout(() => {
                 sendSecurityStatusRequest();
             }, 1500);

@@ -1248,13 +1248,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // sendMarketDataRequest(["KSE-100", "KMI-30"]);
 
       setTimeout(() => {
-        sendTradingSessionStatusRequest("REG");
-      }, 500);
-
-      setTimeout(() => {
         sendSecurityListRequestForREGEquity();
 
-      }, 1000);
+      }, 500);
 
       setTimeout(() => {
         sendSecurityStatusRequest();
