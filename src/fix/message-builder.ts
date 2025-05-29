@@ -384,7 +384,7 @@ export function createMarketDataRequestBuilder(
     .setMsgType(MessageType.MARKET_DATA_REQUEST)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextMarketDataAndIncrement())
+    .addField(FieldTag.MSG_SEQ_NUM, "2")
     .addField(FieldTag.MD_REQ_ID, requestId)
     .addField(FieldTag.MARKET_DEPTH, '0')
     .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
