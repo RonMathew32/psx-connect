@@ -588,7 +588,7 @@ export function createNewsMessageBuilder(
     .setMsgType(MessageType.NEWS)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+    .addField(FieldTag.MSG_SEQ_NUM, "2")
     .addField(FieldTag.HEADLINE, headline)
     .addField(FieldTag.URGENCY, urgency)
     .addField(FieldTag.LINES_OF_TEXT, '1') // Just using 1 line of text for simplicity
