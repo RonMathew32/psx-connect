@@ -128,6 +128,7 @@ export enum FieldTag {
   NEWS_ID = '1472',                 // News ID
   CHANNEL_NO = '10201',              // Channel number
   RAW_DATA_FORMAT = '10208',        // Number of market data stream IDs
+  TRADING_PHASE_CODE = '8538',      // Trading phase code
 }
 
 // Subscription Request Types
@@ -206,4 +207,18 @@ export const DEFAULT_CONNECTION = {
   RESET_SEQ_NUM: 'Y',
   DEFAULT_APPL_VER_ID: '9',
   DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
-}; 
+};
+
+// Trading Phase Codes from specification
+export enum TradingPhaseCode {
+  STARTING = 'S',                       // Starting (before market open)
+  OPEN_CALL_AUCTION_MORNING = 'O',      // Open Call Auction (pre-open period in the morning)
+  CONTINUOUS_AUCTION = 'T',             // Continuous Auction (open period)
+  TRADING_BREAK = 'B',                  // Trading Break (break period for lunch or other breaks)
+  NORMAL_CALL_AUCTION_AFTERNOON = 'N',  // Normal Call Auction (pre-open period in afternoon after lunch)
+  TEMPORARY_SUSPENSION = 'H',           // Temporary Suspension (during market halts)
+  NORMAL_CALL_AUCTION_AFTER_HALT = 'V', // Normal Call Auction (after market halts)
+  CLOSE_CALL_AUCTION = 'C',             // Close Call Auction (pre-close period)
+  AFTER_HOUR_TRADING = 'A',             // After Hour Trading (post-close period)
+  MARKET_CLOSED = 'E',                  // Market Closed
+} 

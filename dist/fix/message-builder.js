@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MarketCode = void 0;
 exports.createMessageBuilder = createMessageBuilder;
 exports.createLogonMessageBuilder = createLogonMessageBuilder;
 exports.createLogoutMessageBuilder = createLogoutMessageBuilder;
@@ -19,6 +20,20 @@ exports.createSymbolMarketDataSubscriptionBuilder = createSymbolMarketDataSubscr
 exports.createNewsMessageBuilder = createNewsMessageBuilder;
 exports.getMessageTypeName = getMessageTypeName;
 const constants_1 = require("../constants");
+// Market codes from specification
+exports.MarketCode = {
+    REGULAR: '01',
+    BILLS_AND_BOND: '02',
+    STOCK_DELIVERABLE_FUTURE: '03',
+    STOCK_OPTION: '05',
+    INDEX_OPTION: '06',
+    STOCK_INDEX_FUTURE: '07',
+    ODD_LOT: '08',
+    NEGOTIATED_DEAL: '09',
+    EQUITIES_SQUARE_UP: '10',
+    FUTURES_SQUARE_UP: '12',
+    TRADE_RECTIFICATION: '13'
+};
 /**
  * Get current timestamp in FIX format (YYYYMMDD-HH:MM:SS.sss)
  *
@@ -258,14 +273,30 @@ function createSequenceResetRequestMessageBuilder(options, sequenceManager, newS
  *
  */
 function createTradingSessionStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = 'REG') {
+    // Current timestamp in FIX format (YYYYMMDD-HH:MM:SS)
+    const now = new Date();
+    const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
+        now.toISOString().substring(11, 19).replace(/:/g, '');
+    // Map tradingSessionID to appropriate market code
+    let marketCode = exports.MarketCode.REGULAR; // Default to regular market
+    // Map session IDs to market codes if needed
+    if (tradingSessionID === 'FUT') {
+        marketCode = exports.MarketCode.STOCK_DELIVERABLE_FUTURE;
+    }
+    else if (tradingSessionID === 'ODDLOT') {
+        marketCode = exports.MarketCode.ODD_LOT;
+    }
     const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .addField(constants_1.FieldTag.MSG_SEQ_NUM, "2")
+        .setMsgSeqNum(sequenceManager.getNextTradingStatusAndIncrement())
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
+        // Add the required fields from the specification
+        .addField(constants_1.FieldTag.ORIG_TIME, origTime) // Tag 42: OrigTime
+        .addField(constants_1.FieldTag.CHANNEL_NO, '1') // Tag 1020: ChannelNo
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, marketCode); // Tag 336: Use market code instead of session ID
     return builder;
 }
 /**

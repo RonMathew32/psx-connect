@@ -2,6 +2,21 @@ import { SOH, FieldTag, MessageType, DEFAULT_CONNECTION, ProductType, SecurityTy
 import { FixClientOptions } from '../types';
 import { SequenceManager } from '../utils/sequence-manager';
 
+// Market codes from specification
+export const MarketCode = {
+  REGULAR: '01',
+  BILLS_AND_BOND: '02',
+  STOCK_DELIVERABLE_FUTURE: '03',
+  STOCK_OPTION: '05',
+  INDEX_OPTION: '06',
+  STOCK_INDEX_FUTURE: '07',
+  ODD_LOT: '08',
+  NEGOTIATED_DEAL: '09',
+  EQUITIES_SQUARE_UP: '10',
+  FUTURES_SQUARE_UP: '12',
+  TRADE_RECTIFICATION: '13'
+};
+
 /**
  * Get current timestamp in FIX format (YYYYMMDD-HH:MM:SS.sss)
  * 
@@ -325,19 +340,35 @@ export function createTradingSessionStatusRequestBuilder(
   requestId: string,
   tradingSessionID: string = 'REG'
 ): MessageBuilder {
+  // Current timestamp in FIX format (YYYYMMDD-HH:MM:SS)
+  const now = new Date();
+  const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' + 
+                  now.toISOString().substring(11, 19).replace(/:/g, '');
+  
+  // Map tradingSessionID to appropriate market code
+  let marketCode = MarketCode.REGULAR; // Default to regular market
+  
+  // Map session IDs to market codes if needed
+  if (tradingSessionID === 'FUT') {
+    marketCode = MarketCode.STOCK_DELIVERABLE_FUTURE;
+  } else if (tradingSessionID === 'ODDLOT') {
+    marketCode = MarketCode.ODD_LOT;
+  }
+  
   const builder = createMessageBuilder()
     .setMsgType(MessageType.TRADING_SESSION_STATUS_REQUEST)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
-    .addField(FieldTag.MSG_SEQ_NUM, "2")
+    .setMsgSeqNum(sequenceManager.getNextTradingStatusAndIncrement())
     .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
     .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
-    .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID);
+    // Add the required fields from the specification
+    .addField(FieldTag.ORIG_TIME, origTime)           // Tag 42: OrigTime
+    .addField(FieldTag.CHANNEL_NO, '1')               // Tag 1020: ChannelNo
+    .addField(FieldTag.TRADING_SESSION_ID, marketCode); // Tag 336: Use market code instead of session ID
 
   return builder;
-
 }
-
 
 /**
  * Creates a Security Status Request message builder for FUT Equity

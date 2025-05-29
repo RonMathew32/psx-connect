@@ -3,7 +3,7 @@
  * FIX protocol constants
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_CONNECTION = exports.PartyRole = exports.ProductType = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
+exports.TradingPhaseCode = exports.DEFAULT_CONNECTION = exports.PartyRole = exports.ProductType = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
 // Standard FIX delimiter - SOH (Start of Header) character (ASCII 1)
 exports.SOH = String.fromCharCode(1);
 /**
@@ -130,6 +130,7 @@ var FieldTag;
     FieldTag["NEWS_ID"] = "1472";
     FieldTag["CHANNEL_NO"] = "10201";
     FieldTag["RAW_DATA_FORMAT"] = "10208";
+    FieldTag["TRADING_PHASE_CODE"] = "8538";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;
@@ -208,3 +209,17 @@ exports.DEFAULT_CONNECTION = {
     DEFAULT_APPL_VER_ID: '9',
     DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
 };
+// Trading Phase Codes from specification
+var TradingPhaseCode;
+(function (TradingPhaseCode) {
+    TradingPhaseCode["STARTING"] = "S";
+    TradingPhaseCode["OPEN_CALL_AUCTION_MORNING"] = "O";
+    TradingPhaseCode["CONTINUOUS_AUCTION"] = "T";
+    TradingPhaseCode["TRADING_BREAK"] = "B";
+    TradingPhaseCode["NORMAL_CALL_AUCTION_AFTERNOON"] = "N";
+    TradingPhaseCode["TEMPORARY_SUSPENSION"] = "H";
+    TradingPhaseCode["NORMAL_CALL_AUCTION_AFTER_HALT"] = "V";
+    TradingPhaseCode["CLOSE_CALL_AUCTION"] = "C";
+    TradingPhaseCode["AFTER_HOUR_TRADING"] = "A";
+    TradingPhaseCode["MARKET_CLOSED"] = "E";
+})(TradingPhaseCode || (exports.TradingPhaseCode = TradingPhaseCode = {}));
