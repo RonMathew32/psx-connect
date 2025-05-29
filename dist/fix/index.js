@@ -696,14 +696,14 @@ function createFixClient(options) {
                 return null;
             }
             // Reset the security list sequence number to 2 before sending the request
-            sequenceManager.setSecurityListSeqNum(3);
+            sequenceManager.setSecurityListSeqNum(2);
             logger_1.logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 3");
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
             const builder = (0, message_builder_1.createSecurityListRequestForREGEquityBuilder)(options, sequenceManager, requestId);
             const rawMessage = builder.buildMessage();
+            logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
             if (socket) {
-                logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
                 socket.write(rawMessage);
                 state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
                 logger_1.logger.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);

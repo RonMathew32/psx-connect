@@ -935,7 +935,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       }
 
       // Reset the security list sequence number to 2 before sending the request
-      sequenceManager.setSecurityListSeqNum(3);
+      sequenceManager.setSecurityListSeqNum(2);
       logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 3");
 
       const requestId = uuidv4();
@@ -949,9 +949,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
         requestId
       );
       const rawMessage = builder.buildMessage();
+      logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
 
       if (socket) {
-        logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
         socket.write(rawMessage);
         state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
         logger.info(
