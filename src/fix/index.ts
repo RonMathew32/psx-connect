@@ -837,6 +837,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         tradingSessionID
       );
       const rawMessage = builder.buildMessage();
+      logger.info(`[TRADING_STATUS:REQUEST] Raw message: ${rawMessage}`);
       socket.write(rawMessage);
       logger.info(
         `[TRADING_STATUS:REQUEST] Sent request for ${tradingSessionID} market with ID: ${requestId} | Using sequence: ${sequenceManager.getTradingStatusSeqNum()}`

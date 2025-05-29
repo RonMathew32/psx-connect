@@ -626,6 +626,7 @@ function createFixClient(options) {
             logger_1.logger.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
             const builder = (0, message_builder_1.createTradingSessionStatusRequestBuilder)(options, sequenceManager, requestId, tradingSessionID);
             const rawMessage = builder.buildMessage();
+            logger_1.logger.info(`[TRADING_STATUS:REQUEST] Raw message: ${rawMessage}`);
             socket.write(rawMessage);
             logger_1.logger.info(`[TRADING_STATUS:REQUEST] Sent request for ${tradingSessionID} market with ID: ${requestId} | Using sequence: ${sequenceManager.getTradingStatusSeqNum()}`);
             return requestId;
