@@ -292,26 +292,32 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
     return builder;
 }
 /**
- * Creates a Security Status Request message builder for FUT Equity
+ * Creates a Security Status Request message builder
  *
  * @param options Fix client options
  * @param sequenceManager Sequence manager
  * @param requestId Request ID
- * @param tradingSessionID Trading session ID
+ * @param symbol Symbol to request status for
  * @returns Message builder for Security Status Request
  *
  */
-function createSecurityStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = "FUT") {
-    // Build a message with an exact sequence of fields that matches a previously successful message
+function createSecurityStatusRequestBuilder(options, sequenceManager, requestId, symbol = "NA") {
+    // Current timestamp in FIX format (YYYYMMDD-HH:MM:SS)
+    const now = new Date();
+    const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
+        now.toISOString().substring(11, 19).replace(/:/g, '');
+    // Build a message with fields from the specification
     const builder = createMessageBuilder()
-        .setMsgType(constants_1.MessageType.SECURITY_STATUS_REQUEST)
-        .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+        .setMsgType('f') // Security Status message type
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .addField(constants_1.FieldTag.SECURITY_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.SYMBOL, "NA")
-        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0")
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID);
+        .setMsgSeqNum(2)
+        // Add the required fields from the specification
+        .addField(constants_1.FieldTag.ORIG_TIME, origTime) // Tag 42: OrigTime
+        .addField(constants_1.FieldTag.CHANNEL_NO, '1') // Tag 10201: ChannelNo
+        .addField(constants_1.FieldTag.SYMBOL, symbol) // Tag 55: Symbol
+        .addField(constants_1.FieldTag.SECURITY_SWITCH_TYPE, '1') // Tag 10203: SecuritySwitchType
+        .addField(constants_1.FieldTag.SECURITY_SWITCH_STATUS, 'Y'); // Tag 10204: SecuritySwitchStatus (Y=OPEN)
     return builder;
 }
 /**
