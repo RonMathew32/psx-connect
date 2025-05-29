@@ -299,7 +299,7 @@ function createMarketDataRequestBuilder(options, sequenceManager, symbols, entry
         .setMsgType(constants_1.MessageType.MARKET_DATA_REQUEST)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextMarketDataAndIncrement())
+        .addField(constants_1.FieldTag.MSG_SEQ_NUM, "2")
         .addField(constants_1.FieldTag.MD_REQ_ID, requestId)
         .addField(constants_1.FieldTag.MARKET_DEPTH, '0')
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, subscriptionType)
