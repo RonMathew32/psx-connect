@@ -901,6 +901,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         "FUT"
       );
       const rawMessage = builder.buildMessage();
+      logger.info(`[SECURITY_STATUS:REQUEST] Raw message: ${rawMessage}`);
       socket.write(rawMessage);
       logger.info(
         `[SECURITY_STATUS:REQUEST] Sent request for FUT market with ID: ${requestId} | Using sequence}`
@@ -1241,7 +1242,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     logger.info('[SESSION:LOGON] Requesting trading session status and security data');
     setTimeout(() => {
       // sendNewsMessage("Test News", "This is a test news message", "1");
-      sendTradingSessionStatusRequest();
+      sendSecurityStatusRequest();
     }, 500);
   });
 

@@ -674,6 +674,7 @@ function createFixClient(options) {
             sequenceManager.setSecurityListSeqNum(2);
             const builder = (0, message_builder_1.createSecurityStatusRequestBuilder)(options, sequenceManager, requestId, "FUT");
             const rawMessage = builder.buildMessage();
+            logger_1.logger.info(`[SECURITY_STATUS:REQUEST] Raw message: ${rawMessage}`);
             socket.write(rawMessage);
             logger_1.logger.info(`[SECURITY_STATUS:REQUEST] Sent request for FUT market with ID: ${requestId} | Using sequence}`);
             return requestId;
@@ -877,7 +878,7 @@ function createFixClient(options) {
         logger_1.logger.info('[SESSION:LOGON] Requesting trading session status and security data');
         setTimeout(() => {
             // sendNewsMessage("Test News", "This is a test news message", "1");
-            sendTradingSessionStatusRequest();
+            sendSecurityStatusRequest();
         }, 500);
     });
     const client = {
