@@ -613,7 +613,9 @@ function createFixClient(options) {
             const requestId = (0, uuid_1.v4)();
             logger_1.logger.info(`[MARKET_DATA:REQUEST] Creating market data request for symbols: ${symbols.join(", ")}`);
             const builder = (0, message_builder_1.createMarketDataRequestBuilder)(options, sequenceManager, symbols, entryTypes, subscriptionType, requestId);
+            sequenceManager.setMarketDataSeqNum(2);
             const rawMessage = builder.buildMessage();
+            logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR MARKET DATA REQUEST');
             socket?.write(rawMessage);
             const subTypes = {
                 "0": "SNAPSHOT",

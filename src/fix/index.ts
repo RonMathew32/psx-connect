@@ -796,7 +796,9 @@ export function createFixClient(options: FixClientOptions): FixClient {
         subscriptionType,
         requestId
       );
+      sequenceManager.setMarketDataSeqNum(2);
       const rawMessage = builder.buildMessage();
+      logger.info(rawMessage, 'CHECKING MESSAGE FOR MARKET DATA REQUEST');
       socket?.write(rawMessage);
 
       const subTypes: Record<string, string> = {
