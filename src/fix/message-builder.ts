@@ -61,10 +61,11 @@ interface MessageBuilder {
  * Creates a generic FIX message builder
  * 
  * @param beginString Begin string
+ * @param skipSendingTime Skip sending time
  * @returns Message builder
  * 
  */
-export function createMessageBuilder(beginString: string = 'FIXT.1.1'): MessageBuilder {
+export function createMessageBuilder(beginString: string = 'FIXT.1.1', skipSendingTime: boolean = false): MessageBuilder {
   let headerFields: Record<string, string> = {
     [FieldTag.BEGIN_STRING]: beginString,
   };
@@ -100,7 +101,7 @@ export function createMessageBuilder(beginString: string = 'FIXT.1.1'): MessageB
       throw new Error('Message type is required');
     }
 
-    if (!headerFields[FieldTag.SENDING_TIME]) {
+    if (!skipSendingTime && !headerFields[FieldTag.SENDING_TIME]) {
       headerFields[FieldTag.SENDING_TIME] = getCurrentTimestamp();
     }
 
@@ -346,7 +347,7 @@ export function createTradingSessionStatusRequestBuilder(
     now.toISOString().substring(11, 19).replace(/:/g, '');
 
   // Use the original session ID instead of market code
-  const builder = createMessageBuilder()
+  const builder = createMessageBuilder('FIXT.1.1', true) // Skip sending time
     .setMsgType(MessageType.TRADING_SESSION_STATUS)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)

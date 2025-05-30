@@ -56,10 +56,11 @@ function getCurrentTimestamp() {
  * Creates a generic FIX message builder
  *
  * @param beginString Begin string
+ * @param skipSendingTime Skip sending time
  * @returns Message builder
  *
  */
-function createMessageBuilder(beginString = 'FIXT.1.1') {
+function createMessageBuilder(beginString = 'FIXT.1.1', skipSendingTime = false) {
     let headerFields = {
         [constants_1.FieldTag.BEGIN_STRING]: beginString,
     };
@@ -88,7 +89,7 @@ function createMessageBuilder(beginString = 'FIXT.1.1') {
         if (!headerFields[constants_1.FieldTag.MSG_TYPE]) {
             throw new Error('Message type is required');
         }
-        if (!headerFields[constants_1.FieldTag.SENDING_TIME]) {
+        if (!skipSendingTime && !headerFields[constants_1.FieldTag.SENDING_TIME]) {
             headerFields[constants_1.FieldTag.SENDING_TIME] = getCurrentTimestamp();
         }
         const allFields = { ...headerFields, ...bodyFields };
@@ -278,7 +279,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
     const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
         now.toISOString().substring(11, 19).replace(/:/g, '');
     // Use the original session ID instead of market code
-    const builder = createMessageBuilder()
+    const builder = createMessageBuilder('FIXT.1.1', true) // Skip sending time
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
