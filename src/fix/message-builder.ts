@@ -342,21 +342,21 @@ export function createTradingSessionStatusRequestBuilder(
 ): MessageBuilder {
   // Current timestamp in FIX format (YYYYMMDD-HH:MM:SS)
   const now = new Date();
-  const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' + 
-                  now.toISOString().substring(11, 19).replace(/:/g, '');
-  
+  const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
+    now.toISOString().substring(11, 19).replace(/:/g, '');
+
   // Use the original session ID instead of market code
   const builder = createMessageBuilder()
-    .setMsgType(MessageType.TRADING_SESSION_STATUS_REQUEST)
+    .setMsgType(MessageType.TRADING_SESSION_STATUS)
     .setSenderCompID(options.senderCompId)
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(2)
     .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
-    .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
+    .addField(FieldTag.TRADING_PHASE_CODE, "S")
     // Add the required fields from the specification
-    .addField(FieldTag.ORIG_TIME, origTime)           // Tag 42: OrigTime
+    .addField(FieldTag.ORIG_TIME, getCurrentTimestamp())           // Tag 42: OrigTime
     .addField(FieldTag.CHANNEL_NO, '1')               // Tag 1020: ChannelNo
-    .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID); // Tag 336: Use original session ID
+    .addField(FieldTag.TRADING_SESSION_ID, '01'); // Tag 336: Use original session ID
 
   return builder;
 }
@@ -379,9 +379,9 @@ export function createSecurityStatusRequestBuilder(
 ): MessageBuilder {
   // Current timestamp in FIX format (YYYYMMDD-HH:MM:SS)
   const now = new Date();
-  const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' + 
-                  now.toISOString().substring(11, 19).replace(/:/g, '');
-  
+  const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
+    now.toISOString().substring(11, 19).replace(/:/g, '');
+
   // Build a message with fields from the specification
   const builder = createMessageBuilder()
     .setMsgType('f')  // Security Status message type
@@ -446,18 +446,18 @@ export function createSecurityListRequestForREGEquityBuilder(
   requestId: string
 ): MessageBuilder {
   return createMessageBuilder()
-  .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-  .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
-  .setSenderCompID(options.senderCompId)
-  .setTargetCompID(options.targetCompId)
-  .addField(FieldTag.TRANSACT_TIME, getCurrentTimestamp())
-  .addField("15", "008")
-  .addField(FieldTag.SYMBOL, "NA")
-  .addField(FieldTag.SECURITY_REQ_ID, requestId)
-  .addField(FieldTag.TRADING_SESSION_ID, "REG")
-  .addField(FieldTag.PRODUCT, "5")
-  .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
-  .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                          // TradingSessionID
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .addField(FieldTag.TRANSACT_TIME, getCurrentTimestamp())
+    .addField("15", "008")
+    .addField(FieldTag.SYMBOL, "NA")
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.TRADING_SESSION_ID, "REG")
+    .addField(FieldTag.PRODUCT, "5")
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)                          // TradingSessionID
 }
 
 /**
@@ -495,18 +495,18 @@ export function createSecurityListRequestForRegIndexBuilder(
   requestId: string
 ): MessageBuilder {
   const builder = createMessageBuilder()
-  .setMsgType(MessageType.SECURITY_LIST_REQUEST)
-  .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
-  .setSenderCompID(options.senderCompId)
-  .setTargetCompID(options.targetCompId)
-  .addField(FieldTag.TRANSACT_TIME, getCurrentTimestamp())
-  .addField("15", "008")
-  .addField(FieldTag.SYMBOL, "UPP9")
-  .addField(FieldTag.SECURITY_REQ_ID, requestId)
-  .addField(FieldTag.TRADING_SESSION_ID, "REG")
-  .addField(FieldTag.PRODUCT, "4")
-  .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
-  .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
+    .setMsgType(MessageType.SECURITY_LIST_REQUEST)
+    .setMsgSeqNum(sequenceManager.getNextSecurityListAndIncrement())
+    .setSenderCompID(options.senderCompId)
+    .setTargetCompID(options.targetCompId)
+    .addField(FieldTag.TRANSACT_TIME, getCurrentTimestamp())
+    .addField("15", "008")
+    .addField(FieldTag.SYMBOL, "UPP9")
+    .addField(FieldTag.SECURITY_REQ_ID, requestId)
+    .addField(FieldTag.TRADING_SESSION_ID, "REG")
+    .addField(FieldTag.PRODUCT, "4")
+    .addField(FieldTag.SECURITY_LIST_REQUEST_TYPE, "0")
+    .addField(FieldTag.APPL_VER_ID, DEFAULT_CONNECTION.DEFAULT_APPL_VER_ID)
 
   return builder;
 }

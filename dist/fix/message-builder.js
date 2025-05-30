@@ -279,16 +279,16 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         now.toISOString().substring(11, 19).replace(/:/g, '');
     // Use the original session ID instead of market code
     const builder = createMessageBuilder()
-        .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
+        .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS)
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(2)
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, '0')
+        .addField(constants_1.FieldTag.TRADING_PHASE_CODE, "S")
         // Add the required fields from the specification
-        .addField(constants_1.FieldTag.ORIG_TIME, origTime) // Tag 42: OrigTime
+        .addField(constants_1.FieldTag.ORIG_TIME, getCurrentTimestamp()) // Tag 42: OrigTime
         .addField(constants_1.FieldTag.CHANNEL_NO, '1') // Tag 1020: ChannelNo
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID); // Tag 336: Use original session ID
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, '01'); // Tag 336: Use original session ID
     return builder;
 }
 /**
