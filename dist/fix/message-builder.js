@@ -283,7 +283,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         .setSenderCompID(options.senderCompId)
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(2)
-        .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
+        // .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.TRADING_PHASE_CODE, "S")
         // Add the required fields from the specification
         .addField(constants_1.FieldTag.ORIG_TIME, getCurrentTimestamp()) // Tag 42: OrigTime
