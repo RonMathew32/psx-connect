@@ -279,10 +279,10 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
     const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
         now.toISOString().substring(11, 19).replace(/:/g, '');
     // Use the original session ID instead of market code
-    const builder = createMessageBuilder('FIXT.1.1', true) // Skip sending time
+    const builder = createMessageBuilder() // Skip sending time
         .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS)
-        .setSenderCompID(options.senderCompId)
-        .setTargetCompID(options.targetCompId)
+        // .setSenderCompID(options.senderCompId)
+        // .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(2)
         // .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
         .addField(constants_1.FieldTag.TRADING_PHASE_CODE, "S")
