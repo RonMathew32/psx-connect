@@ -56,11 +56,10 @@ function getCurrentTimestamp() {
  * Creates a generic FIX message builder
  *
  * @param beginString Begin string
- * @param skipSendingTime Skip sending time
  * @returns Message builder
  *
  */
-function createMessageBuilder(beginString = 'FIXT.1.1', skipSendingTime = false) {
+function createMessageBuilder(beginString = 'FIXT.1.1') {
     let headerFields = {
         [constants_1.FieldTag.BEGIN_STRING]: beginString,
     };
@@ -89,7 +88,7 @@ function createMessageBuilder(beginString = 'FIXT.1.1', skipSendingTime = false)
         if (!headerFields[constants_1.FieldTag.MSG_TYPE]) {
             throw new Error('Message type is required');
         }
-        if (!skipSendingTime && !headerFields[constants_1.FieldTag.SENDING_TIME]) {
+        if (!headerFields[constants_1.FieldTag.SENDING_TIME]) {
             headerFields[constants_1.FieldTag.SENDING_TIME] = getCurrentTimestamp();
         }
         const allFields = { ...headerFields, ...bodyFields };
@@ -274,22 +273,14 @@ function createSequenceResetRequestMessageBuilder(options, sequenceManager, newS
  *
  */
 function createTradingSessionStatusRequestBuilder(options, sequenceManager, requestId, tradingSessionID = 'REG') {
-    // Current timestamp in FIX format (YYYYMMDD-HH:MM:SS)
-    const now = new Date();
-    const origTime = now.toISOString().replace(/[-T:Z.]/g, '').substring(0, 8) + '-' +
-        now.toISOString().substring(11, 19).replace(/:/g, '');
-    // Use the original session ID instead of market code
-    const builder = createMessageBuilder() // Skip sending time
-        .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS)
-        // .setSenderCompID(options.senderCompId)
-        // .setTargetCompID(options.targetCompId)
+    const builder = createMessageBuilder()
+        .setMsgType(constants_1.MessageType.TRADING_SESSION_STATUS_REQUEST)
+        .setSenderCompID(options.senderCompId)
+        .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(2)
-        // .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
-        .addField(constants_1.FieldTag.TRADING_PHASE_CODE, "S")
-        // Add the required fields from the specification
-        .addField(constants_1.FieldTag.ORIG_TIME, getCurrentTimestamp()) // Tag 42: OrigTime
-        .addField(constants_1.FieldTag.CHANNEL_NO, '1') // Tag 1020: ChannelNo
-        .addField(constants_1.FieldTag.TRADING_SESSION_ID, '01'); // Tag 336: Use original session ID
+        .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID)
+        .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0");
     return builder;
 }
 /**
