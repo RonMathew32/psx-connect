@@ -346,6 +346,7 @@ export function createTradingSessionStatusRequestBuilder(
     .setTargetCompID(options.targetCompId)
     .setMsgSeqNum(2)
     .addField(FieldTag.TRAD_SES_REQ_ID, requestId)
+    .addField(FieldTag.TRAD_SES_STATUS, "0")
     .addField(FieldTag.TRADING_SESSION_ID, tradingSessionID)
     .addField(FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0")
 

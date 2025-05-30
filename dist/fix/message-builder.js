@@ -279,6 +279,7 @@ function createTradingSessionStatusRequestBuilder(options, sequenceManager, requ
         .setTargetCompID(options.targetCompId)
         .setMsgSeqNum(2)
         .addField(constants_1.FieldTag.TRAD_SES_REQ_ID, requestId)
+        .addField(constants_1.FieldTag.TRAD_SES_STATUS, "0")
         .addField(constants_1.FieldTag.TRADING_SESSION_ID, tradingSessionID)
         .addField(constants_1.FieldTag.SUBSCRIPTION_REQUEST_TYPE, "0");
     return builder;
