@@ -1239,20 +1239,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
       return;
     }
   }
-   
-  emitter.on('logon', () => {
-    logger.info('[SESSION:LOGON] Requesting trading session status and security data');
-    setTimeout(() => {
-      // sendNewsMessage("Test News", "This is a test news message", "1");
-      // sendNewsMessage("Test News", "This is a test news message", "1");
-      // sendMarketDataRequest(["KSE-100", "KMI-30"]);
-
-      setTimeout(() => {
-        sendTradingSessionStatusRequest();
-      }, 500);
-
-    }, 500);
-  });
 
   const client = {
     on: (event: string, listener: (...args: any[]) => void) => {
