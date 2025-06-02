@@ -418,7 +418,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const symbol = symbolField ? symbolField.substring(3) : '';
 
       // Get channel number to identify message type
-      const channelNoField = segments.find((s) => s.startsWith('1020='));
+      const channelNoField = segments.find((s) => s.startsWith('10201='));
       const channelNo = channelNoField ? channelNoField.substring(5) : '';
       
       let messageCategory = 'UNKNOWN';

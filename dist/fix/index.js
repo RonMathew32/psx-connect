@@ -332,7 +332,7 @@ function createFixClient(options) {
             const symbolField = segments.find((s) => s.startsWith('55='));
             const symbol = symbolField ? symbolField.substring(3) : '';
             // Get channel number to identify message type
-            const channelNoField = segments.find((s) => s.startsWith('1020='));
+            const channelNoField = segments.find((s) => s.startsWith('10201='));
             const channelNo = channelNoField ? channelNoField.substring(5) : '';
             let messageCategory = 'UNKNOWN';
             if (msgType === constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
