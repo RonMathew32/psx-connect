@@ -359,7 +359,7 @@ function createFixClient(options) {
                 messageCategory = 'REJECT';
             }
             // Log message info with channel number information if available
-            let logMessage = `[${messageCategory}] Received FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`;
+            let logMessage = `[${messageCategory}] Received FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''} channel=${channelNo}`;
             if (channelNo) {
                 const channelDescription = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
                 logMessage += `, Channel=${channelNo} (${channelDescription})`;
