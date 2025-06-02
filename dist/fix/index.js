@@ -331,6 +331,9 @@ function createFixClient(options) {
             const msgTypeName = (0, message_builder_1.getMessageTypeName)(msgType);
             const symbolField = segments.find((s) => s.startsWith('55='));
             const symbol = symbolField ? symbolField.substring(3) : '';
+            // Get channel number to identify message type
+            const channelNoField = segments.find((s) => s.startsWith('1020='));
+            const channelNo = channelNoField ? channelNoField.substring(5) : '';
             let messageCategory = 'UNKNOWN';
             if (msgType === constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
                 msgType === constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH ||
@@ -355,13 +358,23 @@ function createFixClient(options) {
             else if (msgType === constants_1.MessageType.REJECT) {
                 messageCategory = 'REJECT';
             }
-            logger_1.logger.info(`[${messageCategory}] Received FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`);
+            // Log message info with channel number information if available
+            let logMessage = `[${messageCategory}] Received FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`;
+            if (channelNo) {
+                const channelDescription = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
+                logMessage += `, Channel=${channelNo} (${channelDescription})`;
+            }
+            logger_1.logger.info(logMessage);
             logger_1.logger.info(`------------------------------------------------------------------------------------------------------------`);
             logger_1.logger.info(message);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.logger.warn('Could not parse FIX message');
                 return;
+            }
+            // Add channel info to categorized data if available
+            if (channelNo && parsedMessage) {
+                parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
             }
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
                 const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
