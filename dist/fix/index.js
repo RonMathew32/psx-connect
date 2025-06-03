@@ -220,6 +220,9 @@ function createFixClient(options) {
                     sequenceManager.updateServerSequence(incomingSeqNum);
                 }
             }
+            logger_1.logger.info(`[SESSION:MESSAGE] Processing message: ${message} `);
+            logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType}`);
+            logger_1.logger.info(`[SESSION:MESSAGE] Message channel: ${channelNo}`);
             switch (msgType) {
                 case constants_1.MessageType.LOGON:
                     logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);

@@ -225,7 +225,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
   const processMessage = (message: string): void => {
     try {
       const segments = message.split(SOH);
-
       const fixVersion = segments.find((s) => s.startsWith('8=FIX'));
       if (!fixVersion) {
         logger.warn('Received non-FIX message');
@@ -268,6 +267,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
           sequenceManager.updateServerSequence(incomingSeqNum);
         }
       }
+
+      logger.info(`[SESSION:MESSAGE] Processing message: ${message} `);
+      logger.info(`[SESSION:MESSAGE] Message type: ${msgType}`);
+      logger.info(`[SESSION:MESSAGE] Message channel: ${channelNo}`);
 
       switch (msgType) {
         case MessageType.LOGON:
