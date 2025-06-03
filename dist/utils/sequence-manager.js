@@ -207,7 +207,7 @@ class SequenceManager {
                 this.mainSeqNum = newValue + 1;
                 this.securityListSeqNum = this.mainSeqNum;
                 this.tradingStatusSeqNum = this.mainSeqNum;
-                logger_1.logger.info(`[SEQUENCE] Aligning sequences with server: Main=${this.mainSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}`);
+                // logger.info(`[SEQUENCE] Aligning sequences with server: Main=${this.mainSeqNum}, SecurityList=${this.securityListSeqNum}, TradingStatus=${this.tradingStatusSeqNum}`);
             }
             // Store updated sequence numbers
             this.saveToStore();

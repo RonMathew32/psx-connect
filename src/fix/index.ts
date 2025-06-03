@@ -269,8 +269,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       }
 
       logger.info(`[SESSION:MESSAGE] Processing message: ${message} `);
-      logger.info(`[SESSION:MESSAGE] Message type: ${msgType}`);
-      logger.info(`[SESSION:MESSAGE] Message channel: ${channelNo}`);
+      logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNo} channel description: ${getMessageTypeByChannelNo(channelNo)}`);
 
       switch (msgType) {
         case MessageType.LOGON:
@@ -326,9 +325,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
           break;
         case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
           handleMarketDataIncremental(parsedMessage, emitter);
-          break;
-        case 'f': // Security Status message
-          handleTradingStatus(parsedMessage, emitter);
           break;
         default:
           emitter.emit('categorizedData', {

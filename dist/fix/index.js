@@ -221,8 +221,7 @@ function createFixClient(options) {
                 }
             }
             logger_1.logger.info(`[SESSION:MESSAGE] Processing message: ${message} `);
-            logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType}`);
-            logger_1.logger.info(`[SESSION:MESSAGE] Message channel: ${channelNo}`);
+            logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNo} channel description: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNo)}`);
             switch (msgType) {
                 case constants_1.MessageType.LOGON:
                     logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);
@@ -271,9 +270,6 @@ function createFixClient(options) {
                     break;
                 case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
                     (0, message_handler_1.handleMarketDataIncremental)(parsedMessage, emitter);
-                    break;
-                case 'f': // Security Status message
-                    (0, message_handler_1.handleTradingStatus)(parsedMessage, emitter);
                     break;
                 default:
                     emitter.emit('categorizedData', {
