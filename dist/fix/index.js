@@ -202,8 +202,9 @@ function createFixClient(options) {
                 logger_1.logger.warn('Could not parse FIX message');
                 return;
             }
+            const channelNoStr = channelNo?.replace('=', '');
             if (channelNo && parsedMessage) {
-                parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
+                parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr);
             }
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
                 const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
@@ -220,8 +221,10 @@ function createFixClient(options) {
                     sequenceManager.updateServerSequence(incomingSeqNum);
                 }
             }
-            logger_1.logger.info(`[SESSION:MESSAGE] Processing message: ${message} `);
-            logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNo} channel description: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNo)}`);
+            // //I need message with delimeters
+            const messageWithDelimeters = message.split(constants_1.SOH).join('\n');
+            logger_1.logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
+            logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr)}`);
             switch (msgType) {
                 case constants_1.MessageType.LOGON:
                     logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);

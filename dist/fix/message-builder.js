@@ -223,9 +223,7 @@ function createResendRequestMessageBuilder(options, sequenceManager, beginSeqNo,
  */
 function getMessageTypeByChannelNo(channelNo) {
     logger_1.logger.info(`[SESSION:MESSAGE] Getting message type by channel no: ${channelNo}`);
-    const channelNoStr = channelNo.replace('=', '');
-    logger_1.logger.info(`[SESSION:MESSAGE] Channel no string: ${channelNoStr}`);
-    const channelNoNum = parseInt(channelNoStr, 10);
+    const channelNoNum = parseInt(channelNo, 10);
     switch (channelNoNum) {
         case 1:
             return 'TradingSessionStatus/SecurityStatus';
