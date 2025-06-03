@@ -1,5 +1,6 @@
 import { SOH, FieldTag, MessageType, DEFAULT_CONNECTION } from '../constants';
 import { FixClientOptions } from '../types';
+import { logger } from '../utils/logger';
 import { SequenceManager } from '../utils/sequence-manager';
 
 /**
@@ -285,6 +286,7 @@ export function createResendRequestMessageBuilder(
  * @returns Description of the message type
  */
 export function getMessageTypeByChannelNo(channelNo: string): string {
+  logger.info(`[SESSION:MESSAGE] Getting message type by channel no: ${channelNo}`);
   const channelNoNum = parseInt(channelNo, 10);
 
   switch (channelNoNum) {
