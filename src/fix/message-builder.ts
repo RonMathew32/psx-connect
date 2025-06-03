@@ -253,31 +253,31 @@ export function createTestRequestMessageBuilder(
   return builder;
 }
 
-/**
- * Creates a Resend Request message builder
- * 
- * @param options Fix client options
- * @param sequenceManager Sequence manager
- * @param beginSeqNo Message sequence number of first message in range to be resent
- * @param endSeqNo Message sequence number of last message in range to be resent. 
- *                 Use 0 to request all messages after beginSeqNo.
- */
-export function createResendRequestMessageBuilder(
-  options: FixClientOptions,
-  sequenceManager: SequenceManager,
-  beginSeqNo: number,
-  endSeqNo: number
-): MessageBuilder {
-  const builder = createMessageBuilder()
-    .setMsgType(MessageType.RESEND_REQUEST)
-    .setSenderCompID(options.senderCompId)
-    .setTargetCompID(options.targetCompId)
-    .setMsgSeqNum(sequenceManager.getNextAndIncrement())
-    .addField(FieldTag.BEGIN_SEQ_NO, beginSeqNo.toString())
-    .addField(FieldTag.END_SEQ_NO, endSeqNo.toString());
+// /**
+//  * Creates a Resend Request message builder
+//  * 
+//  * @param options Fix client options
+//  * @param sequenceManager Sequence manager
+//  * @param beginSeqNo Message sequence number of first message in range to be resent
+//  * @param endSeqNo Message sequence number of last message in range to be resent. 
+//  *                 Use 0 to request all messages after beginSeqNo.
+//  */
+// export function createResendRequestMessageBuilder(
+//   options: FixClientOptions,
+//   sequenceManager: SequenceManager,
+//   beginSeqNo: number,
+//   endSeqNo: number
+// ): MessageBuilder {
+//   const builder = createMessageBuilder()
+//     .setMsgType(MessageType.RESEND_REQUEST)
+//     .setSenderCompID(options.senderCompId)
+//     .setTargetCompID(options.targetCompId)
+//     .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+//     .addField(FieldTag.BEGIN_SEQ_NO, beginSeqNo.toString())
+//     .addField(FieldTag.END_SEQ_NO, endSeqNo.toString());
 
-  return builder;
-}
+//   return builder;
+// }
 
 /**
  * Get message type description based on ChannelNo

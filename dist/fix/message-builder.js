@@ -5,7 +5,6 @@ exports.createLogonMessageBuilder = createLogonMessageBuilder;
 exports.createLogoutMessageBuilder = createLogoutMessageBuilder;
 exports.createHeartbeatMessageBuilder = createHeartbeatMessageBuilder;
 exports.createTestRequestMessageBuilder = createTestRequestMessageBuilder;
-exports.createResendRequestMessageBuilder = createResendRequestMessageBuilder;
 exports.getMessageTypeByChannelNo = getMessageTypeByChannelNo;
 exports.getMessageTypeName = getMessageTypeName;
 const constants_1 = require("../constants");
@@ -196,25 +195,30 @@ function createTestRequestMessageBuilder(options, testReqId) {
     }
     return builder;
 }
-/**
- * Creates a Resend Request message builder
- *
- * @param options Fix client options
- * @param sequenceManager Sequence manager
- * @param beginSeqNo Message sequence number of first message in range to be resent
- * @param endSeqNo Message sequence number of last message in range to be resent.
- *                 Use 0 to request all messages after beginSeqNo.
- */
-function createResendRequestMessageBuilder(options, sequenceManager, beginSeqNo, endSeqNo) {
-    const builder = createMessageBuilder()
-        .setMsgType(constants_1.MessageType.RESEND_REQUEST)
-        .setSenderCompID(options.senderCompId)
-        .setTargetCompID(options.targetCompId)
-        .setMsgSeqNum(sequenceManager.getNextAndIncrement())
-        .addField(constants_1.FieldTag.BEGIN_SEQ_NO, beginSeqNo.toString())
-        .addField(constants_1.FieldTag.END_SEQ_NO, endSeqNo.toString());
-    return builder;
-}
+// /**
+//  * Creates a Resend Request message builder
+//  * 
+//  * @param options Fix client options
+//  * @param sequenceManager Sequence manager
+//  * @param beginSeqNo Message sequence number of first message in range to be resent
+//  * @param endSeqNo Message sequence number of last message in range to be resent. 
+//  *                 Use 0 to request all messages after beginSeqNo.
+//  */
+// export function createResendRequestMessageBuilder(
+//   options: FixClientOptions,
+//   sequenceManager: SequenceManager,
+//   beginSeqNo: number,
+//   endSeqNo: number
+// ): MessageBuilder {
+//   const builder = createMessageBuilder()
+//     .setMsgType(MessageType.RESEND_REQUEST)
+//     .setSenderCompID(options.senderCompId)
+//     .setTargetCompID(options.targetCompId)
+//     .setMsgSeqNum(sequenceManager.getNextAndIncrement())
+//     .addField(FieldTag.BEGIN_SEQ_NO, beginSeqNo.toString())
+//     .addField(FieldTag.END_SEQ_NO, endSeqNo.toString());
+//   return builder;
+// }
 /**
  * Get message type description based on ChannelNo
  * This helps identify the type of message received based on the ChannelNo field

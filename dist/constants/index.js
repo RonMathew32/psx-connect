@@ -134,6 +134,8 @@ var FieldTag;
     FieldTag["SECURITY_SWITCH_STATUS"] = "10204";
     FieldTag["RAW_DATA_FORMAT"] = "10208";
     FieldTag["TRADING_PHASE_CODE"] = "8538";
+    FieldTag["MD_PRICE_LEVEL"] = "1023";
+    FieldTag["NUMBER_OF_ORDERS"] = "346";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;

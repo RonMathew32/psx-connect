@@ -132,6 +132,8 @@ export enum FieldTag {
   SECURITY_SWITCH_STATUS = '10204', // Switch Status
   RAW_DATA_FORMAT = '10208',        // Number of market data stream IDs
   TRADING_PHASE_CODE = '8538',      // Trading phase code
+  MD_PRICE_LEVEL = '1023',
+  NUMBER_OF_ORDERS = '346', 
 }
 
 // Subscription Request Types

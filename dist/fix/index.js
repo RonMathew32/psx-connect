@@ -206,25 +206,29 @@ function createFixClient(options) {
             if (channelNo && parsedMessage) {
                 parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr);
             }
-            if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
-                const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
-                const msgType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
-                const text = parsedMessage[constants_1.FieldTag.TEXT] || '';
-                const isSequenceError = Boolean(text.includes('MsgSeqNum') ||
-                    text.includes('too large') ||
-                    text.includes('sequence'));
-                if ((msgType === constants_1.MessageType.LOGOUT || msgType === constants_1.MessageType.REJECT) &&
-                    isSequenceError) {
-                    logger_1.logger.warn(`Received ${msgType} with sequence error: ${text}`);
-                }
-                else {
-                    sequenceManager.updateServerSequence(incomingSeqNum);
-                }
-            }
+            // if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+            //   const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+            //   const msgType = parsedMessage[FieldTag.MSG_TYPE];
+            //   const text = parsedMessage[FieldTag.TEXT] || '';
+            //   const isSequenceError = Boolean(
+            //     text.includes('MsgSeqNum') ||
+            //     text.includes('too large') ||
+            //     text.includes('sequence')
+            //   );
+            //   if (
+            //     (msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) &&
+            //     isSequenceError
+            //   ) {
+            //     logger.warn(`Received ${msgType} with sequence error: ${text}`);
+            //   } else {
+            //     sequenceManager.updateServerSequence(incomingSeqNum);
+            //   }
+            // }
             // //I need message with delimeters
-            const messageWithDelimeters = message.split(constants_1.SOH).join('\n');
-            logger_1.logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
+            // const messageWithDelimeters = message.split(SOH).join('\n');
+            // logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
             logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr)}`);
+            logger_1.logger.info(`[SESSION:PARSED_MESSAGE]: ${parsedMessage}`);
             logger_1.logger.info(`--------------------------------`);
             switch (msgType) {
                 case constants_1.MessageType.LOGON:

@@ -248,30 +248,31 @@ export function createFixClient(options: FixClientOptions): FixClient {
         parsedMessage['channelDescription'] = getMessageTypeByChannelNo(channelNoStr);
       }
 
-      if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
-        const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
-        const msgType = parsedMessage[FieldTag.MSG_TYPE];
-        const text = parsedMessage[FieldTag.TEXT] || '';
-        const isSequenceError = Boolean(
-          text.includes('MsgSeqNum') ||
-          text.includes('too large') ||
-          text.includes('sequence')
-        );
+      // if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+      //   const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+      //   const msgType = parsedMessage[FieldTag.MSG_TYPE];
+      //   const text = parsedMessage[FieldTag.TEXT] || '';
+      //   const isSequenceError = Boolean(
+      //     text.includes('MsgSeqNum') ||
+      //     text.includes('too large') ||
+      //     text.includes('sequence')
+      //   );
 
-        if (
-          (msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) &&
-          isSequenceError
-        ) {
-          logger.warn(`Received ${msgType} with sequence error: ${text}`);
-        } else {
-          sequenceManager.updateServerSequence(incomingSeqNum);
-        }
-      }
+      //   if (
+      //     (msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) &&
+      //     isSequenceError
+      //   ) {
+      //     logger.warn(`Received ${msgType} with sequence error: ${text}`);
+      //   } else {
+      //     sequenceManager.updateServerSequence(incomingSeqNum);
+      //   }
+      // }
       // //I need message with delimeters
-      const messageWithDelimeters = message.split(SOH).join('\n');
-      logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
+      // const messageWithDelimeters = message.split(SOH).join('\n');
+      // logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
 
       logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${getMessageTypeByChannelNo(channelNoStr)}`);
+      logger.info(`[SESSION:PARSED_MESSAGE]: ${parsedMessage}`);
 
       logger.info(`--------------------------------`)
 
