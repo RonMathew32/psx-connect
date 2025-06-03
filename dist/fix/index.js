@@ -84,6 +84,7 @@ function createFixClient(options) {
                 }, 500);
             });
             socket.on('data', (data) => {
+                logger_1.logger.info(`[SESSION:DATA] Received data: ${data}`);
                 try {
                     const dataStr = data.toString();
                     if (dataStr.includes('35=1')) { // Test request

@@ -114,6 +114,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       });
 
       socket.on('data', (data) => {
+        logger.info(`[SESSION:DATA] Received data: ${data}`);
         try {
           const dataStr = data.toString();
 
