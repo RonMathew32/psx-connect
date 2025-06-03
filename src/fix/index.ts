@@ -97,11 +97,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
       socket.on('connect', () => {
         logger.info(`Connected to ${fixHost}:${fixPort}`);
         state.setConnected(true);
-        
+
         if (logonTimer) {
           clearTimeout(logonTimer);
         }
-        
+
         logonTimer = setTimeout(() => {
           try {
             logger.info('Sending logon message...');
@@ -116,7 +116,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       socket.on('data', (data) => {
         try {
           const dataStr = data.toString();
-          
+
           if (dataStr.includes('35=1')) { // Test request
             const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
             if (testReqIdMatch && testReqIdMatch[1]) {
@@ -233,7 +233,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       const msgTypeField = segments.find((s) => s.startsWith('35='));
       const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
-      
+
       const channelNoField = segments.find((s) => s.startsWith('10201='));
       const channelNo = channelNoField ? channelNoField.substring(5) : '';
 
@@ -272,6 +272,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
       logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
 
       logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${getMessageTypeByChannelNo(channelNoStr)}`);
+
+      logger.info(`--------------------------------`)
 
       switch (msgType) {
         case MessageType.LOGON:

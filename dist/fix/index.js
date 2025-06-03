@@ -225,6 +225,7 @@ function createFixClient(options) {
             const messageWithDelimeters = message.split(constants_1.SOH).join('\n');
             logger_1.logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
             logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr)}`);
+            logger_1.logger.info(`--------------------------------`);
             switch (msgType) {
                 case constants_1.MessageType.LOGON:
                     logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);
