@@ -91,3 +91,28 @@ export interface FixClientOptions {
       tradingStatus?: number;
     };
   } 
+
+  export interface WebSocketMessage {
+    type: 'marketData' | 'tradingSessionStatus' | 'securityList' | 'equitySecurityList' | 'indexSecurityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
+    data?: MarketDataItem[] | TradingSessionInfo | SecurityInfo[] | any;
+    message?: string;
+    timestamp?: number;
+    connected?: boolean;
+    categorized?: {
+      equities: SecurityInfo[];
+      indices: SecurityInfo[];
+      other: SecurityInfo[];
+    };
+    count?: number;
+  }
+  
+  export interface FixConfig {
+    host: string;
+    port: number;
+    senderCompId: string;
+    targetCompId: string;
+    username: string;
+    password: string;
+    heartbeatIntervalSecs: number;
+    resetOnLogon: boolean;
+  }

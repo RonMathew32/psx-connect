@@ -1,11 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleNews = exports.handleMarketDataRequestReject = exports.handleReject = exports.handleTradingStatus = exports.handleTradingSessionStatus = exports.handleSecurityList = exports.handleMarketDataIncremental = exports.handleMarketDataSnapshot = exports.handleSequenceError = exports.handleLogout = exports.handleLogon = void 0;
+exports.handleNews = exports.handleMarketDataRequestReject = exports.handleReject = exports.handleTradingStatus = exports.handleTradingSessionStatus = exports.handleSecurityList = exports.handleMarketDataIncremental = exports.handleMarketDataSnapshot = exports.handleLogout = exports.handleLogon = void 0;
 const logger_1 = require("../utils/logger");
 const constants_1 = require("../constants");
 function processMarketData(parsedMessage, emitter, type) {
     try {
-        logger_1.logger.info(`[MARKET_DATA:${type}] Processing market data...`);
         const marketData = [];
         const symbol = parsedMessage[constants_1.FieldTag.SYMBOL] || 'UNKNOWN';
         const noMDEntries = parseInt(parsedMessage[constants_1.FieldTag.NO_MD_ENTRIES] || '0', 10);
@@ -35,154 +34,66 @@ function processMarketData(parsedMessage, emitter, type) {
             data: parsedMessage,
             timestamp: new Date().toISOString(),
         });
-        logger_1.logger.info(`[MARKET_DATA:${type}] Processing complete for symbol: ${symbol}`);
     }
     catch (error) {
-        logger_1.logger.error(`[MARKET_DATA:${type}] Error handling: ${error instanceof Error ? error.message : String(error)}`);
+        logger_1.logger.error(`Error handling market data: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 const handleLogon = (message, sequenceManager, emitter, requestedEquitySecurities) => {
-    logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);
+    logger_1.logger.info(`Processing logon message from server`);
     const wasPreviouslyLoggedIn = requestedEquitySecurities.value;
     requestedEquitySecurities.value = true;
-    // Get server's sequence number
     const serverSeqNum = parseInt(message[constants_1.FieldTag.MSG_SEQ_NUM] || "1", 10);
-    logger_1.logger.info(`[SESSION:LOGON] Server's sequence number: ${serverSeqNum}`);
-    // Check if a sequence reset is requested
     const resetFlag = message[constants_1.FieldTag.RESET_SEQ_NUM_FLAG] === "Y";
-    // Process the logon using the sequence manager to ensure correct sequence numbers
     sequenceManager.processLogon(serverSeqNum, resetFlag);
-    logger_1.logger.info(`[SESSION:LOGON] Successfully logged in to FIX server with sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-    // Emit event so client can handle login success
     emitter.emit("logon", message);
-    // Schedule trading session status request after a short delay
     if (!wasPreviouslyLoggedIn) {
         setTimeout(() => {
             emitter.emit("requestTradingSessionStatus");
         }, 1000);
     }
-    logger_1.logger.info(`[SESSION:LOGON] Processing complete`);
 };
 exports.handleLogon = handleLogon;
 const handleLogout = (message, emitter, sequenceManager, requestedEquitySecurities, socket, connect) => {
-    logger_1.logger.info(`[SESSION:LOGOUT] Handling logout message`);
-    // Get any provided text reason for the logout
+    logger_1.logger.info(`Handling logout message`);
     const text = message[constants_1.FieldTag.TEXT];
-    // Reset sequence numbers on any logout
-    logger_1.logger.info("[SESSION:LOGOUT] Resetting all sequence numbers due to logout");
     sequenceManager.resetAll();
-    logger_1.logger.info(`[SESSION:LOGOUT] After reset, sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-    // Reset the requestedEquitySecurities flag so we can request them again after reconnect
     requestedEquitySecurities.value = false;
-    logger_1.logger.info("[SESSION:LOGOUT] Reset requestedEquitySecurities flag");
-    // Check if this is a sequence number related logout
     if (text &&
         (text.includes("MsgSeqNum") ||
             text.includes("too large") ||
             text.includes("sequence"))) {
-        logger_1.logger.warn(`[SESSION:LOGOUT] Received logout due to sequence number issue: ${text}`);
-        // Try to parse the expected sequence number from the message
         const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
         if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
             const expectedSeqNum = parseInt(expectedSeqNumMatch[1], 10);
             if (!isNaN(expectedSeqNum)) {
-                logger_1.logger.info(`[SESSION:LOGOUT] Server expects sequence number: ${expectedSeqNum}`);
-                // Perform a full disconnect and reconnect with sequence reset
                 if (socket) {
-                    logger_1.logger.info("[SESSION:LOGOUT] Disconnecting due to sequence number error");
                     socket.destroy();
                     socket = null;
                 }
-                // Wait a moment before reconnecting
                 setTimeout(() => {
-                    // Reset sequence numbers to what the server expects
                     sequenceManager.forceReset(expectedSeqNum);
-                    logger_1.logger.info(`[SESSION:LOGOUT] Reconnecting with adjusted sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
                     connect();
                 }, 2000);
                 return { isSequenceError: true, expectedSeqNum };
             }
-            else {
-                // If we can't parse the expected sequence number, do a full reset
-                logger_1.logger.info("[SESSION:LOGOUT] Cannot parse expected sequence number, performing full reset");
-                if (socket) {
-                    socket.destroy();
-                    socket = null;
-                }
-                setTimeout(() => {
-                    // Reset sequence numbers
-                    sequenceManager.resetAll();
-                    logger_1.logger.info("[SESSION:LOGOUT] Reconnecting with fully reset sequence numbers");
-                    connect();
-                }, 2000);
-                return { isSequenceError: true };
-            }
         }
-        else {
-            // No match found, do a full reset
-            logger_1.logger.info("[SESSION:LOGOUT] No expected sequence number found in message, performing full reset");
-            if (socket) {
-                socket.destroy();
-                socket = null;
-            }
-            setTimeout(() => {
-                // Reset sequence numbers
-                sequenceManager.resetAll();
-                logger_1.logger.info("[SESSION:LOGOUT] Reconnecting with fully reset sequence numbers");
-                connect();
-            }, 2000);
-            return { isSequenceError: true };
+        if (socket) {
+            socket.destroy();
+            socket = null;
         }
+        setTimeout(() => {
+            sequenceManager.resetAll();
+            connect();
+        }, 2000);
+        return { isSequenceError: true };
     }
     else {
-        // For normal logout (not sequence error), also reset the sequence numbers
-        logger_1.logger.info("[SESSION:LOGOUT] Normal logout, sequence numbers reset");
         emitter.emit("logout", message);
         return { isSequenceError: false };
     }
 };
 exports.handleLogout = handleLogout;
-const handleSequenceError = (expectedSeqNum, sequenceManager, socket, connect) => {
-    if (expectedSeqNum !== undefined) {
-        logger_1.logger.info(`[SEQUENCE:ERROR] Server expects sequence number: ${expectedSeqNum}`);
-        // Perform a full disconnect and reconnect with sequence reset
-        if (socket) {
-            logger_1.logger.info("[SEQUENCE:ERROR] Disconnecting due to sequence number error");
-            socket.destroy();
-            socket = null;
-        }
-        // Wait a moment before reconnecting
-        setTimeout(() => {
-            // Reset sequence numbers to what the server expects for PKF-50 compliance
-            logger_1.logger.info(`[SEQUENCE:ERROR] Setting sequence numbers for reconnect:`);
-            // For PKF-50, maintain the specialized sequence numbers
-            sequenceManager.forceReset(expectedSeqNum);
-            // Log all sequence numbers after reset for verification
-            const seqNumbers = sequenceManager.getAll();
-            logger_1.logger.info(`[SEQUENCE:ERROR] After reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
-            logger_1.logger.info(`[SEQUENCE:ERROR] Reconnecting with adjusted sequence numbers`);
-            connect();
-        }, 2000);
-    }
-    else {
-        // If we can't parse the expected sequence number, do a full reset
-        logger_1.logger.info("[SEQUENCE:ERROR] Cannot determine expected sequence number, performing full reset");
-        if (socket) {
-            socket.destroy();
-            socket = null;
-        }
-        setTimeout(() => {
-            // Reset all sequence numbers to defaults per PKF-50
-            sequenceManager.resetAll();
-            // Log all sequence numbers after reset for verification
-            const seqNumbers = sequenceManager.getAll();
-            logger_1.logger.info(`[SEQUENCE:ERROR] After full reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
-            logger_1.logger.info("[SEQUENCE:ERROR] Reconnecting with fully reset sequence numbers");
-            connect();
-        }, 2000);
-    }
-};
-exports.handleSequenceError = handleSequenceError;
 const handleMarketDataSnapshot = (parsedMessage, emitter) => {
     processMarketData(parsedMessage, emitter, 'SNAPSHOT');
 };
@@ -193,14 +104,11 @@ const handleMarketDataIncremental = (parsedMessage, emitter) => {
 exports.handleMarketDataIncremental = handleMarketDataIncremental;
 const handleSecurityList = (parsedMessage, emitter, securityCache) => {
     try {
-        logger_1.logger.info("[SECURITY_LIST] Processing security list...");
         const securities = [];
         const noRelatedSym = parseInt(parsedMessage[constants_1.FieldTag.NO_RELATED_SYM] || "0", 10);
-        const product = parsedMessage["460"] || "4"; // Default to EQUITY if not specified
+        const product = parsedMessage["460"] || "4";
         const productType = product === "5" ? "INDEX" : "EQUITY";
         const isFinalFragment = parsedMessage[constants_1.FieldTag.LAST_FRAGMENT] === "Y";
-        const reqId = parsedMessage[constants_1.FieldTag.SECURITY_REQ_ID] || "";
-        logger_1.logger.info(`[SECURITY_LIST:${productType}] Processing ${noRelatedSym} securities, fragment is ${isFinalFragment ? 'final' : 'partial'}, reqId: ${reqId}`);
         for (let i = 1; i <= noRelatedSym; i++) {
             const symPrefix = `RELATED SYM ${i}`;
             const symbol = parsedMessage[`${symPrefix}:${constants_1.FieldTag.SYMBOL}`];
@@ -210,8 +118,7 @@ const handleSecurityList = (parsedMessage, emitter, securityCache) => {
             const currency = parsedMessage[`${symPrefix}:${constants_1.FieldTag.CURRENCY}`] || "PKR";
             const issuer = parsedMessage[`${symPrefix}:${constants_1.FieldTag.ISSUER}`] || "";
             const cfiCode = parsedMessage[`${symPrefix}:${constants_1.FieldTag.CFI_CODE}`] || "";
-            const securityType = parsedMessage[`${symPrefix}:167`] || ""; // SecurityType
-            // Trading session info
+            const securityType = parsedMessage[`${symPrefix}:167`] || "";
             let tradingSessionId = "REG";
             const noTradingSessionRules = parseInt(parsedMessage[`${symPrefix}:1309`] || "0", 10);
             if (noTradingSessionRules > 0) {
@@ -230,26 +137,18 @@ const handleSecurityList = (parsedMessage, emitter, securityCache) => {
                     securityType,
                     tradingSessionId
                 });
-                logger_1.logger.debug(`[SECURITY_LIST:${productType}] Processed symbol: ${symbol}, desc: ${securityDesc || 'N/A'}`);
             }
         }
-        // If we received securities, update cache based on product type
         if (securities.length > 0) {
             if (isFinalFragment || securityCache[productType].length === 0) {
-                // If this is the final fragment or we have no existing data, replace the cache
                 securityCache[productType] = securities;
-                logger_1.logger.info(`[SECURITY_LIST:${productType}] Replaced cache with ${securities.length} securities`);
             }
             else {
-                // Otherwise append to existing cache
                 securityCache[productType] = [...securityCache[productType], ...securities];
-                logger_1.logger.info(`[SECURITY_LIST:${productType}] Added ${securities.length} securities to cache, total now: ${securityCache[productType].length}`);
             }
         }
-        // Emit events
         emitter.emit("securityList", securities);
         emitter.emit(`${productType.toLowerCase()}SecurityList`, securities);
-        // Emit an additional categorized event
         emitter.emit("categorizedData", {
             category: "SECURITY_LIST",
             type: productType,
@@ -257,23 +156,20 @@ const handleSecurityList = (parsedMessage, emitter, securityCache) => {
             data: parsedMessage,
             timestamp: new Date().toISOString(),
         });
-        logger_1.logger.info(`[SECURITY_LIST:${productType}] Processing complete for ${noRelatedSym} securities ${isFinalFragment ? '(final fragment)' : ''}`);
     }
     catch (error) {
-        logger_1.logger.error(`[SECURITY_LIST] Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
+        logger_1.logger.error(`Error handling security list: ${error instanceof Error ? error.message : String(error)}`);
     }
 };
 exports.handleSecurityList = handleSecurityList;
 const handleTradingSessionStatus = (parsedMessage, emitter) => {
     try {
-        logger_1.logger.info("[TRADING_STATUS:SESSION] Processing trading session status...");
         const sessionInfo = {
             tradingSessionID: parsedMessage[constants_1.FieldTag.TRADING_SESSION_ID] || "UNKNOWN",
-            status: parsedMessage["340"] || "UNKNOWN", // TradSesStatus
+            status: parsedMessage["340"] || "UNKNOWN",
             timestamp: parsedMessage[constants_1.FieldTag.SENDING_TIME] || new Date().toISOString(),
         };
         emitter.emit("tradingSessionStatus", sessionInfo);
-        // Emit an additional categorized event
         emitter.emit("categorizedData", {
             category: "TRADING_STATUS",
             type: "SESSION",
@@ -281,24 +177,21 @@ const handleTradingSessionStatus = (parsedMessage, emitter) => {
             data: parsedMessage,
             timestamp: new Date().toISOString(),
         });
-        logger_1.logger.info(`[TRADING_STATUS:SESSION] Processing complete for session: ${sessionInfo.tradingSessionID}`);
     }
     catch (error) {
-        logger_1.logger.error(`[TRADING_STATUS:SESSION] Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
+        logger_1.logger.error(`Error handling trading session status: ${error instanceof Error ? error.message : String(error)}`);
     }
 };
 exports.handleTradingSessionStatus = handleTradingSessionStatus;
 const handleTradingStatus = (parsedMessage, emitter) => {
     try {
-        logger_1.logger.info("[TRADING_STATUS:SYMBOL] Processing trading status...");
         const statusInfo = {
             symbol: parsedMessage[constants_1.FieldTag.SYMBOL] || "UNKNOWN",
-            status: parsedMessage["326"] || "UNKNOWN", // TradingStatus
+            status: parsedMessage["326"] || "UNKNOWN",
             timestamp: parsedMessage[constants_1.FieldTag.SENDING_TIME] || new Date().toISOString(),
-            origTime: parsedMessage["60"], // TransactTime
+            origTime: parsedMessage["60"],
         };
         emitter.emit("kseTradingStatus", statusInfo);
-        // Emit an additional categorized event
         emitter.emit("categorizedData", {
             category: "TRADING_STATUS",
             type: "SYMBOL",
@@ -307,31 +200,17 @@ const handleTradingStatus = (parsedMessage, emitter) => {
             data: parsedMessage,
             timestamp: new Date().toISOString(),
         });
-        logger_1.logger.info(`[TRADING_STATUS:SYMBOL] Processing complete for symbol: ${statusInfo.symbol}`);
     }
     catch (error) {
-        logger_1.logger.error(`[TRADING_STATUS:SYMBOL] Error handling trading status: ${error instanceof Error ? error.message : String(error)}`);
+        logger_1.logger.error(`Error handling trading status: ${error instanceof Error ? error.message : String(error)}`);
     }
 };
 exports.handleTradingStatus = handleTradingStatus;
 const handleReject = (parsedMessage) => {
     const text = parsedMessage[constants_1.FieldTag.TEXT] || "";
-    const rejectReasonCode = parsedMessage["373"]; // SessionRejectReason
+    const rejectReasonCode = parsedMessage["373"];
     const refTagId = parsedMessage[constants_1.FieldTag.REF_TAG_ID];
     const refSeqNum = parsedMessage[constants_1.FieldTag.REF_SEQ_NUM];
-    logger_1.logger.error(`[REJECT] Detailed reject information:`);
-    logger_1.logger.error(`[REJECT] Reason code: ${rejectReasonCode}`);
-    logger_1.logger.error(`[REJECT] Referenced tag ID: ${refTagId || 'Not specified'}`);
-    logger_1.logger.error(`[REJECT] Referenced sequence number: ${refSeqNum || 'Not specified'}`);
-    logger_1.logger.error(`[REJECT] Response text: ${text || 'No text provided'}`);
-    if (refTagId) {
-        logger_1.logger.error(`[REJECT] Missing or invalid field tag: ${refTagId}`);
-    }
-    // Check for sequence error in text message
-    const isSequenceError = text.includes("MsgSeqNum") ||
-        text.includes("too large") ||
-        text.includes("sequence");
-    // Get reject reason description based on code
     let rejectReason = "Unknown reject reason";
     if (rejectReasonCode) {
         switch (rejectReasonCode) {
@@ -371,6 +250,9 @@ const handleReject = (parsedMessage) => {
             default: rejectReason = `Unknown reject reason code: ${rejectReasonCode}`;
         }
     }
+    const isSequenceError = text.includes("MsgSeqNum") ||
+        text.includes("too large") ||
+        text.includes("sequence");
     if (isSequenceError) {
         const expectedSeqNumMatch = text.match(/expected ['"]?(\d+)['"]?/);
         if (expectedSeqNumMatch && expectedSeqNumMatch[1]) {
@@ -388,7 +270,6 @@ const handleMarketDataRequestReject = (parsedMessage, emitter) => {
     const mdReqId = parsedMessage[constants_1.FieldTag.MD_REQ_ID] || "UNKNOWN";
     const rejReasonCode = parsedMessage[constants_1.FieldTag.MD_REQ_REJ_REASON];
     const text = parsedMessage[constants_1.FieldTag.TEXT];
-    // Parse the rejection reason based on the code
     let rejReason = "Unknown rejection reason";
     if (rejReasonCode) {
         switch (rejReasonCode) {
@@ -443,15 +324,8 @@ const handleMarketDataRequestReject = (parsedMessage, emitter) => {
     emitter.emit("marketDataReject", rejectInfo);
 };
 exports.handleMarketDataRequestReject = handleMarketDataRequestReject;
-/**
- * Handle News messages
- *
- * @param parsedMessage The parsed FIX message
- * @param emitter Event emitter to send events
- */
 const handleNews = (parsedMessage, emitter) => {
     try {
-        logger_1.logger.info('[NEWS] Processing news message...');
         const newsInfo = {
             headline: parsedMessage[constants_1.FieldTag.HEADLINE] || 'No headline',
             text: parsedMessage[constants_1.FieldTag.TEXT] || 'No text provided',
@@ -459,9 +333,7 @@ const handleNews = (parsedMessage, emitter) => {
             origTime: parsedMessage[constants_1.FieldTag.ORIG_TIME] || parsedMessage[constants_1.FieldTag.SENDING_TIME] || new Date().toISOString(),
             timestamp: new Date().toISOString()
         };
-        // Emit a news event
         emitter.emit('news', newsInfo);
-        // Also emit as categorized data
         emitter.emit('categorizedData', {
             category: 'NEWS',
             type: 'GENERAL',
@@ -470,10 +342,9 @@ const handleNews = (parsedMessage, emitter) => {
             data: parsedMessage,
             timestamp: new Date().toISOString()
         });
-        logger_1.logger.info(`[NEWS] Processed news message: ${newsInfo.headline}`);
     }
     catch (error) {
-        logger_1.logger.error(`[NEWS] Error handling news message: ${error instanceof Error ? error.message : String(error)}`);
+        logger_1.logger.error(`Error handling news message: ${error instanceof Error ? error.message : String(error)}`);
     }
 };
 exports.handleNews = handleNews;

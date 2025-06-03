@@ -8,7 +8,6 @@ const message_builder_1 = require("./message-builder");
 const message_parser_1 = require("./message-parser");
 const constants_1 = require("../constants");
 const net_1 = require("net");
-const uuid_1 = require("uuid");
 const message_handler_1 = require("./message-handler");
 const connection_state_1 = require("../utils/connection-state");
 /**
@@ -19,15 +18,9 @@ function createFixClient(options) {
     let socket = null;
     let heartbeatTimer = null;
     let reconnectTimer = null;
-    let lastActivityTime = 0;
-    let testRequestCount = 0;
     let logonTimer = null;
-    let lastSecurityListRefresh = null;
     const sequenceManager = new sequence_manager_1.SequenceManager();
-    const state = new connection_state_1.ConnectionState(); // Initialize ConnectionState
-    const forceResetSequenceNumber = (newSeq = 2) => {
-        sequenceManager.forceReset(newSeq);
-    };
+    const state = new connection_state_1.ConnectionState();
     const start = () => {
         connect();
     };
@@ -37,35 +30,26 @@ function createFixClient(options) {
         disconnect();
     };
     const connect = async () => {
-        // Update to use state.isConnected()
         if (socket && state.isConnected()) {
             logger_1.logger.warn('Already connected');
             return;
         }
-        // Ensure environment variables are defined and valid
         const fixPort = parseInt(process.env.FIX_PORT || '7001', 10);
         const fixHost = process.env.FIX_HOST || '127.0.0.1';
         if (isNaN(fixPort) || !fixHost) {
-            logger_1.logger.error('Invalid FIX_PORT or FIX_HOST environment variable. Please ensure they are set correctly.');
+            logger_1.logger.error('Invalid FIX_PORT or FIX_HOST environment variable.');
             emitter.emit('error', new Error('Invalid FIX_PORT or FIX_HOST environment variable.'));
             return;
         }
         try {
-            logger_1.logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}...`);
+            logger_1.logger.info(`Establishing TCP connection to ${fixHost}:${fixPort}`);
             socket = new net_1.Socket();
             socket.setKeepAlive(true, 10000);
             socket.setNoDelay(true);
             socket.setTimeout(options.connectTimeoutMs || 60000);
             socket.connect(fixPort, fixHost);
-            // Add error handling for socket errors
             socket.on('error', (error) => {
                 logger_1.logger.error(`Socket error: ${error.message}`);
-                // Save sequence numbers in case of socket errors
-                logger_1.logger.info(`[CONNECTION:ERROR] Saving sequence numbers before potential disconnect: ${JSON.stringify(sequenceManager.getAll())}`);
-                if (error.message.includes('ECONNRESET') || error.message.includes('EPIPE')) {
-                    logger_1.logger.warn('Connection reset by peer or broken pipe. Will attempt to reconnect...');
-                }
-                // emitter.emit('error', error);
             });
             socket.on('timeout', () => {
                 logger_1.logger.error('Connection timed out');
@@ -73,34 +57,24 @@ function createFixClient(options) {
                     socket.destroy();
                     socket = null;
                 }
-                state.setConnected(false); // Update state
-                // emitter.emit('error', new Error('Connection timed out'));
+                state.setConnected(false);
             });
             socket.on('close', (hadError) => {
                 logger_1.logger.info(`Socket disconnected${hadError ? ' due to error' : ''}`);
-                // Save sequence numbers on any disconnection
-                // This ensures we remember our sequence even if we didn't logout properly
-                logger_1.logger.info(`[CONNECTION:CLOSE] Saving current sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
-                state.reset(); // Reset all states on disconnect
-                // emitter.emit('disconnected');
-                // Only schedule reconnect if not during normal shutdown
+                state.reset();
                 if (!state.isShuttingDown()) {
                     scheduleReconnect();
                 }
             });
             socket.on('connect', () => {
-                logger_1.logger.info('--------------------------------', fixHost);
-                logger_1.logger.info('--------------------------------', fixPort);
                 logger_1.logger.info(`Connected to ${fixHost}:${fixPort}`);
-                state.setConnected(true); // Update state
+                state.setConnected(true);
                 if (logonTimer) {
                     clearTimeout(logonTimer);
                 }
                 logonTimer = setTimeout(() => {
                     try {
                         logger_1.logger.info('Sending logon message...');
-                        // Always use ResetSeqNumFlag=Y in logon, which will reset both sides to 1
-                        // The FIX protocol handles the sequence number reset
                         sendLogon();
                     }
                     catch (error) {
@@ -108,116 +82,25 @@ function createFixClient(options) {
                         disconnect();
                     }
                 }, 500);
-                // emitter.emit('connected');
-            });
-            socket.on('drain', () => {
-                logger_1.logger.info('Drained');
             });
             socket.on('data', (data) => {
-                logger_1.logger.info('--------------------------------');
                 try {
-                    // Update last activity time to reset heartbeat timer
-                    lastActivityTime = Date.now();
-                    let category = 'UNKNOWN';
                     const dataStr = data.toString();
-                    const messageTypes = [];
-                    const symbolsFound = [];
-                    // Extract message types
-                    const msgTypeMatches = dataStr.match(/35=([A-Za-z0-9])/g) || [];
-                    for (const match of msgTypeMatches) {
-                        const msgType = match.substring(3);
-                        messageTypes.push(msgType);
-                    }
-                    // Extract symbols
-                    const symbolMatches = dataStr.match(/55=([^\x01]+)/g) || [];
-                    for (const match of symbolMatches) {
-                        const symbol = match.substring(3);
-                        if (symbol)
-                            symbolsFound.push(symbol);
-                    }
-                    // Handle reject messages
-                    const categorizedMessages = messageTypes.map((type) => {
-                        if (type === constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
-                            type === constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH ||
-                            type === 'Y') {
-                            category = 'MARKET_DATA';
-                        }
-                        else if (type === constants_1.MessageType.SECURITY_LIST ||
-                            type === constants_1.MessageType.SECURITY_LIST_REQUEST) {
-                            logger_1.logger.info(`[SECURITY_LIST] Received security list message`);
-                            category = 'SECURITY_LIST';
-                        }
-                        else if (type === constants_1.MessageType.TRADING_SESSION_STATUS ||
-                            type === 'f') {
-                            category = 'TRADING_STATUS';
-                        }
-                        else if (type === constants_1.MessageType.LOGON ||
-                            type === constants_1.MessageType.LOGOUT) {
-                            category = 'SESSION';
-                        }
-                        else if (type === constants_1.MessageType.HEARTBEAT ||
-                            type === constants_1.MessageType.TEST_REQUEST) {
-                            category = 'HEARTBEAT';
-                        }
-                        else if (type === constants_1.MessageType.REJECT) {
-                            category = 'REJECT';
-                            // Extract reject-specific fields
-                            const rejectReasonMatch = dataStr.match(/373=([^\x01]+)/);
-                            const refTagIdMatch = dataStr.match(/371=([^\x01]+)/);
-                            const refSeqNumMatch = dataStr.match(/45=([^\x01]+)/);
-                            const refMsgTypeMatch = dataStr.match(/372=([^\x01]+)/);
-                            const textMatch = dataStr.match(/58=([^\x01]+)/);
-                            const rejectDetails = {
-                                rejectReason: rejectReasonMatch ? rejectReasonMatch[1] : 'Unknown',
-                                refTagId: refTagIdMatch ? refTagIdMatch[1] : 'Unknown',
-                                refSeqNum: refSeqNumMatch ? refSeqNumMatch[1] : 'Unknown',
-                                refMsgType: refMsgTypeMatch ? refMsgTypeMatch[1] : 'Unknown',
-                                text: textMatch ? textMatch[1] : 'No error description provided',
-                            };
-                            logger_1.logger.error(`[REJECT] Received reject message: Reason=${rejectDetails.rejectReason}, ` +
-                                `RefTagID=${rejectDetails.refTagId}, RefSeqNum=${rejectDetails.refSeqNum}, ` +
-                                `RefMsgType=${rejectDetails.refMsgType}, Text=${rejectDetails.text}`);
-                        }
-                        return `${category}:${type}`;
-                    });
-                    if (messageTypes.length > 0) {
-                        logger_1.logger.info(`[DATA:RECEIVED] Message types: ${categorizedMessages.join(', ')}${symbolsFound.length > 0 ? ' | Symbols: ' + symbolsFound.join(', ') : ''}`);
-                    }
-                    else {
-                        logger_1.logger.warn(`[DATA:RECEIVED] No recognizable message types found in data`);
-                    }
-                    // Handle test request
-                    if (dataStr.includes('35=1')) {
+                    if (dataStr.includes('35=1')) { // Test request
                         const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
                         if (testReqIdMatch && testReqIdMatch[1]) {
-                            const testReqId = testReqIdMatch[1];
-                            logger_1.logger.info(`[TEST_REQUEST] Received test request with ID: ${testReqId}, responding immediately`);
-                            sendHeartbeat(testReqId);
+                            sendHeartbeat(testReqIdMatch[1]);
                         }
                     }
-                    logger_1.logger.info(data);
-                    logger_1.logger.info(`[DATA:PROCESSING] Starting message processing...`);
-                    let processingResult = false;
-                    try {
-                        handleData(data);
-                        processingResult = true;
-                    }
-                    catch (error) {
-                        logger_1.logger.error(`[DATA:ERROR] Failed to process data: ${error instanceof Error ? error.message : String(error)}`);
-                        if (error instanceof Error && error.stack) {
-                            logger_1.logger.error(error.stack);
-                        }
-                        processingResult = false;
-                    }
-                    logger_1.logger.info(`[DATA:COMPLETE] Message processing ${processingResult ? 'succeeded' : 'failed'}`);
+                    handleData(data);
                 }
                 catch (err) {
-                    logger_1.logger.error(`Error pre-parsing data: ${err}`);
+                    logger_1.logger.error(`Error processing data: ${err}`);
                 }
             });
         }
         catch (error) {
-            logger_1.logger.error(`Error creating socket or connecting: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.logger.error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`);
             emitter.emit('error', new Error(`Connection failed: ${error instanceof Error ? error.message : String(error)}`));
         }
     };
@@ -227,7 +110,6 @@ function createFixClient(options) {
             if (state.isConnected() && state.isLoggedIn()) {
                 logger_1.logger.info("[SESSION:LOGOUT] Sending logout message");
                 sendLogout();
-                // Give some time for the logout message to be sent before destroying the socket
                 setTimeout(() => {
                     if (socket) {
                         socket.destroy();
@@ -249,16 +131,12 @@ function createFixClient(options) {
         if (reconnectTimer) {
             clearTimeout(reconnectTimer);
         }
-        // Don't reset sequences on reconnect - we'll use the stored numbers
-        // If we have a clean start (with ResetSeqNumFlag=Y) the sequences will be reset anyway
-        logger_1.logger.info('[CONNECTION] Scheduling reconnect in 5 seconds');
-        logger_1.logger.info(`[CONNECTION] Will use stored sequence numbers when reconnecting: ${JSON.stringify(sequenceManager.getAll())}`);
-        // Reset request states
+        logger_1.logger.info('Scheduling reconnect in 5 seconds');
         state.setRequestSent('equitySecurities', false);
         state.setRequestSent('indexSecurities', false);
         state.setRequestSent('futSecurities', false);
         reconnectTimer = setTimeout(() => {
-            logger_1.logger.info('[CONNECTION] Attempting to reconnect');
+            logger_1.logger.info('Attempting to reconnect');
             connect();
         }, 5000);
     };
@@ -274,22 +152,17 @@ function createFixClient(options) {
     };
     const handleData = (data) => {
         try {
-            lastActivityTime = Date.now();
             const dataStr = data.toString();
-            logger_1.logger.debug(`[DATA:HANDLING] Received data: ${dataStr.length} bytes`);
             const messages = dataStr.split(constants_1.SOH);
             let currentMessage = '';
-            let messageCount = 0;
             for (const segment of messages) {
                 if (segment.startsWith('8=FIX')) {
                     if (currentMessage) {
                         try {
                             processMessage(currentMessage);
-                            logger_1.logger.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
-                            messageCount++;
                         }
                         catch (err) {
-                            logger_1.logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
+                            logger_1.logger.error(`Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
                         }
                     }
                     currentMessage = segment;
@@ -301,20 +174,14 @@ function createFixClient(options) {
             if (currentMessage) {
                 try {
                     processMessage(currentMessage);
-                    logger_1.logger.info(`[DATA:HANDLING] Processing message: ${currentMessage}`);
-                    messageCount++;
                 }
                 catch (err) {
-                    logger_1.logger.error(`[DATA:ERROR] Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
+                    logger_1.logger.error(`Failed to process message: ${err instanceof Error ? err.message : String(err)}`);
                 }
             }
-            logger_1.logger.debug(`[DATA:HANDLING] Processed ${messageCount} FIX messages`);
         }
         catch (error) {
-            logger_1.logger.error(`[DATA:ERROR] Error handling data buffer: ${error instanceof Error ? error.message : String(error)}`);
-            if (error instanceof Error && error.stack) {
-                logger_1.logger.error(error.stack);
-            }
+            logger_1.logger.error(`Error handling data: ${error instanceof Error ? error.message : String(error)}`);
             throw error;
         }
     };
@@ -328,51 +195,13 @@ function createFixClient(options) {
             }
             const msgTypeField = segments.find((s) => s.startsWith('35='));
             const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
-            const msgTypeName = (0, message_builder_1.getMessageTypeName)(msgType);
-            const symbolField = segments.find((s) => s.startsWith('55='));
-            const symbol = symbolField ? symbolField.substring(3) : '';
-            // Get channel number to identify message type
             const channelNoField = segments.find((s) => s.startsWith('10201='));
             const channelNo = channelNoField ? channelNoField.substring(5) : '';
-            let messageCategory = 'UNKNOWN';
-            if (msgType === constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH ||
-                msgType === constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH ||
-                msgType === 'Y') {
-                messageCategory = 'MARKET_DATA';
-            }
-            else if (msgType === constants_1.MessageType.SECURITY_LIST) {
-                messageCategory = 'SECURITY_LIST';
-            }
-            else if (msgType === constants_1.MessageType.TRADING_SESSION_STATUS ||
-                msgType === 'f') {
-                messageCategory = 'TRADING_STATUS';
-            }
-            else if (msgType === constants_1.MessageType.LOGON ||
-                msgType === constants_1.MessageType.LOGOUT) {
-                messageCategory = 'SESSION';
-            }
-            else if (msgType === constants_1.MessageType.HEARTBEAT ||
-                msgType === constants_1.MessageType.TEST_REQUEST) {
-                messageCategory = 'HEARTBEAT';
-            }
-            else if (msgType === constants_1.MessageType.REJECT) {
-                messageCategory = 'REJECT';
-            }
-            // Log message info with channel number information if available
-            let logMessage = `[${messageCategory}] Received FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''} channel=${channelNo}`;
-            if (channelNo) {
-                const channelDescription = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
-                logMessage += `, Channel=${channelNo} (${channelDescription})`;
-            }
-            logger_1.logger.info(logMessage);
-            logger_1.logger.info(`------------------------------------------------------------------------------------------------------------`);
-            logger_1.logger.info(message);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.logger.warn('Could not parse FIX message');
                 return;
             }
-            // Add channel info to categorized data if available
             if (channelNo && parsedMessage) {
                 parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
             }
@@ -395,82 +224,55 @@ function createFixClient(options) {
                 case constants_1.MessageType.LOGON:
                     logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);
                     (0, message_handler_1.handleLogon)(parsedMessage, sequenceManager, emitter, { value: false });
-                    state.setLoggedIn(true); // Update state
-                    logger_1.logger.info(`[SESSION:LOGON] Processing complete`);
+                    state.setLoggedIn(true);
                     break;
                 case constants_1.MessageType.REJECT:
                     const rejectResult = (0, message_handler_1.handleReject)(parsedMessage);
                     if (rejectResult.isSequenceError) {
-                        logger_1.logger.error(`[REJECT] Sequence error detected: ${rejectResult.rejectReason}`);
                         handleSequenceError(rejectResult.expectedSeqNum);
                     }
                     else {
-                        logger_1.logger.error(`[REJECT] Session reject reason: ${rejectResult.rejectReason}`);
                         emitter.emit('reject', {
                             reason: rejectResult.rejectReason || ''
                         });
                     }
                     break;
                 case constants_1.MessageType.LOGOUT:
-                    logger_1.logger.info(`[SESSION:LOGOUT] Handling logout message`);
                     const logoutResult = (0, message_handler_1.handleLogout)(parsedMessage, emitter, sequenceManager, { value: false }, socket, connect);
                     if (logoutResult.isSequenceError) {
-                        logger_1.logger.info(`[SESSION:LOGOUT] Detected sequence error, handling...`);
                         handleSequenceError(logoutResult.expectedSeqNum);
                     }
                     else {
-                        state.setLoggedIn(false); // Update state
+                        state.setLoggedIn(false);
                         if (heartbeatTimer) {
                             clearInterval(heartbeatTimer);
                             heartbeatTimer = null;
-                            logger_1.logger.info(`[SESSION:LOGOUT] Cleared heartbeat timer`);
                         }
                     }
-                    logger_1.logger.info(`[SESSION:LOGOUT] Processing complete`);
                     break;
                 case constants_1.MessageType.MARKET_DATA_REQUEST_REJECT:
-                    logger_1.logger.info(`[MARKET_DATA:REJECT] Processing market data request reject message`);
                     (0, message_handler_1.handleMarketDataRequestReject)(parsedMessage, emitter);
-                    logger_1.logger.info(`[MARKET_DATA:REJECT] Processing complete`);
                     break;
                 case constants_1.MessageType.NEWS:
-                    logger_1.logger.info(`[NEWS] Received news message`);
                     (0, message_handler_1.handleNews)(parsedMessage, emitter);
-                    logger_1.logger.info(`[NEWS] Processing complete`);
                     break;
                 case constants_1.MessageType.SECURITY_LIST:
-                    logger_1.logger.info(`[SECURITY_LIST] Processing security list message from snapshot`);
-                    // Create a cache object for security data if not already defined in your code
                     const securityCache = { EQUITY: [], INDEX: [] };
                     (0, message_handler_1.handleSecurityList)(parsedMessage, emitter, securityCache);
-                    logger_1.logger.info(`[SECURITY_LIST] Processing complete for security list snapshot`);
                     break;
                 case constants_1.MessageType.TRADING_SESSION_STATUS:
-                    logger_1.logger.info(`[TRADING_STATUS] Processing trading session status message from snapshot`);
                     (0, message_handler_1.handleTradingSessionStatus)(parsedMessage, emitter);
-                    logger_1.logger.info(`[TRADING_STATUS] Processing complete for trading status snapshot`);
                     break;
                 case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-                    logger_1.logger.info(`[MARKET_DATA] Processing full market data snapshot`);
                     (0, message_handler_1.handleMarketDataSnapshot)(parsedMessage, emitter);
-                    logger_1.logger.info(`[MARKET_DATA] Processing complete for market data snapshot`);
                     break;
                 case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-                    logger_1.logger.info(`[MARKET_DATA] Processing incremental market data update`);
                     (0, message_handler_1.handleMarketDataIncremental)(parsedMessage, emitter);
-                    logger_1.logger.info(`[MARKET_DATA] Processing complete for incremental data`);
                     break;
                 case 'f': // Security Status message
-                    logger_1.logger.info(`[SECURITY_STATUS] Processing security status message`);
                     (0, message_handler_1.handleTradingStatus)(parsedMessage, emitter);
-                    logger_1.logger.info(`[SECURITY_STATUS] Processing complete`);
                     break;
-                // ... other cases remain unchanged ...
                 default:
-                    logger_1.logger.info(`[UNKNOWN:${msgType}] Received unhandled message type: ${msgType} (${msgTypeName})`);
-                    if (parsedMessage[constants_1.FieldTag.SYMBOL]) {
-                        logger_1.logger.info(`[UNKNOWN:${msgType}] Symbol: ${parsedMessage[constants_1.FieldTag.SYMBOL]}`);
-                    }
                     emitter.emit('categorizedData', {
                         category: 'UNKNOWN',
                         type: msgType,
@@ -486,60 +288,46 @@ function createFixClient(options) {
     };
     const handleSequenceError = (expectedSeqNum) => {
         if (expectedSeqNum !== undefined) {
-            logger_1.logger.info(`[SEQUENCE:ERROR] Server expects sequence number: ${expectedSeqNum}`);
+            logger_1.logger.info(`Server expects sequence number: ${expectedSeqNum}`);
             if (socket) {
-                logger_1.logger.info('[SEQUENCE:ERROR] Disconnecting due to sequence number error');
                 socket.destroy();
                 socket = null;
             }
             setTimeout(() => {
                 sequenceManager.forceReset(expectedSeqNum);
-                const seqNumbers = sequenceManager.getAll();
-                logger_1.logger.info(`[SEQUENCE:ERROR] After reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
-                logger_1.logger.info(`[SEQUENCE:ERROR] Reconnecting with adjusted sequence numbers`);
                 connect();
             }, 2000);
         }
         else {
-            logger_1.logger.info('[SEQUENCE:ERROR] Cannot determine expected sequence number, performing full reset');
+            logger_1.logger.info('Cannot determine expected sequence number, performing full reset');
             if (socket) {
                 socket.destroy();
                 socket = null;
             }
             setTimeout(() => {
                 sequenceManager.resetAll();
-                const seqNumbers = sequenceManager.getAll();
-                logger_1.logger.info(`[SEQUENCE:ERROR] After full reset: Main=${seqNumbers.main}, Server=${seqNumbers.server}, MarketData=${seqNumbers.marketData}, SecurityList=${seqNumbers.securityList}, TradingStatus=${seqNumbers.tradingStatus}`);
-                logger_1.logger.info('[SEQUENCE:ERROR] Reconnecting with fully reset sequence numbers');
                 connect();
             }, 2000);
         }
     };
     const sendLogon = () => {
-        logger_1.logger.info("[SESSION:LOGON] Creating logon message");
         if (!state.isConnected()) {
-            logger_1.logger.warn('[SESSION:LOGON] Cannot send logon: not connected or already logged in');
+            logger_1.logger.warn('Cannot send logon: not connected');
             return;
         }
         try {
-            // Always reset all sequence numbers before a new logon
             sequenceManager.resetAll();
-            logger_1.logger.info("[SESSION:LOGON] Reset all sequence numbers before logon");
-            logger_1.logger.info(`[SESSION:LOGON] Sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
             const builder = (0, message_builder_1.createLogonMessageBuilder)(options, sequenceManager);
             const message = builder.buildMessage();
-            logger_1.logger.info(`[SESSION:LOGON] Sending logon message with username: ${options.username}`);
-            logger_1.logger.info(`[SESSION:LOGON] Using sequence number: 1 with reset flag Y`);
             sendMessage(message);
-            logger_1.logger.info(`[SESSION:LOGON] Logon message sent, sequence numbers now: ${JSON.stringify(sequenceManager.getAll())}`);
         }
         catch (error) {
-            logger_1.logger.error(`[SESSION:LOGON] Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
     const sendLogout = (text) => {
         if (!state.isConnected()) {
-            logger_1.logger.warn("[SESSION:LOGOUT] Cannot send logout, not connected");
+            logger_1.logger.warn("Cannot send logout, not connected");
             emitter.emit("logout", {
                 message: "Logged out from FIX server",
                 timestamp: new Date().toISOString(),
@@ -547,32 +335,24 @@ function createFixClient(options) {
             return;
         }
         try {
-            // We do NOT reset sequence numbers before sending logout
-            // This ensures the server receives our logout message with the correct sequence number
-            // The sequence reset happens on the next logon with ResetSeqNumFlag=Y
-            logger_1.logger.info("[SESSION:LOGOUT] Creating logout message with reset flag");
             const builder = (0, message_builder_1.createLogoutMessageBuilder)(options, sequenceManager, text);
             const message = builder.buildMessage();
             sendMessage(message);
-            logger_1.logger.info("[SESSION:LOGOUT] Sent logout message to server");
-            // Save current sequence numbers to file for possible reconnection on the same day
-            logger_1.logger.info(`[SESSION:LOGOUT] Persisting sequence numbers: ${JSON.stringify(sequenceManager.getAll())}`);
         }
         catch (error) {
-            logger_1.logger.error(`[SESSION:LOGOUT] Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.logger.error(`Error sending logout: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
     const sendHeartbeat = (testReqId) => {
         if (!state.isConnected())
             return;
         try {
-            logger_1.logger.debug(`[HEARTBEAT:SEND] Creating heartbeat message${testReqId ? " with test request ID: " + testReqId : ""}`);
             const builder = (0, message_builder_1.createHeartbeatMessageBuilder)(options, sequenceManager, testReqId);
             const message = builder.buildMessage();
             sendMessage(message);
         }
         catch (error) {
-            logger_1.logger.error(`[HEARTBEAT:SEND] Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
+            logger_1.logger.error(`Error sending heartbeat: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
     const sendMessage = (message) => {
@@ -581,312 +361,12 @@ function createFixClient(options) {
             return;
         }
         try {
-            // Extract message type for categorization
-            // const segments = message.split(SOH);
-            // const msgTypeField = segments.find(s => s.startsWith('35='));
-            // const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
-            // const msgTypeName = getMessageTypeName(msgType);
-            // // Get symbol if it exists for better logging
-            // const symbolField = segments.find(s => s.startsWith('55='));
-            // const symbol = symbolField ? symbolField.substring(3) : '';
-            // // Classify message
-            // let messageCategory = 'UNKNOWN';
-            // if (msgType === MessageType.MARKET_DATA_REQUEST) {
-            //   messageCategory = 'MARKET_DATA';
-            // } else if (msgType === MessageType.SECURITY_LIST_REQUEST) {
-            //   messageCategory = 'SECURITY_LIST';
-            // } else if (msgType === MessageType.TRADING_SESSION_STATUS_REQUEST) {
-            //   messageCategory = 'TRADING_STATUS';
-            // } else if (msgType === MessageType.LOGON || msgType === MessageType.LOGOUT) {
-            //   messageCategory = 'SESSION';
-            // } else if (msgType === MessageType.HEARTBEAT || msgType === MessageType.TEST_REQUEST) {
-            //   messageCategory = 'HEARTBEAT';
-            // }
-            // // Log with category and type for clear identification
-            // logger.info(`[${messageCategory}:OUTGOING] Sending FIX message: Type=${msgType} (${msgTypeName})${symbol ? ', Symbol=' + symbol : ''}`);
-            // logger.info(`----------------------------OUTGOING MESSAGE-----------------------------`);
-            logger_1.logger.info(message);
-            logger_1.logger.debug(`Current sequence numbers: main=${sequenceManager.getMainSeqNum()}, server=${sequenceManager.getServerSeqNum()}`);
-            // Send the message
             socket?.write(message);
         }
         catch (error) {
             logger_1.logger.error(`Error sending message: ${error instanceof Error ? error.message : String(error)}`);
-            // On send error, try to reconnect
             socket?.destroy();
             state.setConnected(false);
-        }
-    };
-    const sendMarketDataRequest = (symbols, entryTypes = ["0", "1"], subscriptionType = "1") => {
-        try {
-            if (!state.isConnected()) {
-                logger_1.logger.error("[MARKET_DATA:REQUEST] Cannot send market data request: not connected");
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[MARKET_DATA:REQUEST] Creating market data request for symbols: ${symbols.join(", ")}`);
-            const builder = (0, message_builder_1.createMarketDataRequestBuilder)(options, sequenceManager, symbols, entryTypes, subscriptionType, requestId);
-            sequenceManager.setMarketDataSeqNum(2);
-            const rawMessage = builder.buildMessage();
-            logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR MARKET DATA REQUEST');
-            socket?.write(rawMessage);
-            const subTypes = {
-                "0": "SNAPSHOT",
-                "1": "SNAPSHOT+UPDATES",
-                "2": "DISABLE_UPDATES",
-            };
-            const entryTypeNames = {
-                "0": "BID",
-                "1": "OFFER",
-                "2": "TRADE",
-                "3": "INDEX_VALUE",
-                "4": "OPENING_PRICE",
-                "7": "HIGH_PRICE",
-                "8": "LOW_PRICE",
-            };
-            const entryTypeLabels = entryTypes
-                .map((t) => entryTypeNames[t] || t)
-                .join(", ");
-            const subTypeLabel = subTypes[subscriptionType] || subscriptionType;
-            logger_1.logger.info(`[MARKET_DATA:REQUEST] Sent ${subTypeLabel} request with ID: ${requestId}`);
-            logger_1.logger.info(`[MARKET_DATA:REQUEST] Symbols: ${symbols.join(", ")} | Entry types: ${entryTypeLabels} | Using sequence: ${sequenceManager.getMarketDataSeqNum()}`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.logger.error("[MARKET_DATA:REQUEST] Error sending market data request:", error);
-            return null;
-        }
-    };
-    const sendTradingSessionStatusRequest = (tradingSessionID = "REG") => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.info(`Connection state - Socket: ${socket ? "present" : "null"}, Connected: ${state.isConnected()}`);
-                logger_1.logger.error("[TRADING_STATUS:REQUEST] Cannot send trading session status request: not connected or not logged in");
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[TRADING_STATUS:REQUEST] Creating trading session status request`);
-            const builder = (0, message_builder_1.createTradingSessionStatusRequestBuilder)(options, sequenceManager, requestId, tradingSessionID);
-            const rawMessage = builder.buildMessage();
-            logger_1.logger.info(`[TRADING_STATUS:REQUEST] Raw message: ${rawMessage}`);
-            socket.write(rawMessage);
-            logger_1.logger.info(`[TRADING_STATUS:REQUEST] Sent request for ${tradingSessionID} market with ID: ${requestId} | Using sequence: ${sequenceManager.getTradingStatusSeqNum()}`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.logger.error("[TRADING_STATUS:REQUEST] Error sending trading session status request:", error);
-            return null;
-        }
-    };
-    const sendSecurityStatusRequest = () => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.error("[SECURITY_STATUS:REQUEST] Cannot send security status request: not connected or not logged in");
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[SECURITY_STATUS:REQUEST] Creating security status request`);
-            sequenceManager.setSecurityListSeqNum(2);
-            const builder = (0, message_builder_1.createSecurityStatusRequestBuilder)(options, sequenceManager, requestId, "FUT");
-            const rawMessage = builder.buildMessage();
-            logger_1.logger.info(`[SECURITY_STATUS:REQUEST] Raw message: ${rawMessage}`);
-            socket.write(rawMessage);
-            logger_1.logger.info(`[SECURITY_STATUS:REQUEST] Sent request for FUT market with ID: ${requestId} | Using sequence}`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.logger.error("[SECURITY_STATUS:REQUEST] Error sending security status request:", error);
-            return null;
-        }
-    };
-    const sendSecurityListRequestForREGEquity = () => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.info(`Connection state - Socket: ${socket ? "present" : "null"}, Connected: ${state.isConnected()}`);
-                logger_1.logger.error("[SECURITY_LIST:EQUITY] Cannot send equity security list request: not connected or not logged in");
-                return null;
-            }
-            if (state.hasRequestBeenSent("equitySecurities")) {
-                logger_1.logger.info("[SECURITY_LIST:EQUITY] Equity securities already requested, skipping duplicate request");
-                return null;
-            }
-            // Reset the security list sequence number to 2 before sending the request
-            sequenceManager.setSecurityListSeqNum(2);
-            logger_1.logger.info("[SECURITY_LIST:EQUITY] Reset security list sequence number to 3");
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[SECURITY_LIST:EQUITY] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForREGEquityBuilder)(options, sequenceManager, requestId);
-            const rawMessage = builder.buildMessage();
-            logger_1.logger.info(rawMessage, 'CHECKING MESSAGE FOR EQUITY SECURITY LIST');
-            if (socket) {
-                socket.write(rawMessage);
-                state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", true);
-                logger_1.logger.info(`[SECURITY_LIST:EQUITY] Request sent successfully with ID: ${requestId}`);
-                logger_1.logger.info(`[SECURITY_LIST:EQUITY] Product: EQUITY | Market: REG | Using sequence: ${sequenceManager.getSecurityListSeqNum()}`);
-                return requestId;
-            }
-            else {
-                logger_1.logger.error(`[SECURITY_LIST:EQUITY] Failed to send request - socket not available`);
-                return null;
-            }
-        }
-        catch (error) {
-            logger_1.logger.error(`[SECURITY_LIST:EQUITY] Error sending request: ${error instanceof Error ? error.message : String(error)}`);
-            return null;
-        }
-    };
-    const sendSecurityListRequestForREGIndex = () => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.error("[SECURITY_LIST:INDEX] Cannot send index security list request: not connected or not logged in");
-                return null;
-            }
-            // Reset the security list sequence number to 2 before sending the request
-            sequenceManager.setSecurityListSeqNum(3);
-            logger_1.logger.info("[SECURITY_LIST:INDEX] Reset security list sequence number to 2");
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[SECURITY_LIST:INDEX] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForRegIndexBuilder)(options, sequenceManager, requestId);
-            const rawMessage = builder.buildMessage();
-            if (socket) {
-                socket.write(rawMessage);
-                state.setRequestSent("indexSecurities", true);
-                logger_1.logger.info(`[SECURITY_LIST:INDEX] Request sent successfully with ID: ${requestId}`);
-                logger_1.logger.info(`[SECURITY_LIST:INDEX] Product: INDEX | Market: REG | Using sequence: ${sequenceManager.getSecurityListSeqNum()}`);
-                return requestId;
-            }
-            else {
-                logger_1.logger.error(`[SECURITY_LIST:INDEX] Failed to send request - socket not available`);
-                return null;
-            }
-        }
-        catch (error) {
-            logger_1.logger.error(`[SECURITY_LIST:INDEX] Error sending request: ${error instanceof Error ? error.message : String(error)}`);
-            return null;
-        }
-    };
-    const sendSecurityListRequestForFutEquity = () => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.info(`Connection state - Socket: ${socket ? "present" : "null"}, Connected: ${state.isConnected()}`);
-                logger_1.logger.error("[SECURITY_LIST:FUT] Cannot send FUT market security list request: not connected or not logged in");
-                return null;
-            }
-            if (state.hasRequestBeenSent("futSecurities")) {
-                logger_1.logger.info("[SECURITY_LIST:FUT] FUT securities already requested, skipping duplicate request");
-                return null;
-            }
-            // Reset the security list sequence number to 3 (don't use 2 to avoid possible collision)
-            sequenceManager.setSecurityListSeqNum(2);
-            logger_1.logger.info("[SECURITY_LIST:FUT] Reset security list sequence number to 3");
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[SECURITY_LIST:FUT] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createSecurityListRequestForFutEquityBuilder)(options, sequenceManager, requestId);
-            const rawMessage = builder.buildMessage();
-            if (socket) {
-                logger_1.logger.info(`CHECKING MESSAGE FOR FUT SECURITY LIST: ${rawMessage}`);
-                socket.write(rawMessage);
-                state.setRequestSent("futSecurities", true);
-                logger_1.logger.info(`[SECURITY_LIST:FUT] Request sent successfully with ID: ${requestId}`);
-                logger_1.logger.info(`[SECURITY_LIST:FUT] Product: EQUITY | Market: FUT | Using sequence: ${sequenceManager.getSecurityListSeqNum()}`);
-                return requestId;
-            }
-            else {
-                logger_1.logger.error(`[SECURITY_LIST:FUT] Failed to send request - socket not available`);
-                return null;
-            }
-        }
-        catch (error) {
-            logger_1.logger.error(`[SECURITY_LIST:FUT] Error sending request: ${error instanceof Error ? error.message : String(error)}`);
-            return null;
-        }
-    };
-    const sendIndexMarketDataRequest = (symbols) => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.error("[MARKET_DATA:INDEX] Cannot send index data request: not connected");
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[MARKET_DATA:INDEX] Creating request for indices: ${symbols.join(", ")}`);
-            const builder = (0, message_builder_1.createIndexMarketDataRequestBuilder)(options, sequenceManager, symbols, requestId);
-            const rawMessage = builder.buildMessage();
-            socket.write(rawMessage);
-            logger_1.logger.info(`[MARKET_DATA:INDEX] Sent SNAPSHOT request with ID: ${requestId}`);
-            logger_1.logger.info(`[MARKET_DATA:INDEX] Indices: ${symbols.join(", ")} | Entry type: INDEX_VALUE | Using sequence: ${sequenceManager.getMarketDataSeqNum()}`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.logger.error("[MARKET_DATA:INDEX] Error sending index data request:", error);
-            return null;
-        }
-    };
-    const sendSymbolMarketDataSubscription = (symbols) => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.error("[MARKET_DATA:SYMBOL] Cannot send market data subscription: not connected");
-                return null;
-            }
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[MARKET_DATA:SYMBOL] Creating subscription for symbols: ${symbols.join(", ")}`);
-            const builder = (0, message_builder_1.createSymbolMarketDataSubscriptionBuilder)(options, sequenceManager, symbols, requestId);
-            const rawMessage = builder.buildMessage();
-            socket.write(rawMessage);
-            logger_1.logger.info(`[MARKET_DATA:SYMBOL] Sent SNAPSHOT+UPDATES subscription with ID: ${requestId}`);
-            logger_1.logger.info(`[MARKET_DATA:SYMBOL] Symbols: ${symbols.join(", ")} | Entry types: BID, OFFER, TRADE | Using sequence: ${sequenceManager.getMarketDataSeqNum()}`);
-            return requestId;
-        }
-        catch (error) {
-            logger_1.logger.error("[MARKET_DATA:SYMBOL] Error sending market data subscription:", error);
-            return null;
-        }
-    };
-    /**
-     * Sends a News message to the counterparty
-     *
-     * @param headline News headline
-     * @param text News text body
-     * @param urgency News urgency (default: '1' Flash)
-     * @returns true if the message was sent successfully, false otherwise
-     */
-    const sendNewsMessage = (headline, text, urgency = '1') => {
-        try {
-            if (!socket || !state.isConnected() || !state.isLoggedIn()) {
-                logger_1.logger.error('[NEWS:SEND] Cannot send news message: not connected or not logged in');
-                return false;
-            }
-            logger_1.logger.info(`[NEWS:SEND] Creating news message with headline: ${headline}`);
-            const builder = (0, message_builder_1.createNewsMessageBuilder)(options, sequenceManager, headline, text, undefined, // Use default timestamp
-            urgency);
-            const rawMessage = builder.buildMessage();
-            logger_1.logger.info(`[NEWS:SEND] Raw message: ${rawMessage}`);
-            socket.write(rawMessage);
-            logger_1.logger.info(`[NEWS:SEND] Sent news message: ${headline}`);
-            return true;
-        }
-        catch (error) {
-            logger_1.logger.error(`[NEWS:SEND] Error sending news message: ${error instanceof Error ? error.message : String(error)}`);
-            return false;
-        }
-    };
-    const sendTestRequest = () => {
-        try {
-            if (!socket || !state.isConnected()) {
-                logger_1.logger.error('[TEST:REQUEST] Cannot send test request: not connected');
-                return;
-            }
-            logger_1.logger.info('[TEST:REQUEST] Sending test request');
-            const requestId = (0, uuid_1.v4)();
-            logger_1.logger.info(`[TEST:REQUEST] Creating request with ID: ${requestId}`);
-            const builder = (0, message_builder_1.createTestRequestMessageBuilder)(options, requestId);
-            const rawMessage = builder.buildMessage();
-            logger_1.logger.info(`[TEST:REQUEST] Raw message: ${rawMessage}`);
-            socket.write(rawMessage);
-            logger_1.logger.info(`[TEST:REQUEST] Sent test request with ID: ${requestId}`);
-        }
-        catch (error) {
-            logger_1.logger.error(`[TEST:REQUEST] Error sending test request: ${error instanceof Error ? error.message : String(error)}`);
-            return;
         }
     };
     const client = {
@@ -896,98 +376,10 @@ function createFixClient(options) {
         },
         connect,
         disconnect,
-        sendTestRequest,
-        sendMarketDataRequest,
-        sendTradingSessionStatusRequest,
-        sendSecurityStatusRequest,
-        sendSecurityListRequestForREGEquity,
-        sendSecurityListRequestForREGIndex,
-        sendSecurityListRequestForFutEquity,
-        sendIndexMarketDataRequest,
-        sendSymbolMarketDataSubscription,
         sendLogon,
         sendLogout,
         start,
         stop,
-        setSequenceNumber: (newSeq) => {
-            forceResetSequenceNumber(newSeq);
-            return client;
-        },
-        setMarketDataSequenceNumber: (seqNum) => {
-            sequenceManager.setMarketDataSeqNum(seqNum);
-            return client;
-        },
-        setSecurityListSequenceNumber: (seqNum) => {
-            sequenceManager.setSecurityListSeqNum(seqNum);
-            return client;
-        },
-        setTradingStatusSequenceNumber: (seqNum) => {
-            sequenceManager.setTradingStatusSeqNum(seqNum);
-            return client;
-        },
-        getSequenceNumbers: () => {
-            return sequenceManager.getAll();
-        },
-        reset: () => {
-            logger_1.logger.info("[RESET] Performing complete reset with disconnection and reconnection");
-            // Reset sequence manager to initial state
-            sequenceManager.resetAll();
-            logger_1.logger.info(`[RESET] All sequence numbers reset to initial values: ${JSON.stringify(sequenceManager.getAll())}`);
-            logger_1.logger.info(`[RESET] Verifying SecurityList sequence number is set to 2: ${sequenceManager.getSecurityListSeqNum()}`);
-            // Reset flag for requested securities
-            state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
-            state.setRequestSent("indexSecurities", false);
-            state.setRequestSent("futSecurities", false);
-            logger_1.logger.info("[RESET] Reset securities request flags");
-            // Disconnect and clean up
-            if (socket) {
-                logger_1.logger.info("[RESET] Destroying socket connection");
-                socket.destroy();
-                socket = null;
-            }
-            state.setConnected(false);
-            state.setLoggedIn(false);
-            clearTimers();
-            logger_1.logger.info("[RESET] Connection and sequence numbers reset to initial state");
-            // Wait a moment before reconnecting
-            setTimeout(() => {
-                logger_1.logger.info("[RESET] Reconnecting after reset");
-                connect();
-            }, 3000);
-            return client;
-        },
-        requestAllSecurities: () => {
-            logger_1.logger.info('[SECURITY_LIST] Requesting all securities data');
-            // Reset request flags to allow refreshing
-            state.setRequestSent("SECURITY_LIST_REQUEST_FOR_EQUITY", false);
-            state.setRequestSent("indexSecurities", false);
-            state.setRequestSent("futSecurities", false);
-            // Request security lists with staggered timing to avoid overwhelming the server
-            sendSecurityListRequestForREGEquity();
-            setTimeout(() => {
-                sendSecurityListRequestForFutEquity();
-            }, 500);
-            setTimeout(() => {
-                sendSecurityListRequestForREGIndex();
-            }, 1000);
-            lastSecurityListRefresh = Date.now();
-            return client;
-        },
-        setupComplete: () => {
-            // Implementation
-            return client;
-        },
-        // Add aliases to match the interface
-        sendSecurityListRequestForEquity: function () {
-            return this.sendSecurityListRequestForREGEquity();
-        },
-        sendSecurityListRequestForIndex: function () {
-            return this.sendSecurityListRequestForREGIndex();
-        },
-        sendSecurityListRequestForFut: function () {
-            return this.sendSecurityListRequestForFutEquity();
-        },
-        sendNewsMessage
     };
     return client;
 }

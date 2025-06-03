@@ -60,133 +60,121 @@ function createWebSocketServer(port, fixConfig = {
     const setupFixClientListeners = () => {
         if (!fixClient)
             return;
-        // Market data events
-        fixClient.on('marketData', (data) => {
-            try {
-                // Ensure we have valid parsed data before broadcasting
-                if (Array.isArray(data) && data.length > 0) {
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting market data with ${data.length} entries`);
-                    broadcast({ type: 'marketData', data, timestamp: Date.now() });
-                }
-                else {
-                    // Handle raw message case
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting raw market data message`);
-                    broadcast({ type: 'marketData', data, timestamp: Date.now() });
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[WEBSOCKET] Error processing market data: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        });
-        // Trading session status events
-        fixClient.on('tradingSessionStatus', (data) => {
-            try {
-                // Validate and process data before broadcasting
-                if (data && data.sessionId) {
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting trading session status: ${JSON.stringify(data)}`);
-                    broadcast({ type: 'tradingSessionStatus', data, timestamp: Date.now() });
-                }
-                else {
-                    logger_1.logger.warn(`[WEBSOCKET] Received invalid trading session data: ${JSON.stringify(data)}`);
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[WEBSOCKET] Error processing trading session status: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        });
-        // Security list events
-        fixClient.on('securityList', (data) => {
-            try {
-                // Validate and process security list before broadcasting
-                if (Array.isArray(data)) {
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting security list with ${data.length} symbols`);
-                    // Categorize securities for better frontend handling
-                    const categorizedData = {
-                        equities: data.filter(s => s.securityType === 'CS' || s.securityType === '4'),
-                        indices: data.filter(s => s.securityType === 'MLEG' || s.securityType === '5'),
-                        other: data.filter(s => s.securityType !== 'CS' && s.securityType !== '4' &&
-                            s.securityType !== 'MLEG' && s.securityType !== '5')
-                    };
-                    broadcast({
-                        type: 'securityList',
-                        data: data,
-                        categorized: categorizedData,
-                        count: data.length,
-                        timestamp: Date.now()
-                    });
-                }
-                else {
-                    logger_1.logger.warn(`[WEBSOCKET] Received invalid security list data`);
-                    broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[WEBSOCKET] Error processing security list: ${error instanceof Error ? error.message : String(error)}`);
-                broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
-            }
-        });
-        // Equity security list events
-        fixClient.on('equitySecurityList', (data) => {
-            try {
-                // Validate and process security list before broadcasting
-                if (Array.isArray(data)) {
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting equity security list with ${data.length} symbols`);
-                    broadcast({
-                        type: 'equitySecurityList',
-                        data: data,
-                        count: data.length,
-                        timestamp: Date.now()
-                    });
-                }
-                else {
-                    logger_1.logger.warn(`[WEBSOCKET] Received invalid equity security list data`);
-                    broadcast({ type: 'equitySecurityList', data: [], count: 0, timestamp: Date.now() });
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[WEBSOCKET] Error processing equity security list: ${error instanceof Error ? error.message : String(error)}`);
-                broadcast({ type: 'equitySecurityList', data: [], count: 0, timestamp: Date.now() });
-            }
-        });
-        // Index security list events
-        fixClient.on('indexSecurityList', (data) => {
-            try {
-                // Validate and process security list before broadcasting
-                if (Array.isArray(data)) {
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting index security list with ${data.length} symbols`);
-                    broadcast({
-                        type: 'indexSecurityList',
-                        data: data,
-                        count: data.length,
-                        timestamp: Date.now()
-                    });
-                }
-                else {
-                    logger_1.logger.warn(`[WEBSOCKET] Received invalid index security list data`);
-                    broadcast({ type: 'indexSecurityList', data: [], count: 0, timestamp: Date.now() });
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[WEBSOCKET] Error processing index security list: ${error instanceof Error ? error.message : String(error)}`);
-                broadcast({ type: 'indexSecurityList', data: [], count: 0, timestamp: Date.now() });
-            }
-        });
-        // KSE data events
-        fixClient.on('kseData', (data) => {
-            try {
-                // Validate and process KSE data before broadcasting
-                if (Array.isArray(data) && data.length > 0) {
-                    logger_1.logger.info(`[WEBSOCKET] Broadcasting KSE data for ${data[0].symbol}`);
-                    broadcast({ type: 'kseData', data, timestamp: Date.now() });
-                }
-                else {
-                    logger_1.logger.warn(`[WEBSOCKET] Received empty KSE data`);
-                }
-            }
-            catch (error) {
-                logger_1.logger.error(`[WEBSOCKET] Error processing KSE data: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        });
+        // // Market data events
+        // fixClient.on('marketData', (data: MarketDataItem[]) => {
+        //   try {
+        //     // Ensure we have valid parsed data before broadcasting
+        //     if (Array.isArray(data) && data.length > 0) {
+        //       logger.info(`[WEBSOCKET] Broadcasting market data with ${data.length} entries`);
+        //       broadcast({ type: 'marketData', data, timestamp: Date.now() });
+        //     } else {
+        //       // Handle raw message case
+        //       logger.info(`[WEBSOCKET] Broadcasting raw market data message`);
+        //       broadcast({ type: 'marketData', data, timestamp: Date.now() });
+        //     }
+        //   } catch (error) {
+        //     logger.error(`[WEBSOCKET] Error processing market data: ${error instanceof Error ? error.message : String(error)}`);
+        //   }
+        // });
+        // // Trading session status events
+        // fixClient.on('tradingSessionStatus', (data: TradingSessionInfo) => {
+        //   try {
+        //     // Validate and process data before broadcasting
+        //     if (data && data.sessionId) {
+        //       logger.info(`[WEBSOCKET] Broadcasting trading session status: ${JSON.stringify(data)}`);
+        //       broadcast({ type: 'tradingSessionStatus', data, timestamp: Date.now() });
+        //     } else {
+        //       logger.warn(`[WEBSOCKET] Received invalid trading session data: ${JSON.stringify(data)}`);
+        //     }
+        //   } catch (error) {
+        //     logger.error(`[WEBSOCKET] Error processing trading session status: ${error instanceof Error ? error.message : String(error)}`);
+        //   }
+        // });
+        // // Security list events
+        // fixClient.on('securityList', (data: SecurityInfo[]) => {
+        //   try {
+        //     // Validate and process security list before broadcasting
+        //     if (Array.isArray(data)) {
+        //       logger.info(`[WEBSOCKET] Broadcasting security list with ${data.length} symbols`);
+        //       // Categorize securities for better frontend handling
+        //       const categorizedData = {
+        //         equities: data.filter(s => s.securityType === 'CS' || s.securityType === '4'),
+        //         indices: data.filter(s => s.securityType === 'MLEG' || s.securityType === '5'),
+        //         other: data.filter(s => s.securityType !== 'CS' && s.securityType !== '4' &&
+        //           s.securityType !== 'MLEG' && s.securityType !== '5')
+        //       };
+        //       broadcast({
+        //         type: 'securityList',
+        //         data: data,
+        //         categorized: categorizedData,
+        //         count: data.length,
+        //         timestamp: Date.now()
+        //       });
+        //     } else {
+        //       logger.warn(`[WEBSOCKET] Received invalid security list data`);
+        //       broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
+        //     }
+        //   } catch (error) {
+        //     logger.error(`[WEBSOCKET] Error processing security list: ${error instanceof Error ? error.message : String(error)}`);
+        //     broadcast({ type: 'securityList', data: [], count: 0, timestamp: Date.now() });
+        //   }
+        // });
+        // // Equity security list events
+        // fixClient.on('equitySecurityList', (data: SecurityInfo[]) => {
+        //   try {
+        //     // Validate and process security list before broadcasting
+        //     if (Array.isArray(data)) {
+        //       logger.info(`[WEBSOCKET] Broadcasting equity security list with ${data.length} symbols`);
+        //       broadcast({
+        //         type: 'equitySecurityList',
+        //         data: data,
+        //         count: data.length,
+        //         timestamp: Date.now()
+        //       });
+        //     } else {
+        //       logger.warn(`[WEBSOCKET] Received invalid equity security list data`);
+        //       broadcast({ type: 'equitySecurityList', data: [], count: 0, timestamp: Date.now() });
+        //     }
+        //   } catch (error) {
+        //     logger.error(`[WEBSOCKET] Error processing equity security list: ${error instanceof Error ? error.message : String(error)}`);
+        //     broadcast({ type: 'equitySecurityList', data: [], count: 0, timestamp: Date.now() });
+        //   }
+        // });
+        // // Index security list events
+        // fixClient.on('indexSecurityList', (data: SecurityInfo[]) => {
+        //   try {
+        //     // Validate and process security list before broadcasting
+        //     if (Array.isArray(data)) {
+        //       logger.info(`[WEBSOCKET] Broadcasting index security list with ${data.length} symbols`);
+        //       broadcast({
+        //         type: 'indexSecurityList',
+        //         data: data,
+        //         count: data.length,
+        //         timestamp: Date.now()
+        //       });
+        //     } else {
+        //       logger.warn(`[WEBSOCKET] Received invalid index security list data`);
+        //       broadcast({ type: 'indexSecurityList', data: [], count: 0, timestamp: Date.now() });
+        //     }
+        //   } catch (error) {
+        //     logger.error(`[WEBSOCKET] Error processing index security list: ${error instanceof Error ? error.message : String(error)}`);
+        //     broadcast({ type: 'indexSecurityList', data: [], count: 0, timestamp: Date.now() });
+        //   }
+        // });
+        // // KSE data events
+        // fixClient.on('kseData', (data: MarketDataItem[]) => {
+        //   try {
+        //     // Validate and process KSE data before broadcasting
+        //     if (Array.isArray(data) && data.length > 0) {
+        //       logger.info(`[WEBSOCKET] Broadcasting KSE data for ${data[0].symbol}`);
+        //       broadcast({ type: 'kseData', data, timestamp: Date.now() });
+        //     } else {
+        //       logger.warn(`[WEBSOCKET] Received empty KSE data`);
+        //     }
+        //   } catch (error) {
+        //     logger.error(`[WEBSOCKET] Error processing KSE data: ${error instanceof Error ? error.message : String(error)}`);
+        //   }
+        // });
         // Connection events
         fixClient.on('logon', () => {
             try {
