@@ -249,10 +249,15 @@ function createFixClient(options) {
                     logger_1.logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
                 }
             }
-            // Emit an event for this channel description
-            // emitter.emit(normalizedChannelDesc, parsedMessage);
-            // Optionally, log or emit a generic event as well
-            // emitter.emit('anyChannel', { channelDesc, data: parsedMessage });
+            // Emit by channel number (if present)
+            if (channelNo) {
+                logger_1.logger.info(`[FIX] Emitting by channel number: ${channelNo} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+                // emitter.emit(channelNo, parsedMessage);
+            }
+            // Emit by normalized channel description (if not unknown)
+            if (normalizedChannelDesc && normalizedChannelDesc !== 'unknown_message_type') {
+                emitter.emit(normalizedChannelDesc, parsedMessage);
+            }
             logger_1.logger.info(`--------------------------------`);
             switch (msgType) {
                 case index_1.MessageType.LOGON:

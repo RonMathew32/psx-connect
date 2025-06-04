@@ -303,11 +303,16 @@ export function createFixClient(options: FixClientOptions): FixClient {
         }
       }
 
-      // Emit an event for this channel description
-      // emitter.emit(normalizedChannelDesc, parsedMessage);
+      // Emit by channel number (if present)
+      if (channelNo) {
+        logger.info(`[FIX] Emitting by channel number: ${channelNo} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+        // emitter.emit(channelNo, parsedMessage);
+      }
 
-      // Optionally, log or emit a generic event as well
-      // emitter.emit('anyChannel', { channelDesc, data: parsedMessage });
+      // Emit by normalized channel description (if not unknown)
+      if (normalizedChannelDesc && normalizedChannelDesc !== 'unknown_message_type') {
+        emitter.emit(normalizedChannelDesc, parsedMessage);
+      }
 
       logger.info(`--------------------------------`)
 
