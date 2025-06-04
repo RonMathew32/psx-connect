@@ -86,14 +86,14 @@ function createFixClient(options) {
             socket.on('data', (data) => {
                 logger_1.logger.info(`[SESSION:DATA] Received data: ${data}`);
                 try {
-                    const dataStr = data.toString();
-                    if (dataStr.includes('35=1')) { // Test request
-                        const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
-                        if (testReqIdMatch && testReqIdMatch[1]) {
-                            sendHeartbeat(testReqIdMatch[1]);
-                        }
-                    }
-                    handleData(data);
+                    // const dataStr = data.toString();
+                    // if (dataStr.includes('35=1')) { // Test request
+                    //   const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
+                    //   if (testReqIdMatch && testReqIdMatch[1]) {
+                    //     sendHeartbeat(testReqIdMatch[1]);
+                    //   }
+                    // }
+                    // handleData(data);
                 }
                 catch (err) {
                     logger_1.logger.error(`Error processing data: ${err}`);

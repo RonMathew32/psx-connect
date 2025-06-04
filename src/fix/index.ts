@@ -116,16 +116,16 @@ export function createFixClient(options: FixClientOptions): FixClient {
       socket.on('data', (data) => {
         logger.info(`[SESSION:DATA] Received data: ${data}`);
         try {
-          const dataStr = data.toString();
+          // const dataStr = data.toString();
 
-          if (dataStr.includes('35=1')) { // Test request
-            const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
-            if (testReqIdMatch && testReqIdMatch[1]) {
-              sendHeartbeat(testReqIdMatch[1]);
-            }
-          }
+          // if (dataStr.includes('35=1')) { // Test request
+          //   const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
+          //   if (testReqIdMatch && testReqIdMatch[1]) {
+          //     sendHeartbeat(testReqIdMatch[1]);
+          //   }
+          // }
 
-          handleData(data);
+          // handleData(data);
         } catch (err) {
           logger.error(`Error processing data: ${err}`);
         }
