@@ -381,6 +381,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     try {
       const builder = createLogonMessageBuilder(options);
       const message = builder.buildMessage();
+      logger.info(`[SESSION:LOGON] Sending logon message: ${message}`);
       sendMessage(message);
     } catch (error) {
       logger.error(`Error sending logon: ${error instanceof Error ? error.message : String(error)}`);

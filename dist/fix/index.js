@@ -326,6 +326,7 @@ function createFixClient(options) {
         try {
             const builder = (0, message_builder_1.createLogonMessageBuilder)(options);
             const message = builder.buildMessage();
+            logger_1.logger.info(`[SESSION:LOGON] Sending logon message: ${message}`);
             sendMessage(message);
         }
         catch (error) {
