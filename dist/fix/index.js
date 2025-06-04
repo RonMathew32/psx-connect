@@ -254,7 +254,6 @@ function createFixClient(options) {
             //   logger.info(`[FIX] Emitting by channel number: ${getMessageTypeByChannelNo(channelNoStr)} parsedMessage: ${JSON.stringify(parsedMessage)}`);
             //   // emitter.emit(channelNoStr, parsedMessage);
             // }
-            logger_1.logger.info(`--------------------------------`);
             // switch (msgType) {
             //   case MessageType.LOGON:
             //     logger.info(`[SESSION:LOGON] Processing logon message from server`);

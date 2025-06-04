@@ -308,7 +308,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
       //   // emitter.emit(channelNoStr, parsedMessage);
       // }
 
-      logger.info(`--------------------------------`)
 
       // switch (msgType) {
       //   case MessageType.LOGON:
