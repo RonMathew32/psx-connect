@@ -250,9 +250,9 @@ function createFixClient(options) {
                 }
             }
             // Emit by channel number (if present)
-            if (channelNo) {
-                logger_1.logger.info(`[FIX] Emitting by channel number: ${channelNo} parsedMessage: ${JSON.stringify(parsedMessage)}`);
-                // emitter.emit(channelNo, parsedMessage);
+            if (channelNoStr) {
+                logger_1.logger.info(`[FIX] Emitting by channel number: ${channelNoStr} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+                // emitter.emit(channelNoStr, parsedMessage);
             }
             // Emit by normalized channel description (if not unknown)
             if (normalizedChannelDesc && normalizedChannelDesc !== 'unknown_message_type') {
