@@ -285,8 +285,6 @@ export function createTestRequestMessageBuilder(
  * @returns Description of the message type
  */
 export function getMessageTypeByChannelNo(channelNo: string): string {
-  logger.info(`[SESSION:MESSAGE] Getting message type by channel no: ${channelNo}`);
-
   const channelNoNum = parseInt(channelNo, 10);
 
   switch (channelNoNum) {

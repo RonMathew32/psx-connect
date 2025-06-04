@@ -8,7 +8,6 @@ exports.createTestRequestMessageBuilder = createTestRequestMessageBuilder;
 exports.getMessageTypeByChannelNo = getMessageTypeByChannelNo;
 exports.getMessageTypeName = getMessageTypeName;
 const constants_1 = require("../constants");
-const logger_1 = require("../utils/logger");
 /**
  * Get current timestamp in FIX format (YYYYMMDD-HH:MM:SS.sss)
  *
@@ -226,7 +225,6 @@ function createTestRequestMessageBuilder(options, testReqId) {
  * @returns Description of the message type
  */
 function getMessageTypeByChannelNo(channelNo) {
-    logger_1.logger.info(`[SESSION:MESSAGE] Getting message type by channel no: ${channelNo}`);
     const channelNoNum = parseInt(channelNo, 10);
     switch (channelNoNum) {
         case 1:
