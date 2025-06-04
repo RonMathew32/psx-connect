@@ -305,7 +305,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       // Emit by channel number (if present)
       if (channelNoStr) {
-        logger.info(`[FIX] Emitting by channel number: ${channelNoStr} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+        logger.info(`[FIX] Emitting by channel number: ${getMessageTypeByChannelNo(channelNoStr)} parsedMessage: ${JSON.stringify(parsedMessage)}`);
         // emitter.emit(channelNoStr, parsedMessage);
       }
 

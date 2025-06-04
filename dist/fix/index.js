@@ -251,7 +251,7 @@ function createFixClient(options) {
             }
             // Emit by channel number (if present)
             if (channelNoStr) {
-                logger_1.logger.info(`[FIX] Emitting by channel number: ${channelNoStr} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+                logger_1.logger.info(`[FIX] Emitting by channel number: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr)} parsedMessage: ${JSON.stringify(parsedMessage)}`);
                 // emitter.emit(channelNoStr, parsedMessage);
             }
             // Emit by normalized channel description (if not unknown)
