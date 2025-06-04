@@ -26,6 +26,12 @@ import {
 } from "./message-handler";
 import { ConnectionState } from "../utils/connection-state";
 
+// Build a reverse lookup for tag meanings
+const tagMeanings: Record<string, string> = {};
+for (const [key, value] of Object.entries(FieldTag)) {
+  tagMeanings[value] = key;
+}
+
 /**
  * Create a FIX client with the specified options
  */
@@ -234,9 +240,13 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       const msgTypeField = segments.find((s) => s.startsWith('35='));
       const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
+      const msgTypeName = Object.entries(MessageType).find(([k, v]) => v === msgType)?.[0] || 'UNKNOWN';
 
       const channelNoField = segments.find((s) => s.startsWith('10201='));
       const channelNo = channelNoField ? channelNoField.substring(5) : '';
+      const channelDesc = getMessageTypeByChannelNo(channelNo);
+
+      logger.info(`[FIX] ChannelNo: ${channelNo} (${channelDesc}), MsgType: ${msgType} (${msgTypeName})`);
 
       const parsedMessage = parseFixMessage(message);
 
@@ -269,9 +279,13 @@ export function createFixClient(options: FixClientOptions): FixClient {
         }
       }
 
-
-      logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${getMessageTypeByChannelNo(channelNoStr)}`);
-      logger.info(`[SESSION:PARSED_MESSAGE]: ${JSON.stringify(parsedMessage)}`);
+      if (parsedMessage) {
+        logger.info('[FIX] Message fields:');
+        for (const [tag, value] of Object.entries(parsedMessage)) {
+          const meaning = tagMeanings[tag] || '';
+          logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}`);
+        }
+      }
 
       logger.info(`--------------------------------`)
 

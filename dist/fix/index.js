@@ -10,6 +10,11 @@ const constants_1 = require("../constants");
 const net_1 = require("net");
 const message_handler_1 = require("./message-handler");
 const connection_state_1 = require("../utils/connection-state");
+// Build a reverse lookup for tag meanings
+const tagMeanings = {};
+for (const [key, value] of Object.entries(constants_1.FieldTag)) {
+    tagMeanings[value] = key;
+}
 /**
  * Create a FIX client with the specified options
  */
@@ -196,8 +201,11 @@ function createFixClient(options) {
             }
             const msgTypeField = segments.find((s) => s.startsWith('35='));
             const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
+            const msgTypeName = Object.entries(constants_1.MessageType).find(([k, v]) => v === msgType)?.[0] || 'UNKNOWN';
             const channelNoField = segments.find((s) => s.startsWith('10201='));
             const channelNo = channelNoField ? channelNoField.substring(5) : '';
+            const channelDesc = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
+            logger_1.logger.info(`[FIX] ChannelNo: ${channelNo} (${channelDesc}), MsgType: ${msgType} (${msgTypeName})`);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.logger.warn('Could not parse FIX message');
@@ -222,8 +230,13 @@ function createFixClient(options) {
                     sequenceManager.updateServerSequence(incomingSeqNum);
                 }
             }
-            logger_1.logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr)}`);
-            logger_1.logger.info(`[SESSION:PARSED_MESSAGE]: ${JSON.stringify(parsedMessage)}`);
+            if (parsedMessage) {
+                logger_1.logger.info('[FIX] Message fields:');
+                for (const [tag, value] of Object.entries(parsedMessage)) {
+                    const meaning = tagMeanings[tag] || '';
+                    logger_1.logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}`);
+                }
+            }
             logger_1.logger.info(`--------------------------------`);
             switch (msgType) {
                 case constants_1.MessageType.LOGON:
