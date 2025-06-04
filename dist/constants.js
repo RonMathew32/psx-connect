@@ -5,10 +5,12 @@ exports.FieldTag = exports.MessageType = exports.DEFAULT_CONNECTION = exports.SO
 exports.SOH = '\x01';
 // Default connection settings for FIX protocol
 exports.DEFAULT_CONNECTION = {
-    ENCRYPT_METHOD: '0', // No encryption
-    RESET_SEQ_NUM: 'Y', // Reset sequence numbers on logon
-    DEFAULT_APPL_VER_ID: 'FIX.4.4',
-    DEFAULT_CSTM_APPL_VER_ID: 'T4.4',
+    VERSION: 'FIXT.1.1',
+    ENCRYPT_METHOD: '0',
+    HEARTBEAT_INTERVAL: '30',
+    RESET_SEQ_NUM: 'Y',
+    DEFAULT_APPL_VER_ID: '9',
+    DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
 };
 // FIX message types
 exports.MessageType = {
