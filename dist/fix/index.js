@@ -93,7 +93,7 @@ function createFixClient(options) {
                     //     sendHeartbeat(testReqIdMatch[1]);
                     //   }
                     // }
-                    // handleData(data);
+                    handleData(data);
                 }
                 catch (err) {
                     logger_1.logger.error(`Error processing data: ${err}`);

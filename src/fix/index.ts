@@ -125,7 +125,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
           //   }
           // }
 
-          // handleData(data);
+          handleData(data);
         } catch (err) {
           logger.error(`Error processing data: ${err}`);
         }
