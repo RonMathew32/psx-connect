@@ -134,6 +134,8 @@ export enum FieldTag {
   TRADING_PHASE_CODE = '8538',      // Trading phase code
   MD_PRICE_LEVEL = '1023',
   NUMBER_OF_ORDERS = '346', 
+  NUM_TRADES = '8503',
+  TOTAL_VALUE_TRADE = '8504',
 }
 
 // Subscription Request Types

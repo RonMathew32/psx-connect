@@ -136,6 +136,8 @@ var FieldTag;
     FieldTag["TRADING_PHASE_CODE"] = "8538";
     FieldTag["MD_PRICE_LEVEL"] = "1023";
     FieldTag["NUMBER_OF_ORDERS"] = "346";
+    FieldTag["NUM_TRADES"] = "8503";
+    FieldTag["TOTAL_VALUE_TRADE"] = "8504";
 })(FieldTag || (exports.FieldTag = FieldTag = {}));
 // Subscription Request Types
 var SubscriptionRequestType;
