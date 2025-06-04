@@ -247,7 +247,11 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const channelNo = channelNoField ? channelNoField.substring(5) : '';
       const channelDesc = getMessageTypeByChannelNo(channelNo);
 
+      // Normalize the channel description to a safe event name (e.g., remove spaces, lowercase)
+      const normalizedChannelDesc = channelDesc.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
       logger.info(`[FIX] ChannelNo: ${channelNo} (${channelDesc}), MsgType: ${msgType} (${msgTypeName})`);
+      logger.info(`[FIX] Normalized channel description: ${normalizedChannelDesc}`);
 
       const parsedMessage = parseFixMessage(message);
 
@@ -298,6 +302,12 @@ export function createFixClient(options: FixClientOptions): FixClient {
           logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
         }
       }
+
+      // Emit an event for this channel description
+      // emitter.emit(normalizedChannelDesc, parsedMessage);
+
+      // Optionally, log or emit a generic event as well
+      // emitter.emit('anyChannel', { channelDesc, data: parsedMessage });
 
       logger.info(`--------------------------------`)
 

@@ -205,7 +205,10 @@ function createFixClient(options) {
             const channelNoField = segments.find((s) => s.startsWith('10201='));
             const channelNo = channelNoField ? channelNoField.substring(5) : '';
             const channelDesc = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
+            // Normalize the channel description to a safe event name (e.g., remove spaces, lowercase)
+            const normalizedChannelDesc = channelDesc.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             logger_1.logger.info(`[FIX] ChannelNo: ${channelNo} (${channelDesc}), MsgType: ${msgType} (${msgTypeName})`);
+            logger_1.logger.info(`[FIX] Normalized channel description: ${normalizedChannelDesc}`);
             const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
             if (!parsedMessage) {
                 logger_1.logger.warn('Could not parse FIX message');
@@ -246,6 +249,10 @@ function createFixClient(options) {
                     logger_1.logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
                 }
             }
+            // Emit an event for this channel description
+            // emitter.emit(normalizedChannelDesc, parsedMessage);
+            // Optionally, log or emit a generic event as well
+            // emitter.emit('anyChannel', { channelDesc, data: parsedMessage });
             logger_1.logger.info(`--------------------------------`);
             switch (msgType) {
                 case index_1.MessageType.LOGON:
