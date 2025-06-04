@@ -227,3 +227,70 @@ export enum TradingPhaseCode {
   AFTER_HOUR_TRADING = 'A',             // After Hour Trading (post-close period)
   MARKET_CLOSED = 'E',                  // Market Closed
 } 
+
+export const MDStreamIDMeanings: Record<string, string> = {
+  "010": "Regular Market",
+  "020": "Bills and Bond Market",
+  "030": "Stock Deliverable Future Market",
+  "040": "Stock Cash Settled Future Market",
+  "050": "Stock Option Market",
+  "060": "Index Option Market",
+  "070": "Stock Index Future Market",
+  "080": "Odd Lot Market",
+  "100": "Equities Square Up Market",
+  "120": "Futures Square Up Market",
+  "900": "INDEX"
+};
+
+export const TradingPhaseCodeMeanings: Record<string, string> = {
+  "S": "Starting (before market open)",
+  "O": "Open Call Auction (pre-open period in the morning",
+  "T": "Continuous Auction(open period)",
+  "B": "Trading Break(break period in case of lunch break on Fridays or break after pre-open or close before post-close period)",
+  "N": "Normal Call Auction (pre-open period in the afternoon on Fridays)",
+  "C": "Close Call Auction (pre-close period)",
+  "H": "Temporary Suspension (suspension period in case of securities suspension or market halts)",
+  "A": "After Hour Trading(post-close period)",
+  "V": "Normal Call Auction (after market halts)",
+  "E": "Market Closed"
+}
+
+export const TradingPhaseCodeFirstDigitMeanings: Record<string, string> = {
+  "0": "normal status",
+  "1": "suspended for a whole day (when status=1(suspension) in securities.xml in the static market data. "
+}
+
+export const TradingPhaseCodeSecondDigitMeanings: Record<string, string> = {
+  "1": "break period after pre-open period",
+  "2": "break period in case of lunch break on Fridays",
+  "3": "break period after pre-open period in the afternoon on Fridays",
+  "4": "break period at market close before post-close period"
+}
+
+export const MDEntryTypeMeanings: Record<string, string> = {
+  "0": "buy",
+  "1": "sell",
+  "2": "latest price",
+  "3": "current index",
+  "4": "open price",
+  "5": "closing price",
+  "6": "settlement price",
+  "7": "highest price",
+  "8": "lowest price",
+  "x1": "fluctuation 1",
+  "x2": "fluctuation 2",
+  "x3": "buy statistics",
+  "x4": "sell statistics",
+  "x5": "PE ratio 1",
+  "x6": "PE ratio 2",
+  "x7": "fund prev NAV",
+  "x8": "ETF INAV",
+  "xa": "previous close index",
+  "xb": "open index",
+  "xc": "max index",
+  "xd": "min index",
+  "xe": "up price limit",
+  "xf": "down price limit",
+  "xg": "position quantity",
+  "xl": "close index"
+};

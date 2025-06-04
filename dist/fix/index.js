@@ -6,13 +6,13 @@ const logger_1 = require("../utils/logger");
 const events_1 = require("events");
 const message_builder_1 = require("./message-builder");
 const message_parser_1 = require("./message-parser");
-const constants_1 = require("../constants");
+const index_1 = require("../constants/index");
 const net_1 = require("net");
 const message_handler_1 = require("./message-handler");
 const connection_state_1 = require("../utils/connection-state");
 // Build a reverse lookup for tag meanings
 const tagMeanings = {};
-for (const [key, value] of Object.entries(constants_1.FieldTag)) {
+for (const [key, value] of Object.entries(index_1.FieldTag)) {
     tagMeanings[value] = key;
 }
 /**
@@ -159,7 +159,7 @@ function createFixClient(options) {
     const handleData = (data) => {
         try {
             const dataStr = data.toString();
-            const messages = dataStr.split(constants_1.SOH);
+            const messages = dataStr.split(index_1.SOH);
             let currentMessage = '';
             for (const segment of messages) {
                 if (segment.startsWith('8=FIX')) {
@@ -174,7 +174,7 @@ function createFixClient(options) {
                     currentMessage = segment;
                 }
                 else if (currentMessage) {
-                    currentMessage += constants_1.SOH + segment;
+                    currentMessage += index_1.SOH + segment;
                 }
             }
             if (currentMessage) {
@@ -193,7 +193,7 @@ function createFixClient(options) {
     };
     const processMessage = (message) => {
         try {
-            const segments = message.split(constants_1.SOH);
+            const segments = message.split(index_1.SOH);
             const fixVersion = segments.find((s) => s.startsWith('8=FIX'));
             if (!fixVersion) {
                 logger_1.logger.warn('Received non-FIX message');
@@ -201,7 +201,7 @@ function createFixClient(options) {
             }
             const msgTypeField = segments.find((s) => s.startsWith('35='));
             const msgType = msgTypeField ? msgTypeField.substring(3) : 'UNKNOWN';
-            const msgTypeName = Object.entries(constants_1.MessageType).find(([k, v]) => v === msgType)?.[0] || 'UNKNOWN';
+            const msgTypeName = Object.entries(index_1.MessageType).find(([k, v]) => v === msgType)?.[0] || 'UNKNOWN';
             const channelNoField = segments.find((s) => s.startsWith('10201='));
             const channelNo = channelNoField ? channelNoField.substring(5) : '';
             const channelDesc = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
@@ -215,14 +215,14 @@ function createFixClient(options) {
             if (channelNo && parsedMessage) {
                 parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr);
             }
-            if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
-                const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
-                const msgType = parsedMessage[constants_1.FieldTag.MSG_TYPE];
-                const text = parsedMessage[constants_1.FieldTag.TEXT] || '';
+            if (parsedMessage[index_1.FieldTag.MSG_SEQ_NUM]) {
+                const incomingSeqNum = parseInt(parsedMessage[index_1.FieldTag.MSG_SEQ_NUM], 10);
+                const msgType = parsedMessage[index_1.FieldTag.MSG_TYPE];
+                const text = parsedMessage[index_1.FieldTag.TEXT] || '';
                 const isSequenceError = Boolean(text.includes('MsgSeqNum') ||
                     text.includes('too large') ||
                     text.includes('sequence'));
-                if ((msgType === constants_1.MessageType.LOGOUT || msgType === constants_1.MessageType.REJECT) &&
+                if ((msgType === index_1.MessageType.LOGOUT || msgType === index_1.MessageType.REJECT) &&
                     isSequenceError) {
                     logger_1.logger.warn(`Received ${msgType} with sequence error: ${text}`);
                 }
@@ -234,17 +234,26 @@ function createFixClient(options) {
                 logger_1.logger.info('[FIX] Message fields:');
                 for (const [tag, value] of Object.entries(parsedMessage)) {
                     const meaning = tagMeanings[tag] || '';
-                    logger_1.logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}`);
+                    let extra = '';
+                    // Show extra meaning for MDStreamID (1500)
+                    if (tag === "1500") {
+                        extra = index_1.MDStreamIDMeanings[value] ? ` (${index_1.MDStreamIDMeanings[value]})` : '';
+                    }
+                    // Show extra meaning for MD_ENTRY_TYPE (269)
+                    if (tag === index_1.FieldTag.MD_ENTRY_TYPE || tag === "269") {
+                        extra = index_1.MDEntryTypeMeanings[value] ? ` (${index_1.MDEntryTypeMeanings[value]})` : '';
+                    }
+                    logger_1.logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
                 }
             }
             logger_1.logger.info(`--------------------------------`);
             switch (msgType) {
-                case constants_1.MessageType.LOGON:
+                case index_1.MessageType.LOGON:
                     logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);
                     (0, message_handler_1.handleLogon)(parsedMessage, sequenceManager, emitter, { value: false });
                     state.setLoggedIn(true);
                     break;
-                case constants_1.MessageType.REJECT:
+                case index_1.MessageType.REJECT:
                     const rejectResult = (0, message_handler_1.handleReject)(parsedMessage);
                     if (rejectResult.isSequenceError) {
                         handleSequenceError(rejectResult.expectedSeqNum);
@@ -255,7 +264,7 @@ function createFixClient(options) {
                         });
                     }
                     break;
-                case constants_1.MessageType.LOGOUT:
+                case index_1.MessageType.LOGOUT:
                     const logoutResult = (0, message_handler_1.handleLogout)(parsedMessage, emitter, sequenceManager, { value: false }, socket, connect);
                     if (logoutResult.isSequenceError) {
                         handleSequenceError(logoutResult.expectedSeqNum);
@@ -268,30 +277,30 @@ function createFixClient(options) {
                         }
                     }
                     break;
-                case constants_1.MessageType.MARKET_DATA_REQUEST_REJECT:
+                case index_1.MessageType.MARKET_DATA_REQUEST_REJECT:
                     (0, message_handler_1.handleMarketDataRequestReject)(parsedMessage, emitter);
                     break;
-                case constants_1.MessageType.NEWS:
+                case index_1.MessageType.NEWS:
                     (0, message_handler_1.handleNews)(parsedMessage, emitter);
                     break;
-                case constants_1.MessageType.SECURITY_LIST:
+                case index_1.MessageType.SECURITY_LIST:
                     const securityCache = { EQUITY: [], INDEX: [] };
                     (0, message_handler_1.handleSecurityList)(parsedMessage, emitter, securityCache);
                     break;
-                case constants_1.MessageType.TRADING_SESSION_STATUS:
+                case index_1.MessageType.TRADING_SESSION_STATUS:
                     (0, message_handler_1.handleTradingSessionStatus)(parsedMessage, emitter);
                     break;
-                case constants_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+                case index_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
                     (0, message_handler_1.handleMarketDataSnapshot)(parsedMessage, emitter);
                     break;
-                case constants_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+                case index_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
                     (0, message_handler_1.handleMarketDataIncremental)(parsedMessage, emitter);
                     break;
                 default:
                     emitter.emit('categorizedData', {
                         category: 'UNKNOWN',
                         type: msgType,
-                        symbol: parsedMessage[constants_1.FieldTag.SYMBOL] || '',
+                        symbol: parsedMessage[index_1.FieldTag.SYMBOL] || '',
                         data: parsedMessage,
                         timestamp: new Date().toISOString(),
                     });

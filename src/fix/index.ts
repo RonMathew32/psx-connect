@@ -9,7 +9,7 @@ import {
   getMessageTypeByChannelNo
 } from "./message-builder";
 import { parseFixMessage, ParsedFixMessage } from "./message-parser";
-import { SOH, MessageType, FieldTag } from "../constants";
+import { SOH, MessageType, FieldTag, MDStreamIDMeanings, MDEntryTypeMeanings } from "../constants/index";
 import { Socket } from "net";
 import { FixClientOptions } from "../types";
 import {
@@ -31,6 +31,7 @@ const tagMeanings: Record<string, string> = {};
 for (const [key, value] of Object.entries(FieldTag)) {
   tagMeanings[value] = key;
 }
+
 
 /**
  * Create a FIX client with the specified options
@@ -283,7 +284,18 @@ export function createFixClient(options: FixClientOptions): FixClient {
         logger.info('[FIX] Message fields:');
         for (const [tag, value] of Object.entries(parsedMessage)) {
           const meaning = tagMeanings[tag] || '';
-          logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}`);
+          let extra = '';
+
+          // Show extra meaning for MDStreamID (1500)
+          if (tag === "1500") {
+            extra = MDStreamIDMeanings[value] ? ` (${MDStreamIDMeanings[value]})` : '';
+          }
+          // Show extra meaning for MD_ENTRY_TYPE (269)
+          if (tag === FieldTag.MD_ENTRY_TYPE || tag === "269") {
+            extra = MDEntryTypeMeanings[value] ? ` (${MDEntryTypeMeanings[value]})` : '';
+          }
+
+          logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
         }
       }
 
