@@ -5,10 +5,8 @@ const sequence_manager_1 = require("../utils/sequence-manager");
 const logger_1 = require("../utils/logger");
 const events_1 = require("events");
 const message_builder_1 = require("./message-builder");
-const message_parser_1 = require("./message-parser");
 const index_1 = require("../constants/index");
 const net_1 = require("net");
-const message_handler_1 = require("./message-handler");
 const connection_state_1 = require("../utils/connection-state");
 // Build a reverse lookup for tag meanings
 const tagMeanings = {};
@@ -205,118 +203,121 @@ function createFixClient(options) {
             const channelNoField = segments.find((s) => s.startsWith('10201='));
             const channelNo = channelNoField ? channelNoField.substring(5) : '';
             const channelDesc = (0, message_builder_1.getMessageTypeByChannelNo)(channelNo);
-            // Normalize the channel description to a safe event name (e.g., remove spaces, lowercase)
-            const normalizedChannelDesc = channelDesc.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
             logger_1.logger.info(`[FIX] ChannelNo: ${channelNo} (${channelDesc}), MsgType: ${msgType} (${msgTypeName})`);
-            logger_1.logger.info(`[FIX] Normalized channel description: ${normalizedChannelDesc}`);
-            const parsedMessage = (0, message_parser_1.parseFixMessage)(message);
-            if (!parsedMessage) {
-                logger_1.logger.warn('Could not parse FIX message');
-                return;
-            }
-            const channelNoStr = channelNo?.replace('=', '');
-            if (channelNo && parsedMessage) {
-                parsedMessage['channelDescription'] = (0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr);
-            }
-            if (parsedMessage[index_1.FieldTag.MSG_SEQ_NUM]) {
-                const incomingSeqNum = parseInt(parsedMessage[index_1.FieldTag.MSG_SEQ_NUM], 10);
-                const msgType = parsedMessage[index_1.FieldTag.MSG_TYPE];
-                const text = parsedMessage[index_1.FieldTag.TEXT] || '';
-                const isSequenceError = Boolean(text.includes('MsgSeqNum') ||
-                    text.includes('too large') ||
-                    text.includes('sequence'));
-                if ((msgType === index_1.MessageType.LOGOUT || msgType === index_1.MessageType.REJECT) &&
-                    isSequenceError) {
-                    logger_1.logger.warn(`Received ${msgType} with sequence error: ${text}`);
-                }
-                else {
-                    sequenceManager.updateServerSequence(incomingSeqNum);
-                }
-            }
-            if (parsedMessage) {
-                logger_1.logger.info('[FIX] Message fields:');
-                for (const [tag, value] of Object.entries(parsedMessage)) {
-                    const meaning = tagMeanings[tag] || '';
-                    let extra = '';
-                    // Show extra meaning for MDStreamID (1500)
-                    if (tag === "1500") {
-                        extra = index_1.MDStreamIDMeanings[value] ? ` (${index_1.MDStreamIDMeanings[value]})` : '';
-                    }
-                    // Show extra meaning for MD_ENTRY_TYPE (269)
-                    if (tag === index_1.FieldTag.MD_ENTRY_TYPE || tag === "269") {
-                        extra = index_1.MDEntryTypeMeanings[value] ? ` (${index_1.MDEntryTypeMeanings[value]})` : '';
-                    }
-                    logger_1.logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
-                }
-            }
-            // Emit by channel number (if present)
-            if (channelNoStr) {
-                logger_1.logger.info(`[FIX] Emitting by channel number: ${(0, message_builder_1.getMessageTypeByChannelNo)(channelNoStr)} parsedMessage: ${JSON.stringify(parsedMessage)}`);
-                // emitter.emit(channelNoStr, parsedMessage);
-            }
-            // Emit by normalized channel description (if not unknown)
-            if (normalizedChannelDesc && normalizedChannelDesc !== 'unknown_message_type') {
-                emitter.emit(normalizedChannelDesc, parsedMessage);
-            }
+            logger_1.logger.info(`[FIX] Message: ${message}`);
+            logger_1.logger.info(`---------------------------------------------------------------------------------------------`);
+            // const parsedMessage = parseFixMessage(message);
+            // if (!parsedMessage) {
+            //   logger.warn('Could not parse FIX message');
+            //   return;
+            // }
+            // const channelNoStr = channelNo?.replace('=', '');
+            // if (channelNo && parsedMessage) {
+            //   parsedMessage['channelDescription'] = getMessageTypeByChannelNo(channelNoStr);
+            // }
+            // if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+            //   const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+            //   const msgType = parsedMessage[FieldTag.MSG_TYPE];
+            //   const text = parsedMessage[FieldTag.TEXT] || '';
+            //   const isSequenceError = Boolean(
+            //     text.includes('MsgSeqNum') ||
+            //     text.includes('too large') ||
+            //     text.includes('sequence')
+            //   );
+            //   if (
+            //     (msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) &&
+            //     isSequenceError
+            //   ) {
+            //     logger.warn(`Received ${msgType} with sequence error: ${text}`);
+            //   } else {
+            //     sequenceManager.updateServerSequence(incomingSeqNum);
+            //   }
+            // }
+            // if (parsedMessage) {
+            //   logger.info('[FIX] Message fields:');
+            //   for (const [tag, value] of Object.entries(parsedMessage)) {
+            //     const meaning = tagMeanings[tag] || '';
+            //     let extra = '';
+            //     // Show extra meaning for MDStreamID (1500)
+            //     if (tag === "1500") {
+            //       extra = MDStreamIDMeanings[value] ? ` (${MDStreamIDMeanings[value]})` : '';
+            //     }
+            //     // Show extra meaning for MD_ENTRY_TYPE (269)
+            //     if (tag === FieldTag.MD_ENTRY_TYPE || tag === "269") {
+            //       extra = MDEntryTypeMeanings[value] ? ` (${MDEntryTypeMeanings[value]})` : '';
+            //     }
+            //     logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
+            //   }
+            // }
+            // // Emit by channel number (if present)
+            // if (channelNoStr) {
+            //   logger.info(`[FIX] Emitting by channel number: ${getMessageTypeByChannelNo(channelNoStr)} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+            //   // emitter.emit(channelNoStr, parsedMessage);
+            // }
             logger_1.logger.info(`--------------------------------`);
-            switch (msgType) {
-                case index_1.MessageType.LOGON:
-                    logger_1.logger.info(`[SESSION:LOGON] Processing logon message from server`);
-                    (0, message_handler_1.handleLogon)(parsedMessage, sequenceManager, emitter, { value: false });
-                    state.setLoggedIn(true);
-                    break;
-                case index_1.MessageType.REJECT:
-                    const rejectResult = (0, message_handler_1.handleReject)(parsedMessage);
-                    if (rejectResult.isSequenceError) {
-                        handleSequenceError(rejectResult.expectedSeqNum);
-                    }
-                    else {
-                        emitter.emit('reject', {
-                            reason: rejectResult.rejectReason || ''
-                        });
-                    }
-                    break;
-                case index_1.MessageType.LOGOUT:
-                    const logoutResult = (0, message_handler_1.handleLogout)(parsedMessage, emitter, sequenceManager, { value: false }, socket, connect);
-                    if (logoutResult.isSequenceError) {
-                        handleSequenceError(logoutResult.expectedSeqNum);
-                    }
-                    else {
-                        state.setLoggedIn(false);
-                        if (heartbeatTimer) {
-                            clearInterval(heartbeatTimer);
-                            heartbeatTimer = null;
-                        }
-                    }
-                    break;
-                case index_1.MessageType.MARKET_DATA_REQUEST_REJECT:
-                    (0, message_handler_1.handleMarketDataRequestReject)(parsedMessage, emitter);
-                    break;
-                case index_1.MessageType.NEWS:
-                    (0, message_handler_1.handleNews)(parsedMessage, emitter);
-                    break;
-                case index_1.MessageType.SECURITY_LIST:
-                    const securityCache = { EQUITY: [], INDEX: [] };
-                    (0, message_handler_1.handleSecurityList)(parsedMessage, emitter, securityCache);
-                    break;
-                case index_1.MessageType.TRADING_SESSION_STATUS:
-                    (0, message_handler_1.handleTradingSessionStatus)(parsedMessage, emitter);
-                    break;
-                case index_1.MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
-                    (0, message_handler_1.handleMarketDataSnapshot)(parsedMessage, emitter);
-                    break;
-                case index_1.MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
-                    (0, message_handler_1.handleMarketDataIncremental)(parsedMessage, emitter);
-                    break;
-                default:
-                    emitter.emit('categorizedData', {
-                        category: 'UNKNOWN',
-                        type: msgType,
-                        symbol: parsedMessage[index_1.FieldTag.SYMBOL] || '',
-                        data: parsedMessage,
-                        timestamp: new Date().toISOString(),
-                    });
-            }
+            // switch (msgType) {
+            //   case MessageType.LOGON:
+            //     logger.info(`[SESSION:LOGON] Processing logon message from server`);
+            //     handleLogon(parsedMessage, sequenceManager, emitter, { value: false });
+            //     state.setLoggedIn(true);
+            //     break;
+            //   case MessageType.REJECT:
+            //     const rejectResult = handleReject(parsedMessage);
+            //     if (rejectResult.isSequenceError) {
+            //       handleSequenceError(rejectResult.expectedSeqNum);
+            //     } else {
+            //       emitter.emit('reject', {
+            //         reason: rejectResult.rejectReason || ''
+            //       });
+            //     }
+            //     break;
+            //   case MessageType.LOGOUT:
+            //     const logoutResult = handleLogout(
+            //       parsedMessage,
+            //       emitter,
+            //       sequenceManager,
+            //       { value: false },
+            //       socket,
+            //       connect
+            //     );
+            //     if (logoutResult.isSequenceError) {
+            //       handleSequenceError(logoutResult.expectedSeqNum);
+            //     } else {
+            //       state.setLoggedIn(false);
+            //       if (heartbeatTimer) {
+            //         clearInterval(heartbeatTimer);
+            //         heartbeatTimer = null;
+            //       }
+            //     }
+            //     break;
+            //   case MessageType.MARKET_DATA_REQUEST_REJECT:
+            //     handleMarketDataRequestReject(parsedMessage, emitter);
+            //     break;
+            //   case MessageType.NEWS:
+            //     handleNews(parsedMessage, emitter);
+            //     break;
+            //   case MessageType.SECURITY_LIST:
+            //     const securityCache = { EQUITY: [], INDEX: [] };
+            //     handleSecurityList(parsedMessage, emitter, securityCache);
+            //     break;
+            //   case MessageType.TRADING_SESSION_STATUS:
+            //     handleTradingSessionStatus(parsedMessage, emitter);
+            //     break;
+            //   case MessageType.MARKET_DATA_SNAPSHOT_FULL_REFRESH:
+            //     handleMarketDataSnapshot(parsedMessage, emitter);
+            //     break;
+            //   case MessageType.MARKET_DATA_INCREMENTAL_REFRESH:
+            //     handleMarketDataIncremental(parsedMessage, emitter);
+            //     break;
+            //   default:
+            //     emitter.emit('categorizedData', {
+            //       category: 'UNKNOWN',
+            //       type: msgType,
+            //       symbol: parsedMessage[FieldTag.SYMBOL] || '',
+            //       data: parsedMessage,
+            //       timestamp: new Date().toISOString(),
+            //     });
+            // }
         }
         catch (error) {
             logger_1.logger.error(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
