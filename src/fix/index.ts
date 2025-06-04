@@ -273,7 +273,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
       // logger.info(`[SESSION:MESSAGE] Processing message: ${messageWithDelimeters} `);
 
       logger.info(`[SESSION:MESSAGE] Message type: ${msgType} Message channel: ${channelNoStr} channel description: ${getMessageTypeByChannelNo(channelNoStr)}`);
-      logger.info(`[SESSION:PARSED_MESSAGE]: ${parsedMessage}`);
+      logger.info(`[SESSION:PARSED_MESSAGE]: ${JSON.stringify(parsedMessage)}`);
 
       logger.info(`--------------------------------`)
 
