@@ -319,10 +319,10 @@ function createFixClient(options) {
         }
     };
     const sendLogon = () => {
-        if (!state.isConnected()) {
-            logger_1.logger.warn('Cannot send logon: not connected');
-            return;
-        }
+        // if (!state.isConnected()) {
+        //   logger.warn('Cannot send logon: not connected');
+        //   return;
+        // }
         try {
             sequenceManager.resetAll();
             const builder = (0, message_builder_1.createLogonMessageBuilder)(options, sequenceManager);
