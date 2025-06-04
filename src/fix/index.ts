@@ -374,14 +374,12 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
   const sendLogon = (): void => {
     if (!state.isConnected()) {
-      sendLogout();
       logger.warn('Cannot send logon: not connected');
       return;
     }
 
     try {
-      sequenceManager.resetAll();
-      const builder = createLogonMessageBuilder(options, sequenceManager);
+      const builder = createLogonMessageBuilder(options);
       const message = builder.buildMessage();
       sendMessage(message);
     } catch (error) {

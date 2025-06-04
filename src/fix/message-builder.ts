@@ -157,7 +157,6 @@ export function createMessageBuilder(beginString: string = 'FIXT.1.1'): MessageB
  */
 export function createLogonMessageBuilder(
   options: FixClientOptions,
-  sequenceManager: SequenceManager
 ): MessageBuilder {
   const builder = createMessageBuilder()
     .setMsgType(MessageType.LOGON)

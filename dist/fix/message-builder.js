@@ -122,7 +122,7 @@ function createMessageBuilder(beginString = 'FIXT.1.1') {
  * @param sequenceManager Sequence manager
  *
  */
-function createLogonMessageBuilder(options, sequenceManager) {
+function createLogonMessageBuilder(options) {
     const builder = createMessageBuilder()
         .setMsgType(constants_1.MessageType.LOGON)
         .setSenderCompID(options.senderCompId)
