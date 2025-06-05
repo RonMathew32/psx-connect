@@ -6,10 +6,9 @@ import {
   createHeartbeatMessageBuilder,
   createLogonMessageBuilder,
   createLogoutMessageBuilder,
-  getMessageTypeByChannelNo
 } from "./message-builder";
 import { parseFixMessage, ParsedFixMessage } from "./message-parser";
-import { SOH, MessageType, FieldTag, MDStreamIDMeanings, MDEntryTypeMeanings } from "../constants/index";
+import { SOH, MessageType, FieldTag, MDStreamIDMeanings, MDEntryTypeMeanings } from "../constants";
 import { Socket } from "net";
 import { FixClientOptions } from "../types";
 import {
@@ -25,6 +24,7 @@ import {
   handleTradingStatus,
 } from "./message-handler";
 import { ConnectionState } from "../utils/connection-state";
+import { getMessageTypeByChannelNo } from "../utils/helpers";
 
 // Build a reverse lookup for tag meanings
 const tagMeanings: Record<string, string> = {};
@@ -123,15 +123,6 @@ export function createFixClient(options: FixClientOptions): FixClient {
       socket.on('data', (data) => {
         logger.info(`[SESSION:DATA] Received data: ${data}`);
         try {
-          // const dataStr = data.toString();
-
-          // if (dataStr.includes('35=1')) { // Test request
-          //   const testReqIdMatch = dataStr.match(/112=([^\x01]+)/);
-          //   if (testReqIdMatch && testReqIdMatch[1]) {
-          //     sendHeartbeat(testReqIdMatch[1]);
-          //   }
-          // }
-
           handleData(data);
         } catch (err) {
           logger.error(`Error processing data: ${err}`);
@@ -252,61 +243,61 @@ export function createFixClient(options: FixClientOptions): FixClient {
       logger.info(`[FIX] Message: ${message}`);
       logger.info(`---------------------------------------------------------------------------------------------`);
 
-      // const parsedMessage = parseFixMessage(message);
+      const parsedMessage = parseFixMessage(message);
 
-      // if (!parsedMessage) {
-      //   logger.warn('Could not parse FIX message');
-      //   return;
-      // }
-      // const channelNoStr = channelNo?.replace('=', '');
-      // if (channelNo && parsedMessage) {
-      //   parsedMessage['channelDescription'] = getMessageTypeByChannelNo(channelNoStr);
-      // }
+      if (!parsedMessage) {
+        logger.warn('Could not parse FIX message');
+        return;
+      }
+      const channelNoStr = channelNo?.replace('=', '');
+      if (channelNo && parsedMessage) {
+        parsedMessage['channelDescription'] = getMessageTypeByChannelNo(channelNoStr);
+      }
 
-      // if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
-      //   const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
-      //   const msgType = parsedMessage[FieldTag.MSG_TYPE];
-      //   const text = parsedMessage[FieldTag.TEXT] || '';
-      //   const isSequenceError = Boolean(
-      //     text.includes('MsgSeqNum') ||
-      //     text.includes('too large') ||
-      //     text.includes('sequence')
-      //   );
+      if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
+        const incomingSeqNum = parseInt(parsedMessage[FieldTag.MSG_SEQ_NUM], 10);
+        const msgType = parsedMessage[FieldTag.MSG_TYPE];
+        const text = parsedMessage[FieldTag.TEXT] || '';
+        const isSequenceError = Boolean(
+          text.includes('MsgSeqNum') ||
+          text.includes('too large') ||
+          text.includes('sequence')
+        );
 
-      //   if (
-      //     (msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) &&
-      //     isSequenceError
-      //   ) {
-      //     logger.warn(`Received ${msgType} with sequence error: ${text}`);
-      //   } else {
-      //     sequenceManager.updateServerSequence(incomingSeqNum);
-      //   }
-      // }
+        if (
+          (msgType === MessageType.LOGOUT || msgType === MessageType.REJECT) &&
+          isSequenceError
+        ) {
+          logger.warn(`Received ${msgType} with sequence error: ${text}`);
+        } else {
+          sequenceManager.updateServerSequence(incomingSeqNum);
+        }
+      }
 
-      // if (parsedMessage) {
-      //   logger.info('[FIX] Message fields:');
-      //   for (const [tag, value] of Object.entries(parsedMessage)) {
-      //     const meaning = tagMeanings[tag] || '';
-      //     let extra = '';
+      if (parsedMessage) {
+        logger.info('[FIX] Message fields:');
+        for (const [tag, value] of Object.entries(parsedMessage)) {
+          const meaning = tagMeanings[tag] || '';
+          let extra = '';
 
-      //     // Show extra meaning for MDStreamID (1500)
-      //     if (tag === "1500") {
-      //       extra = MDStreamIDMeanings[value] ? ` (${MDStreamIDMeanings[value]})` : '';
-      //     }
-      //     // Show extra meaning for MD_ENTRY_TYPE (269)
-      //     if (tag === FieldTag.MD_ENTRY_TYPE || tag === "269") {
-      //       extra = MDEntryTypeMeanings[value] ? ` (${MDEntryTypeMeanings[value]})` : '';
-      //     }
+          // Show extra meaning for MDStreamID (1500)
+          if (tag === "1500") {
+            extra = MDStreamIDMeanings[value] ? ` (${MDStreamIDMeanings[value]})` : '';
+          }
+          // Show extra meaning for MD_ENTRY_TYPE (269)
+          if (tag === FieldTag.MD_ENTRY_TYPE || tag === "269") {
+            extra = MDEntryTypeMeanings[value] ? ` (${MDEntryTypeMeanings[value]})` : '';
+          }
 
-      //     logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
-      //   }
-      // }
+          logger.info(`  ${tag}${meaning ? ` (${meaning})` : ''}: ${value}${extra}`);
+        }
+      }
 
-      // // Emit by channel number (if present)
-      // if (channelNoStr) {
-      //   logger.info(`[FIX] Emitting by channel number: ${getMessageTypeByChannelNo(channelNoStr)} parsedMessage: ${JSON.stringify(parsedMessage)}`);
-      //   // emitter.emit(channelNoStr, parsedMessage);
-      // }
+      // Emit by channel number (if present)
+      if (channelNoStr) {
+        logger.info(`[FIX] Emitting by channel number: ${getMessageTypeByChannelNo(channelNoStr)} ChannelNo: ${channelNoStr} parsedMessage: ${JSON.stringify(parsedMessage)}`);
+        // emitter.emit(channelNoStr, parsedMessage);
+      }
 
 
       // switch (msgType) {

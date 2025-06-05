@@ -3,7 +3,7 @@
  * FIX protocol constants
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MDEntryTypeMeanings = exports.TradingPhaseCodeSecondDigitMeanings = exports.TradingPhaseCodeFirstDigitMeanings = exports.TradingPhaseCodeMeanings = exports.MDStreamIDMeanings = exports.TradingPhaseCode = exports.DEFAULT_CONNECTION = exports.PartyRole = exports.ProductType = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
+exports.MDEntryTypeMeanings = exports.TradingPhaseCodeSecondDigitMeanings = exports.TradingPhaseCodeFirstDigitMeanings = exports.TradingPhaseCodeMeanings = exports.MDStreamIDMeanings = exports.DEFAULT_CONNECTION = exports.PartyRole = exports.ProductType = exports.SecurityType = exports.SecurityListRequestType = exports.MDUpdateType = exports.MDEntryType = exports.SubscriptionRequestType = exports.FieldTag = exports.MessageType = exports.SOH = void 0;
 // Standard FIX delimiter - SOH (Start of Header) character (ASCII 1)
 exports.SOH = String.fromCharCode(1);
 /**
@@ -216,20 +216,6 @@ exports.DEFAULT_CONNECTION = {
     DEFAULT_APPL_VER_ID: '9',
     DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
 };
-// Trading Phase Codes from specification
-var TradingPhaseCode;
-(function (TradingPhaseCode) {
-    TradingPhaseCode["STARTING"] = "S";
-    TradingPhaseCode["OPEN_CALL_AUCTION_MORNING"] = "O";
-    TradingPhaseCode["CONTINUOUS_AUCTION"] = "T";
-    TradingPhaseCode["TRADING_BREAK"] = "B";
-    TradingPhaseCode["NORMAL_CALL_AUCTION_AFTERNOON"] = "N";
-    TradingPhaseCode["TEMPORARY_SUSPENSION"] = "H";
-    TradingPhaseCode["NORMAL_CALL_AUCTION_AFTER_HALT"] = "V";
-    TradingPhaseCode["CLOSE_CALL_AUCTION"] = "C";
-    TradingPhaseCode["AFTER_HOUR_TRADING"] = "A";
-    TradingPhaseCode["MARKET_CLOSED"] = "E";
-})(TradingPhaseCode || (exports.TradingPhaseCode = TradingPhaseCode = {}));
 exports.MDStreamIDMeanings = {
     "010": "Regular Market",
     "020": "Bills and Bond Market",

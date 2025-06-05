@@ -216,20 +216,6 @@ export const DEFAULT_CONNECTION = {
   DEFAULT_CSTM_APPL_VER_ID: 'FIX5.00_PSX_1.00'
 };
 
-// Trading Phase Codes from specification
-export enum TradingPhaseCode {
-  STARTING = 'S',                       // Starting (before market open)
-  OPEN_CALL_AUCTION_MORNING = 'O',      // Open Call Auction (pre-open period in the morning)
-  CONTINUOUS_AUCTION = 'T',             // Continuous Auction (open period)
-  TRADING_BREAK = 'B',                  // Trading Break (break period for lunch or other breaks)
-  NORMAL_CALL_AUCTION_AFTERNOON = 'N',  // Normal Call Auction (pre-open period in afternoon after lunch)
-  TEMPORARY_SUSPENSION = 'H',           // Temporary Suspension (during market halts)
-  NORMAL_CALL_AUCTION_AFTER_HALT = 'V', // Normal Call Auction (after market halts)
-  CLOSE_CALL_AUCTION = 'C',             // Close Call Auction (pre-close period)
-  AFTER_HOUR_TRADING = 'A',             // After Hour Trading (post-close period)
-  MARKET_CLOSED = 'E',                  // Market Closed
-} 
-
 export const MDStreamIDMeanings: Record<string, string> = {
   "010": "Regular Market",
   "020": "Bills and Bond Market",
