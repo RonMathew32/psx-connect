@@ -25,6 +25,9 @@ import {
 } from "./message-handler";
 import { ConnectionState } from "../utils/connection-state";
 import { getMessageTypeByChannelNo } from "../utils/helpers";
+import Redis from 'ioredis';
+
+const redis = new Redis(); // configure as needed
 
 // Build a reverse lookup for tag meanings
 const tagMeanings: Record<string, string> = {};
@@ -221,7 +224,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
     }
   };
 
-  const processMessage = (message: string): void => {
+  const processMessage = async (message: string): Promise<void> => {
     try {
       const segments = message.split(SOH);
       const fixVersion = segments.find((s) => s.startsWith('8=FIX'));
@@ -252,6 +255,12 @@ export function createFixClient(options: FixClientOptions): FixClient {
       const channelNoStr = channelNo?.replace('=', '');
       if (channelNo && parsedMessage) {
         parsedMessage['channelDescription'] = getMessageTypeByChannelNo(channelNoStr);
+      }
+
+      // Save to Redis
+      if (parsedMessage && channelNoStr) {
+        await redis.lpush(`fix-latest:${channelNoStr}`, JSON.stringify(parsedMessage));
+        await redis.ltrim(`fix-latest:${channelNoStr}`, 0, 1999);
       }
 
       if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {

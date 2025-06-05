@@ -8,8 +8,13 @@ const logger_1 = require("./utils/logger");
 const websocket_server_1 = require("./utils/websocket-server");
 const fix_1 = require("./fix");
 const validate_fix_options_1 = require("./utils/validate-fix-options");
+const express_1 = __importDefault(require("express"));
+const ioredis_1 = __importDefault(require("ioredis"));
 // Load environment variables
 dotenv_1.default.config();
+// Initialize Redis and Express
+const redis = new ioredis_1.default(); // configure as needed
+const app = (0, express_1.default)();
 /**
  * Configuration for the FIX client
  */
@@ -37,9 +42,10 @@ function initializeWebSocketServer() {
 /**
  * Initialize the FIX client with the provided options
  * @param options FIX client configuration
+ * @param wss WebSocket server instance
  * @returns FIX client instance
  */
-function initializeFixClient(options) {
+function initializeFixClient(options, wss) {
     (0, validate_fix_options_1.validateFixOptions)(options);
     const fixClient = (0, fix_1.createFixClient)(options);
     // Set up FIX client event listeners
@@ -57,9 +63,34 @@ function initializeFixClient(options) {
     });
     fixClient.on('disconnected', () => {
         logger_1.logger.warn('Disconnected from PSX server.');
+        wss.clients.forEach((client) => {
+            if (client.readyState === 1 /* WebSocket.OPEN */) {
+                client.send(JSON.stringify({ type: "psx_disconnected" }));
+            }
+        });
     });
     return fixClient;
 }
+// Express API endpoint for latest data
+app.get("/api/latest-data/:channelNo", async (req, res) => {
+    try {
+        const data = await redis.get("fix-latest");
+        if (data) {
+            res.json(JSON.parse(data));
+        }
+        else {
+            res.status(404).json({ error: "No data found" });
+        }
+    }
+    catch (err) {
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+// Start Express server
+const EXPRESS_PORT = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 3000;
+app.listen(EXPRESS_PORT, () => {
+    logger_1.logger.info(`API server listening on port ${EXPRESS_PORT}`);
+});
 /**
  * Set up process signal handlers for graceful shutdown
  * @param fixClient FIX client instance
@@ -93,7 +124,7 @@ async function main() {
         // Initialize WebSocket server
         const wss = initializeWebSocketServer();
         // Initialize FIX client
-        const fixClient = initializeFixClient(DEFAULT_FIX_CONFIG);
+        const fixClient = initializeFixClient(DEFAULT_FIX_CONFIG, wss);
         // Set up signal handlers for graceful shutdown
         setupSignalHandlers(fixClient, wss);
         // Connect to the FIX server

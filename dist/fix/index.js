@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createFixClient = createFixClient;
 const sequence_manager_1 = require("../utils/sequence-manager");
@@ -10,6 +13,8 @@ const constants_1 = require("../constants");
 const net_1 = require("net");
 const connection_state_1 = require("../utils/connection-state");
 const helpers_1 = require("../utils/helpers");
+const ioredis_1 = __importDefault(require("ioredis"));
+const redis = new ioredis_1.default(); // configure as needed
 // Build a reverse lookup for tag meanings
 const tagMeanings = {};
 for (const [key, value] of Object.entries(constants_1.FieldTag)) {
@@ -184,7 +189,7 @@ function createFixClient(options) {
             throw error;
         }
     };
-    const processMessage = (message) => {
+    const processMessage = async (message) => {
         try {
             const segments = message.split(constants_1.SOH);
             const fixVersion = segments.find((s) => s.startsWith('8=FIX'));
@@ -209,6 +214,11 @@ function createFixClient(options) {
             const channelNoStr = channelNo?.replace('=', '');
             if (channelNo && parsedMessage) {
                 parsedMessage['channelDescription'] = (0, helpers_1.getMessageTypeByChannelNo)(channelNoStr);
+            }
+            // Save to Redis
+            if (parsedMessage && channelNoStr) {
+                await redis.lpush(`fix-latest:${channelNoStr}`, JSON.stringify(parsedMessage));
+                await redis.ltrim(`fix-latest:${channelNoStr}`, 0, 1999);
             }
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
                 const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);

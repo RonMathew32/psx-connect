@@ -4,9 +4,15 @@ import { createWebSocketServer } from './utils/websocket-server';
 import { FixClientOptions } from './types';
 import { createFixClient } from './fix';
 import { validateFixOptions } from './utils/validate-fix-options';
+import express, { Request, Response } from 'express';
+import Redis from 'ioredis';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize Redis and Express
+const redis = new Redis(); // configure as needed
+const app = express();
 
 /**
  * Configuration for the FIX client
@@ -30,16 +36,17 @@ const DEFAULT_FIX_CONFIG: FixClientOptions = {
  * Initialize the WebSocket server
  * @returns WebSocket server instance
  */
-function initializeWebSocketServer(): { close: () => void; isFixConnected: () => boolean } {
+function initializeWebSocketServer() {
   return createWebSocketServer(8080);
 }
 
 /**
  * Initialize the FIX client with the provided options
  * @param options FIX client configuration
+ * @param wss WebSocket server instance
  * @returns FIX client instance
  */
-function initializeFixClient(options: FixClientOptions) {
+function initializeFixClient(options: FixClientOptions, wss: any) {
   validateFixOptions(options);
   const fixClient = createFixClient(options);
 
@@ -62,10 +69,35 @@ function initializeFixClient(options: FixClientOptions) {
 
   fixClient.on('disconnected', () => {
     logger.warn('Disconnected from PSX server.');
+    wss.clients.forEach((client: any) => {
+      if (client.readyState === 1 /* WebSocket.OPEN */) {
+        client.send(JSON.stringify({ type: "psx_disconnected" }));
+      }
+    });
   });
 
   return fixClient;
 }
+
+// Express API endpoint for latest data
+app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
+  try {
+    const data = await redis.get("fix-latest");
+    if (data) {
+      res.json(JSON.parse(data));
+    } else {
+      res.status(404).json({ error: "No data found" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Start Express server
+const EXPRESS_PORT = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 3000;
+app.listen(EXPRESS_PORT, () => {
+  logger.info(`API server listening on port ${EXPRESS_PORT}`);
+});
 
 /**
  * Set up process signal handlers for graceful shutdown
@@ -106,7 +138,7 @@ async function main(): Promise<void> {
     const wss = initializeWebSocketServer();
 
     // Initialize FIX client
-    const fixClient = initializeFixClient(DEFAULT_FIX_CONFIG);
+    const fixClient = initializeFixClient(DEFAULT_FIX_CONFIG, wss);
 
     // Set up signal handlers for graceful shutdown
     setupSignalHandlers(fixClient, wss);
