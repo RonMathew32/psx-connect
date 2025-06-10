@@ -220,8 +220,11 @@ function createFixClient(options) {
                 await redis.lpush(`fix-latest:${channelNoStr}`, JSON.stringify(parsedMessage));
                 await redis.ltrim(`fix-latest:${channelNoStr}`, 0, 1999);
                 // Get the latest message (head of the list) and log it
-                const latest = await redis.lindex(`fix-latest:${channelNoStr}`, 0);
-                logger_1.logger.info(`[REDIS] Saved and fetched from Redis for channel ${channelNoStr}: ${latest}`);
+                const allMessages = await redis.lrange(`fix-latest:${channelNoStr}`, 0, 1999);
+                logger_1.logger.info(`[REDIS] All messages for channel ${channelNoStr}:`);
+                allMessages.forEach((msg, idx) => {
+                    logger_1.logger.info(`[${idx + 1}] ${msg}`);
+                });
             }
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {
                 const incomingSeqNum = parseInt(parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM], 10);
