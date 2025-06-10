@@ -72,7 +72,7 @@ function initializeFixClient(options, wss) {
     return fixClient;
 }
 // Express API endpoint for latest data
-app.get("/api/latest-data/:channelNo", async (req, res) => {
+app.get("/api/latest-data", async (req, res) => {
     try {
         const data = await redis.get("fix-latest");
         if (data) {
