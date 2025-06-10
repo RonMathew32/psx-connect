@@ -83,7 +83,7 @@ function initializeFixClient(options: FixClientOptions, wss: any) {
 app.get("/api/latest-data", async (req: Request, res: Response) => {
   try {
     // Get all messages from the 'fix-latest' list (0 to 1999 = up to 2000 messages)
-    const data = await redis.lrange("fix-latest", 0, 1999);
+    const data = await redis.lrange(`fix-latest:1041`, 0, 1999);
     if (data && data.length > 0) {
       // Parse each message from JSON string to object
       const messages = data.map(msg => JSON.parse(msg));
