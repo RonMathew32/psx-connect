@@ -83,7 +83,7 @@ function initializeFixClient(options: FixClientOptions, wss: any) {
 app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
   const { channelNo } = req.params;
   // logger.info(`Fetching latest data for channel ${channelNo}`);
-  return;
+  // return;
   try {
     const data = await redis.lrange(`fix-latest:${channelNo}`, 0, 1999);
     if (data && data.length > 0) {
