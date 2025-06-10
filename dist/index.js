@@ -10,6 +10,7 @@ const fix_1 = require("./fix");
 const validate_fix_options_1 = require("./utils/validate-fix-options");
 const express_1 = __importDefault(require("express"));
 const ioredis_1 = __importDefault(require("ioredis"));
+const helpers_1 = require("./utils/helpers");
 // Load environment variables
 dotenv_1.default.config();
 // Initialize Redis and Express
@@ -71,22 +72,42 @@ function initializeFixClient(options, wss) {
     });
     return fixClient;
 }
-// Express API endpoint for latest data
+// Health check endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'PSX-Connect API is running.' });
+});
+// Express API endpoint for latest data by channel number
 app.get("/api/latest-data/:channelNo", async (req, res) => {
     const { channelNo } = req.params;
-    // logger.info(`Fetching latest data for channel ${channelNo}`);
-    // return;
+    logger_1.logger.info(`[API] Fetching latest data for channelNo: ${channelNo}`);
+    const isChannelValid = (0, helpers_1.getMessageTypeByChannelNo)(channelNo);
+    if (isChannelValid === "Unknown Message Type") {
+        logger_1.logger.warn(`[API] Invalid channelNo received: ${channelNo}`);
+        res.status(400).json({ error: "Invalid channelNo. It must be a positive integer." });
+        return;
+    }
     try {
         const data = await redis.lrange(`fix-latest:${channelNo}`, 0, 1999);
         if (data && data.length > 0) {
-            const messages = data.map(msg => JSON.parse(msg));
+            const messages = data.map(msg => {
+                try {
+                    return JSON.parse(msg);
+                }
+                catch (e) {
+                    logger_1.logger.warn(`[API] Failed to parse message from Redis: ${msg}`);
+                    return null;
+                }
+            }).filter(Boolean);
+            logger_1.logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
             res.json(messages);
         }
         else {
-            res.status(404).json({ error: "No data found" });
+            logger_1.logger.info(`[API] No data found for channelNo: ${channelNo}`);
+            res.status(404).json({ error: "No data found for the specified channelNo." });
         }
     }
     catch (err) {
+        logger_1.logger.error(`[API] Internal server error for channelNo ${channelNo}: ${err}`);
         res.status(500).json({ error: "Internal server error" });
     }
 });

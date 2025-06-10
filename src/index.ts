@@ -6,6 +6,7 @@ import { createFixClient } from './fix';
 import { validateFixOptions } from './utils/validate-fix-options';
 import express, { Request, Response } from 'express';
 import Redis from 'ioredis';
+import { getMessageTypeByChannelNo } from './utils/helpers';
 
 // Load environment variables
 dotenv.config();
@@ -79,20 +80,43 @@ function initializeFixClient(options: FixClientOptions, wss: any) {
   return fixClient;
 }
 
-// Express API endpoint for latest data
+// Health check endpoint
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', message: 'PSX-Connect API is running.' });
+});
+
+// Express API endpoint for latest data by channel number
 app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
   const { channelNo } = req.params;
-  // logger.info(`Fetching latest data for channel ${channelNo}`);
-  // return;
+  logger.info(`[API] Fetching latest data for channelNo: ${channelNo}`);
+
+  const isChannelValid = getMessageTypeByChannelNo(channelNo);
+  if (isChannelValid === "Unknown Message Type") {
+    logger.warn(`[API] Invalid channelNo received: ${channelNo}`);
+    res.status(400).json({ error: "Invalid channelNo. It must be a positive integer." });
+    return;
+  }
+
+
   try {
     const data = await redis.lrange(`fix-latest:${channelNo}`, 0, 1999);
     if (data && data.length > 0) {
-      const messages = data.map(msg => JSON.parse(msg));
+      const messages = data.map(msg => {
+        try {
+          return JSON.parse(msg);
+        } catch (e) {
+          logger.warn(`[API] Failed to parse message from Redis: ${msg}`);
+          return null;
+        }
+      }).filter(Boolean);
+      logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
       res.json(messages);
     } else {
-      res.status(404).json({ error: "No data found" });
+      logger.info(`[API] No data found for channelNo: ${channelNo}`);
+      res.status(404).json({ error: "No data found for the specified channelNo." });
     }
   } catch (err) {
+    logger.error(`[API] Internal server error for channelNo ${channelNo}: ${err}`);
     res.status(500).json({ error: "Internal server error" });
   }
 });
