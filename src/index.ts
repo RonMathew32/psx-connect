@@ -80,12 +80,13 @@ function initializeFixClient(options: FixClientOptions, wss: any) {
 }
 
 // Express API endpoint for latest data
-app.get("/api/latest-data", async (req: Request, res: Response) => {
+app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
+  const { channelNo } = req.params;
+  logger.info(`Fetching latest data for channel ${channelNo}`);
+  return;
   try {
-    // Get all messages from the 'fix-latest' list (0 to 1999 = up to 2000 messages)
-    const data = await redis.lrange(`fix-latest:1`, 0, 1999);
+    const data = await redis.lrange(`fix-latest:${channelNo}`, 0, 1999);
     if (data && data.length > 0) {
-      // Parse each message from JSON string to object
       const messages = data.map(msg => JSON.parse(msg));
       res.json(messages);
     } else {
