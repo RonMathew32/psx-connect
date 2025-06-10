@@ -74,7 +74,7 @@ function initializeFixClient(options, wss) {
 // Express API endpoint for latest data
 app.get("/api/latest-data/:channelNo", async (req, res) => {
     const { channelNo } = req.params;
-    logger_1.logger.info(`Fetching latest data for channel ${channelNo}`);
+    // logger.info(`Fetching latest data for channel ${channelNo}`);
     return;
     try {
         const data = await redis.lrange(`fix-latest:${channelNo}`, 0, 1999);
