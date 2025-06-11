@@ -261,6 +261,8 @@ export function createFixClient(options: FixClientOptions): FixClient {
       if (parsedMessage && channelNoStr) {
         const symbol = parsedMessage['55'] || parsedMessage['SYMBOL'];
         if (symbol) {
+          logger.info(`[REDIS] Saving message for symbol: ${symbol} and channelNo: ${channelNoStr}`);
+          logger.info(`[REDIS] Parsed message: ${JSON.stringify(parsedMessage)}`);
           await redis.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
         }
       }
