@@ -89,8 +89,19 @@ app.get("/api/latest-data/:channelNo", async (req, res) => {
     try {
         const data = await redis.hgetall(`fix-latest:${channelNo}`);
         if (data && Object.keys(data).length > 0) {
-            const messages = Object.values(data).map(msg => JSON.parse(msg));
+            let messages = Object.values(data).map(msg => JSON.parse(msg));
             logger_1.logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
+            // If channelNo is '1', filter each message to only include the specified tags
+            if (channelNo === '1') {
+                messages = messages.map(msg => ({
+                    '55': msg['55'],
+                    '52': msg['52'],
+                    '10201': msg['10201'],
+                    '10202': msg['10202'],
+                    '10203': msg['10203'],
+                    'channelDescription': msg['channelDescription'],
+                }));
+            }
             res.json(messages);
         }
         else {
