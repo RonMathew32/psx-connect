@@ -99,16 +99,10 @@ app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
 
 
   try {
-    const data = await redis.lrange(`fix-latest:${channelNo}`, 0, 1999);
-    if (data && data.length > 0) {
-      const messages = data.map(msg => {
-        try {
-          return JSON.parse(msg);
-        } catch (e) {
-          logger.warn(`[API] Failed to parse message from Redis: ${msg}`);
-          return null;
-        }
-      }).filter(Boolean);
+    const data = await redis.hgetall(`fix-latest:${channelNo}`);
+
+    if (data && Object.keys(data).length > 0) {
+      const messages = Object.values(data).map(msg => JSON.parse(msg));
       logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
       res.json(messages);
     } else {
