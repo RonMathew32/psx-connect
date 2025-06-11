@@ -7,6 +7,7 @@ import { validateFixOptions } from './utils/validate-fix-options';
 import express, { Request, Response } from 'express';
 import Redis from 'ioredis';
 import { getMessageTypeByChannelNo } from './utils/helpers';
+import { formatMessages } from './utils/messages-formatter';
 
 // Load environment variables
 dotenv.config();
@@ -105,19 +106,9 @@ app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
       let messages = Object.values(data).map(msg => JSON.parse(msg));
       logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
 
-      // If channelNo is '1', filter each message to only include the specified tags
-      if (channelNo === '1') {
-        messages = messages.map(msg => ({
-          '55': msg['55'],
-          '52': msg['52'],
-          '10201': msg['10201'],
-          '10202': msg['10202'],
-          '10203': msg['10203'],
-          'channelDescription': msg['channelDescription'],
-        }));
-      }
+      const formattedMessages = formatMessages(messages);
 
-      res.json(messages);
+      res.json(formattedMessages);
     } else {
       logger.info(`[API] No data found for channelNo: ${channelNo}`);
       res.status(404).json({ error: "No data found for the specified channelNo." });

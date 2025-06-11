@@ -11,6 +11,7 @@ const validate_fix_options_1 = require("./utils/validate-fix-options");
 const express_1 = __importDefault(require("express"));
 const ioredis_1 = __importDefault(require("ioredis"));
 const helpers_1 = require("./utils/helpers");
+const messages_formatter_1 = require("./utils/messages-formatter");
 // Load environment variables
 dotenv_1.default.config();
 // Initialize Redis and Express
@@ -91,18 +92,8 @@ app.get("/api/latest-data/:channelNo", async (req, res) => {
         if (data && Object.keys(data).length > 0) {
             let messages = Object.values(data).map(msg => JSON.parse(msg));
             logger_1.logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
-            // If channelNo is '1', filter each message to only include the specified tags
-            if (channelNo === '1') {
-                messages = messages.map(msg => ({
-                    '55': msg['55'],
-                    '52': msg['52'],
-                    '10201': msg['10201'],
-                    '10202': msg['10202'],
-                    '10203': msg['10203'],
-                    'channelDescription': msg['channelDescription'],
-                }));
-            }
-            res.json(messages);
+            const formattedMessages = (0, messages_formatter_1.formatMessages)(messages);
+            res.json(formattedMessages);
         }
         else {
             logger_1.logger.info(`[API] No data found for channelNo: ${channelNo}`);
