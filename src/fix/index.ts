@@ -259,15 +259,10 @@ export function createFixClient(options: FixClientOptions): FixClient {
 
       // Save to Redis
       if (parsedMessage && channelNoStr) {
-        await redis.lpush(`fix-latest:${channelNoStr}`, JSON.stringify(parsedMessage));
-        await redis.ltrim(`fix-latest:${channelNoStr}`, 0, 1999);
-
-        // Get the latest message (head of the list) and log it
-        const allMessages = await redis.lrange(`fix-latest:${channelNoStr}`, 0, 1999);
-        logger.info(`[REDIS] All messages for channel ${channelNoStr}:`);
-        allMessages.forEach((msg, idx) => {
-          logger.info(`[${idx + 1}] ${msg}`);
-        });
+        const symbol = parsedMessage['55'] || parsedMessage['SYMBOL'];
+        if (symbol) {
+          await redis.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
+        }
       }
 
       if (parsedMessage[FieldTag.MSG_SEQ_NUM]) {
