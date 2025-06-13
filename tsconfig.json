@@ -11,6 +11,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "migrations"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 } 

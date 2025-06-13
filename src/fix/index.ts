@@ -25,9 +25,8 @@ import {
 } from "./message-handler";
 import { ConnectionState } from "../utils/connection-state";
 import { getMessageTypeByChannelNo } from "../utils/helpers";
-import Redis from 'ioredis';
+import { redisClient } from "../utils/cache";
 
-const redis = new Redis(); // configure as needed
 
 // Build a reverse lookup for tag meanings
 const tagMeanings: Record<string, string> = {};
@@ -263,7 +262,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
         if (symbol) {
           logger.info(`[REDIS] Saving message for symbol: ${symbol} and channelNo: ${channelNoStr}`);
           logger.info(`[REDIS] Parsed message: ${JSON.stringify(parsedMessage)}`);
-          await redis.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
+          await redisClient.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
         }
       }
 

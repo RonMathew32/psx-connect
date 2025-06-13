@@ -5,15 +5,15 @@ import { FixClientOptions } from './types';
 import { createFixClient } from './fix';
 import { validateFixOptions } from './utils/validate-fix-options';
 import express, { Request, Response } from 'express';
-import Redis from 'ioredis';
 import { getMessageTypeByChannelNo } from './utils/helpers';
 import { formatMessages } from './utils/messages-formatter';
+import { redisClient } from './utils/cache';
+import './jobs/redisToDbBatch'; // Import the batch processing job
 
 // Load environment variables
 dotenv.config();
 
 // Initialize Redis and Express
-const redis = new Redis(); // configure as needed
 const app = express();
 
 /**
@@ -94,13 +94,13 @@ app.get("/api/latest-data/:channelNo", async (req: Request, res: Response) => {
   const isChannelValid = getMessageTypeByChannelNo(channelNo);
   if (isChannelValid === "Unknown Message Type") {
     logger.warn(`[API] Invalid channelNo received: ${channelNo}`);
-    res.status(400).json({ error: "Invalid channelNo. It must be a positive integer." });
+    res.status(400).json({ error: "Invalid channelNo." });
     return;
   }
 
 
   try {
-    const data = await redis.hgetall(`fix-latest:${channelNo}`);
+    const data = await redisClient.hgetall(`fix-latest:${channelNo}`);
 
     if (data && Object.keys(data).length > 0) {
       let messages = Object.values(data).map(msg => JSON.parse(msg));

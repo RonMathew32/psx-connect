@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createFixClient = createFixClient;
 const sequence_manager_1 = require("../utils/sequence-manager");
@@ -13,8 +10,7 @@ const constants_1 = require("../constants");
 const net_1 = require("net");
 const connection_state_1 = require("../utils/connection-state");
 const helpers_1 = require("../utils/helpers");
-const ioredis_1 = __importDefault(require("ioredis"));
-const redis = new ioredis_1.default(); // configure as needed
+const cache_1 = require("../utils/cache");
 // Build a reverse lookup for tag meanings
 const tagMeanings = {};
 for (const [key, value] of Object.entries(constants_1.FieldTag)) {
@@ -221,7 +217,7 @@ function createFixClient(options) {
                 if (symbol) {
                     logger_1.logger.info(`[REDIS] Saving message for symbol: ${symbol} and channelNo: ${channelNoStr}`);
                     logger_1.logger.info(`[REDIS] Parsed message: ${JSON.stringify(parsedMessage)}`);
-                    await redis.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
+                    await cache_1.redisClient.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
                 }
             }
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {

@@ -9,13 +9,13 @@ const websocket_server_1 = require("./utils/websocket-server");
 const fix_1 = require("./fix");
 const validate_fix_options_1 = require("./utils/validate-fix-options");
 const express_1 = __importDefault(require("express"));
-const ioredis_1 = __importDefault(require("ioredis"));
 const helpers_1 = require("./utils/helpers");
 const messages_formatter_1 = require("./utils/messages-formatter");
+const cache_1 = require("./utils/cache");
+require("./jobs/redisToDbBatch"); // Import the batch processing job
 // Load environment variables
 dotenv_1.default.config();
 // Initialize Redis and Express
-const redis = new ioredis_1.default(); // configure as needed
 const app = (0, express_1.default)();
 /**
  * Configuration for the FIX client
@@ -84,11 +84,11 @@ app.get("/api/latest-data/:channelNo", async (req, res) => {
     const isChannelValid = (0, helpers_1.getMessageTypeByChannelNo)(channelNo);
     if (isChannelValid === "Unknown Message Type") {
         logger_1.logger.warn(`[API] Invalid channelNo received: ${channelNo}`);
-        res.status(400).json({ error: "Invalid channelNo. It must be a positive integer." });
+        res.status(400).json({ error: "Invalid channelNo." });
         return;
     }
     try {
-        const data = await redis.hgetall(`fix-latest:${channelNo}`);
+        const data = await cache_1.redisClient.hgetall(`fix-latest:${channelNo}`);
         if (data && Object.keys(data).length > 0) {
             let messages = Object.values(data).map(msg => JSON.parse(msg));
             logger_1.logger.info(`[API] Returning ${messages.length} messages for channelNo: ${channelNo}`);
