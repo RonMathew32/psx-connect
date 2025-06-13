@@ -56,3 +56,18 @@
 2025-05-14T07:34:54.950Z [info]: Establishing TCP connection to 172.21.101.36:8016...
 2025-05-14T07:34:54.952Z [info]: PSX-Connect running. Press Ctrl+C to exit.
 2025-05-14T07:35:03.432Z [info]: Received SIGINT. Shutting down...
+2025-06-13T06:36:50.160Z [info]: PSX-Connect starting...
+2025-06-13T06:36:50.162Z [info]: Node.js version: v20.18.0
+2025-06-13T06:36:50.163Z [info]: Operating system: darwin x64
+2025-06-13T06:36:50.164Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T06:36:50.165Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T06:36:50.165Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-13T06:36:50.166Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-13T06:36:50.167Z [info]: WebSocket server started on port 8080
+2025-06-13T06:36:50.168Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T06:36:50.169Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T06:36:50.169Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-13T06:36:50.170Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-13T06:36:50.183Z [info]: API server listening on port 3000
+2025-06-13T06:36:50.184Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-13T06:37:07.323Z [info]: Received SIGINT. Shutting down...

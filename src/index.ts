@@ -8,7 +8,6 @@ import express, { Request, Response } from 'express';
 import { getMessageTypeByChannelNo } from './utils/helpers';
 import { formatMessages } from './utils/messages-formatter';
 import { redisClient } from './utils/cache';
-import './jobs/redisToDbBatch'; // Import the batch processing job
 
 // Load environment variables
 dotenv.config();

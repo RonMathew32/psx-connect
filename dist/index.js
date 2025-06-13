@@ -12,7 +12,6 @@ const express_1 = __importDefault(require("express"));
 const helpers_1 = require("./utils/helpers");
 const messages_formatter_1 = require("./utils/messages-formatter");
 const cache_1 = require("./utils/cache");
-require("./jobs/redisToDbBatch"); // Import the batch processing job
 // Load environment variables
 dotenv_1.default.config();
 // Initialize Redis and Express

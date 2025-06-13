@@ -7,8 +7,8 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": "pkfinance123@",
+    "username": "nodefix",
+    "password": "Pkfinance@123456",
     "database": "pkfinancedb",
     "host": "localhost",
     "dialect": "mysql"

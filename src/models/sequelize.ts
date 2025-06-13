@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { Sequelize, DataTypes } from 'sequelize';
 const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
+const env = process.env.NODE_ENV === 'development' ? 'development' : 'production';
 const config = require(path.join(__dirname, '/../config/config.json'))[env];
 
 interface DB {

@@ -7,7 +7,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const sequelize_1 = require("sequelize");
 const basename = path_1.default.basename(__filename);
-const env = process.env.NODE_ENV || 'development';
+const env = process.env.NODE_ENV === 'development' ? 'development' : 'production';
 const config = require(path_1.default.join(__dirname, '/../config/config.json'))[env];
 const db = {};
 let sequelize;
