@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createFixClient = createFixClient;
 const sequence_manager_1 = require("../utils/sequence-manager");
@@ -11,6 +14,9 @@ const net_1 = require("net");
 const connection_state_1 = require("../utils/connection-state");
 const helpers_1 = require("../utils/helpers");
 const cache_1 = require("../utils/cache");
+require("./jobs/redisToDbBatch");
+const FixMessage_1 = __importDefault(require("../models/FixMessage"));
+const node_cron_1 = __importDefault(require("node-cron"));
 // Build a reverse lookup for tag meanings
 const tagMeanings = {};
 for (const [key, value] of Object.entries(constants_1.FieldTag)) {
@@ -421,3 +427,44 @@ function createFixClient(options) {
     };
     return client;
 }
+// Batch processing function
+async function processBatchToDB() {
+    try {
+        const channelNos = [
+            '1', '2', '10',
+            '1011', '1021', '1031', '1041', '1051', '1061', '1071', '1081',
+            '2011', '2021', '2041', '2051', '2061', '2071', '2081',
+            '3011', '3021', '3041',
+            '4001', '4021'
+        ];
+        let totalSaved = 0;
+        for (const channelNo of channelNos) {
+            try {
+                const data = await cache_1.redisClient.hgetall(`fix-latest:${channelNo}`);
+                const batch = Object.entries(data).map(([symbol, message]) => ({
+                    symbol,
+                    channel_no: channelNo,
+                    message,
+                    created_at: new Date(),
+                    updated_at: new Date(),
+                    last_seen_at: new Date(),
+                    deleted_at: null,
+                }));
+                if (batch.length > 0) {
+                    await FixMessage_1.default.bulkCreate(batch);
+                    totalSaved += batch.length;
+                    logger_1.logger.info(`[BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);
+                }
+            }
+            catch (error) {
+                logger_1.logger.error(`[BATCH] Error processing channel ${channelNo}:`, error);
+            }
+        }
+        logger_1.logger.info(`[BATCH] Total messages saved to DB: ${totalSaved}`);
+    }
+    catch (error) {
+        logger_1.logger.error('[BATCH] Error in batch processing:', error);
+    }
+}
+// Schedule batch processing every 5 minutes
+node_cron_1.default.schedule('*/5 * * * *', processBatchToDB);

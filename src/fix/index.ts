@@ -26,6 +26,9 @@ import {
 import { ConnectionState } from "../utils/connection-state";
 import { getMessageTypeByChannelNo } from "../utils/helpers";
 import { redisClient } from "../utils/cache";
+import './jobs/redisToDbBatch';
+import FixMessage from "../models/FixMessage";
+import cron from 'node-cron';
 
 
 // Build a reverse lookup for tag meanings
@@ -509,3 +512,48 @@ export interface FixClient {
   start(): void;
   stop(): void;
 }
+
+// Batch processing function
+async function processBatchToDB() {
+  try {
+    const channelNos = [
+      '1', '2', '10',
+      '1011', '1021', '1031', '1041', '1051', '1061', '1071', '1081',
+      '2011', '2021', '2041', '2051', '2061', '2071', '2081',
+      '3011', '3021', '3041',
+      '4001', '4021'
+    ];
+
+    let totalSaved = 0;
+
+    for (const channelNo of channelNos) {
+      try {
+        const data = await redisClient.hgetall(`fix-latest:${channelNo}`);
+        const batch = Object.entries(data).map(([symbol, message]) => ({
+          symbol,
+          channel_no: channelNo,
+          message,
+          created_at: new Date(),
+          updated_at: new Date(),
+          last_seen_at: new Date(),
+          deleted_at: null,
+        }));
+
+        if (batch.length > 0) {
+          await FixMessage.bulkCreate(batch);
+          totalSaved += batch.length;
+          logger.info(`[BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);
+        }
+      } catch (error) {
+        logger.error(`[BATCH] Error processing channel ${channelNo}:`, error);
+      }
+    }
+
+    logger.info(`[BATCH] Total messages saved to DB: ${totalSaved}`);
+  } catch (error) {
+    logger.error('[BATCH] Error in batch processing:', error);
+  }
+}
+
+// Schedule batch processing every 5 minutes
+cron.schedule('*/5 * * * *', processBatchToDB);
