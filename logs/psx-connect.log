@@ -71,3 +71,20 @@
 2025-06-13T06:36:50.183Z [info]: API server listening on port 3000
 2025-06-13T06:36:50.184Z [info]: PSX-Connect running. Press Ctrl+C to exit.
 2025-06-13T06:37:07.323Z [info]: Received SIGINT. Shutting down...
+2025-06-13T09:30:13.688Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-13T09:30:13.695Z [info]: PSX-Connect starting...
+2025-06-13T09:30:13.696Z [info]: Node.js version: v20.18.0
+2025-06-13T09:30:13.696Z [info]: Operating system: darwin x64
+2025-06-13T09:30:13.697Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T09:30:13.698Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T09:30:13.699Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-13T09:30:13.699Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-13T09:30:13.701Z [info]: WebSocket server started on port 8080
+2025-06-13T09:30:13.701Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T09:30:13.702Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-13T09:30:13.702Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-13T09:30:13.702Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-13T09:30:13.708Z [info]: API server listening on port 3000
+2025-06-13T09:30:13.710Z [info]: Initializing Redis to DB batch processing job
+2025-06-13T09:30:13.711Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-13T09:30:15.038Z [info]: Received SIGINT. Shutting down...

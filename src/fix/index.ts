@@ -26,7 +26,6 @@ import {
 import { ConnectionState } from "../utils/connection-state";
 import { getMessageTypeByChannelNo } from "../utils/helpers";
 import { redisClient } from "../utils/cache";
-import './jobs/redisToDbBatch';
 import FixMessage from "../models/FixMessage";
 import cron from 'node-cron';
 
@@ -530,17 +529,19 @@ async function processBatchToDB() {
     for (const channelNo of channelNos) {
       try {
         const data = await redisClient.hgetall(`fix-latest:${channelNo}`);
-        const batch = Object.entries(data).map(([symbol, message]) => ({
-          symbol,
-          channel_no: channelNo,
-          message,
-          created_at: new Date(),
-          updated_at: new Date(),
-          last_seen_at: new Date(),
-          deleted_at: null,
-        }));
+        const batch = Object.entries(data)
+          .slice(0, batchSize)
+          .map(([symbol, message]) => ({
+            symbol,
+            channel_no: channelNo,
+            message,
+            created_at: new Date(),
+            updated_at: new Date(),
+            last_seen_at: new Date(),
+            deleted_at: null,
+          }));
 
-        if (batch.length > batchSize) {
+        if (batch.length > 0) {
           await FixMessage.bulkCreate(batch);
           totalSaved += batch.length;
           logger.info(`[BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);

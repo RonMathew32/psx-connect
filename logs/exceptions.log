@@ -1,0 +1,105 @@
+2025-06-13T09:27:49.200Z [error]: uncaughtException: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+Error: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js:17:1)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js:17:1)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-13T09:28:31.833Z [error]: uncaughtException: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+Error: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js:17:1)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js:17:1)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-13T09:28:42.688Z [error]: uncaughtException: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+Error: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js:17:1)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module './jobs/redisToDbBatch'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js:17:1)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)

@@ -14,7 +14,6 @@ const net_1 = require("net");
 const connection_state_1 = require("../utils/connection-state");
 const helpers_1 = require("../utils/helpers");
 const cache_1 = require("../utils/cache");
-require("./jobs/redisToDbBatch");
 const FixMessage_1 = __importDefault(require("../models/FixMessage"));
 const node_cron_1 = __importDefault(require("node-cron"));
 // Build a reverse lookup for tag meanings
@@ -442,7 +441,9 @@ async function processBatchToDB() {
         for (const channelNo of channelNos) {
             try {
                 const data = await cache_1.redisClient.hgetall(`fix-latest:${channelNo}`);
-                const batch = Object.entries(data).map(([symbol, message]) => ({
+                const batch = Object.entries(data)
+                    .slice(0, batchSize)
+                    .map(([symbol, message]) => ({
                     symbol,
                     channel_no: channelNo,
                     message,
@@ -451,7 +452,7 @@ async function processBatchToDB() {
                     last_seen_at: new Date(),
                     deleted_at: null,
                 }));
-                if (batch.length > batchSize) {
+                if (batch.length > 0) {
                     await FixMessage_1.default.bulkCreate(batch);
                     totalSaved += batch.length;
                     logger_1.logger.info(`[BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);
