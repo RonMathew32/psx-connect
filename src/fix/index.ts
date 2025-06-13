@@ -525,6 +525,7 @@ async function processBatchToDB() {
     ];
 
     let totalSaved = 0;
+    const batchSize = 500;
 
     for (const channelNo of channelNos) {
       try {
@@ -539,7 +540,7 @@ async function processBatchToDB() {
           deleted_at: null,
         }));
 
-        if (batch.length > 0) {
+        if (batch.length > batchSize) {
           await FixMessage.bulkCreate(batch);
           totalSaved += batch.length;
           logger.info(`[BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);

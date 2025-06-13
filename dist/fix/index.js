@@ -438,6 +438,7 @@ async function processBatchToDB() {
             '4001', '4021'
         ];
         let totalSaved = 0;
+        const batchSize = 500;
         for (const channelNo of channelNos) {
             try {
                 const data = await cache_1.redisClient.hgetall(`fix-latest:${channelNo}`);
@@ -450,7 +451,7 @@ async function processBatchToDB() {
                     last_seen_at: new Date(),
                     deleted_at: null,
                 }));
-                if (batch.length > 0) {
+                if (batch.length > batchSize) {
                     await FixMessage_1.default.bulkCreate(batch);
                     totalSaved += batch.length;
                     logger_1.logger.info(`[BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);
