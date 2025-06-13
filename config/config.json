@@ -1,13 +1,13 @@
 {
   "development": {
     "username": "root",
-    "password": "root",
+    "password": "Pkfinance@123456",
     "database": "pkfinancedb",
     "host": "localhost",
     "dialect": "mysql"
   },
   "production": {
-    "username": "nodefix",
+    "username": "root",
     "password": "Pkfinance@123456",
     "database": "pkfinancedb",
     "host": "localhost",

@@ -8,6 +8,7 @@ import express, { Request, Response } from 'express';
 import { getMessageTypeByChannelNo } from './utils/helpers';
 import { formatMessages } from './utils/messages-formatter';
 import { redisClient } from './utils/cache';
+import batchJob from './jobs/redisToDbBatch';
 
 // Load environment variables
 dotenv.config();
@@ -170,6 +171,10 @@ async function main(): Promise<void> {
 
     // Connect to the FIX server
     await fixClient.connect();
+
+    // Start the batch processing job
+    logger.info('Initializing Redis to DB batch processing job');
+    batchJob.start();
 
     logger.info('PSX-Connect running. Press Ctrl+C to exit.');
   } catch (error) {

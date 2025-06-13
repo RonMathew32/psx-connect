@@ -1,12 +1,15 @@
 import cron from 'node-cron';
+import FixMessage from '../models/FixMessage';
 import { redisClient } from '../utils/cache';
 import { logger } from '../utils/logger';
-import { saveBatchFixMessages } from '../controllers/fixMessageController';
 
 // Helper to get all messages for all channels (or a specific channel)
 async function getBatchFromRedis(channelNo: string, batchSize: number) {
   try {
+    logger.info(`[REDIS_BATCH] Fetching up to ${batchSize} messages for channel ${channelNo}`);
     const data = await redisClient.hgetall(`fix-latest:${channelNo}`);
+    logger.info(`[REDIS_BATCH] Found ${Object.keys(data).length} messages for channel ${channelNo}`);
+    
     const batch = Object.entries(data)
       .slice(0, batchSize)
       .map(([symbol, message]) => ({
@@ -20,14 +23,16 @@ async function getBatchFromRedis(channelNo: string, batchSize: number) {
       }));
     return batch;
   } catch (error) {
-    logger.error(`Error getting batch from Redis for channel ${channelNo}:`, error);
+    logger.error(`[REDIS_BATCH] Error getting batch from Redis for channel ${channelNo}:`, error);
     return [];
   }
 }
 
 // The scheduled job
-cron.schedule('*/10 * * * *', async () => {
-  logger.info('Starting Redis to DB batch processing job');
+const job = cron.schedule('*/10 * * * *', async () => {
+  const startTime = new Date();
+  logger.info(`[REDIS_BATCH] Starting Redis to DB batch processing job at ${startTime.toISOString()}`);
+  
   try {
     const channelNos = [
       '1', '2', '10',
@@ -43,24 +48,39 @@ cron.schedule('*/10 * * * *', async () => {
       try {
         const batch = await getBatchFromRedis(channelNo, 500);
         if (batch.length > 0) {
-          await saveBatchFixMessages(batch);
+          await FixMessage.bulkCreate(batch);
           totalSaved += batch.length;
-          logger.info(`Saved ${batch.length} messages from channel ${channelNo} to DB`);
+          logger.info(`[REDIS_BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);
           
-          // Optionally, remove these entries from Redis after saving to DB
-          // for (const entry of batch) {
-          //   await redisClient.hdel(`fix-latest:${channelNo}`, entry.symbol);
-          // }
+          // Log a sample message for debugging
+          if (batch.length > 0) {
+            logger.info(`[REDIS_BATCH] Sample message for channel ${channelNo}:`, {
+              symbol: batch[0].symbol,
+              message: batch[0].message
+            });
+          }
+        } else {
+          logger.info(`[REDIS_BATCH] No new messages found for channel ${channelNo}`);
         }
       } catch (channelError) {
-        logger.error(`Error processing channel ${channelNo}:`, channelError);
-        // Continue with next channel even if one fails
+        logger.error(`[REDIS_BATCH] Error processing channel ${channelNo}:`, channelError);
         continue;
       }
     }
     
-    logger.info(`Batch processing completed. Total messages saved: ${totalSaved}`);
+    const endTime = new Date();
+    const duration = (endTime.getTime() - startTime.getTime()) / 1000;
+    
+    logger.info(`[REDIS_BATCH] Batch processing completed at ${endTime.toISOString()}`);
+    logger.info(`[REDIS_BATCH] Total messages saved: ${totalSaved}`);
+    logger.info(`[REDIS_BATCH] Processing duration: ${duration} seconds`);
   } catch (err) {
-    logger.error('Batch update error:', err);
+    logger.error('[REDIS_BATCH] Batch update error:', err);
   }
 });
+
+// Ensure the job is running
+logger.info('[REDIS_BATCH] Batch processing job scheduled to run every 10 minutes');
+
+// Export the job so we can control it if needed
+export default job;

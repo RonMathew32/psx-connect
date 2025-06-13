@@ -12,6 +12,7 @@ const express_1 = __importDefault(require("express"));
 const helpers_1 = require("./utils/helpers");
 const messages_formatter_1 = require("./utils/messages-formatter");
 const cache_1 = require("./utils/cache");
+const redisToDbBatch_1 = __importDefault(require("./jobs/redisToDbBatch"));
 // Load environment variables
 dotenv_1.default.config();
 // Initialize Redis and Express
@@ -147,6 +148,9 @@ async function main() {
         setupSignalHandlers(fixClient, wss);
         // Connect to the FIX server
         await fixClient.connect();
+        // Start the batch processing job
+        logger_1.logger.info('Initializing Redis to DB batch processing job');
+        redisToDbBatch_1.default.start();
         logger_1.logger.info('PSX-Connect running. Press Ctrl+C to exit.');
     }
     catch (error) {

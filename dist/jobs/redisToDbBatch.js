@@ -4,13 +4,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_cron_1 = __importDefault(require("node-cron"));
+const FixMessage_1 = __importDefault(require("../models/FixMessage"));
 const cache_1 = require("../utils/cache");
 const logger_1 = require("../utils/logger");
-const fixMessageController_1 = require("../controllers/fixMessageController");
 // Helper to get all messages for all channels (or a specific channel)
 async function getBatchFromRedis(channelNo, batchSize) {
     try {
+        logger_1.logger.info(`[REDIS_BATCH] Fetching up to ${batchSize} messages for channel ${channelNo}`);
         const data = await cache_1.redisClient.hgetall(`fix-latest:${channelNo}`);
+        logger_1.logger.info(`[REDIS_BATCH] Found ${Object.keys(data).length} messages for channel ${channelNo}`);
         const batch = Object.entries(data)
             .slice(0, batchSize)
             .map(([symbol, message]) => ({
@@ -25,13 +27,14 @@ async function getBatchFromRedis(channelNo, batchSize) {
         return batch;
     }
     catch (error) {
-        logger_1.logger.error(`Error getting batch from Redis for channel ${channelNo}:`, error);
+        logger_1.logger.error(`[REDIS_BATCH] Error getting batch from Redis for channel ${channelNo}:`, error);
         return [];
     }
 }
 // The scheduled job
-node_cron_1.default.schedule('*/10 * * * *', async () => {
-    logger_1.logger.info('Starting Redis to DB batch processing job');
+const job = node_cron_1.default.schedule('*/10 * * * *', async () => {
+    const startTime = new Date();
+    logger_1.logger.info(`[REDIS_BATCH] Starting Redis to DB batch processing job at ${startTime.toISOString()}`);
     try {
         const channelNos = [
             '1', '2', '10',
@@ -45,24 +48,37 @@ node_cron_1.default.schedule('*/10 * * * *', async () => {
             try {
                 const batch = await getBatchFromRedis(channelNo, 500);
                 if (batch.length > 0) {
-                    await (0, fixMessageController_1.saveBatchFixMessages)(batch);
+                    await FixMessage_1.default.bulkCreate(batch);
                     totalSaved += batch.length;
-                    logger_1.logger.info(`Saved ${batch.length} messages from channel ${channelNo} to DB`);
-                    // Optionally, remove these entries from Redis after saving to DB
-                    // for (const entry of batch) {
-                    //   await redisClient.hdel(`fix-latest:${channelNo}`, entry.symbol);
-                    // }
+                    logger_1.logger.info(`[REDIS_BATCH] Saved ${batch.length} messages from channel ${channelNo} to DB`);
+                    // Log a sample message for debugging
+                    if (batch.length > 0) {
+                        logger_1.logger.info(`[REDIS_BATCH] Sample message for channel ${channelNo}:`, {
+                            symbol: batch[0].symbol,
+                            message: batch[0].message
+                        });
+                    }
+                }
+                else {
+                    logger_1.logger.info(`[REDIS_BATCH] No new messages found for channel ${channelNo}`);
                 }
             }
             catch (channelError) {
-                logger_1.logger.error(`Error processing channel ${channelNo}:`, channelError);
-                // Continue with next channel even if one fails
+                logger_1.logger.error(`[REDIS_BATCH] Error processing channel ${channelNo}:`, channelError);
                 continue;
             }
         }
-        logger_1.logger.info(`Batch processing completed. Total messages saved: ${totalSaved}`);
+        const endTime = new Date();
+        const duration = (endTime.getTime() - startTime.getTime()) / 1000;
+        logger_1.logger.info(`[REDIS_BATCH] Batch processing completed at ${endTime.toISOString()}`);
+        logger_1.logger.info(`[REDIS_BATCH] Total messages saved: ${totalSaved}`);
+        logger_1.logger.info(`[REDIS_BATCH] Processing duration: ${duration} seconds`);
     }
     catch (err) {
-        logger_1.logger.error('Batch update error:', err);
+        logger_1.logger.error('[REDIS_BATCH] Batch update error:', err);
     }
 });
+// Ensure the job is running
+logger_1.logger.info('[REDIS_BATCH] Batch processing job scheduled to run every 10 minutes');
+// Export the job so we can control it if needed
+exports.default = job;
