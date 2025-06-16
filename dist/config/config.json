@@ -1,16 +1,20 @@
 {
   "development": {
     "username": "root",
-    "password": "Pkfinance@123456",
+    "password": "root",
     "database": "pkfinancedb",
     "host": "localhost",
-    "dialect": "mysql"
+    "port": 3306,
+    "dialect": "mysql",
+    "socketPath": "/Applications/MAMP/tmp/mysql/mysql.sock"
   },
   "production": {
     "username": "root",
     "password": "Pkfinance@123456",
     "database": "pkfinancedb",
     "host": "localhost",
-    "dialect": "mysql"
+    "port": 3306,
+    "dialect": "mysql",
+    "socketPath": "/Applications/MAMP/tmp/mysql/mysql.sock"
   }
 }

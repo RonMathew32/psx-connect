@@ -1,26 +1,59 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../db/index';
+import { Model, DataTypes } from 'sequelize';
+import db from './sequelize';
 
-const FixMessage = sequelize.define('FixMessage', {
-  id: {
-    type: DataTypes.BIGINT,
-    autoIncrement: true,
-    primaryKey: true,
+class FixMessage extends Model {
+  public id!: number;
+  public symbol!: string;
+  public channel_no!: string;
+  public message!: string;
+  public created_at!: Date;
+  public updated_at!: Date;
+  public last_seen_at!: Date;
+  public deleted_at!: Date | null;
+}
+
+FixMessage.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    symbol: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    channel_no: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    message: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    last_seen_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
-  symbol: DataTypes.STRING,
-  channel_no: DataTypes.STRING,
-  message: DataTypes.TEXT('long'),
-  created_at: DataTypes.DATE,
-  updated_at: DataTypes.DATE,
-  last_seen_at: DataTypes.DATE,
-  deleted_at: DataTypes.DATE,
-}, {
-  tableName: 'fix_messages',
-  timestamps: true,
-  paranoid: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  deletedAt: 'deleted_at',
-});
+  {
+    sequelize: db.sequelize,
+    modelName: 'FixMessage',
+    tableName: 'fix_messages',
+    timestamps: false,
+  }
+);
 
 export default FixMessage; 

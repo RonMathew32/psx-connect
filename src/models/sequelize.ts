@@ -3,7 +3,9 @@
 import fs from 'fs';
 import path from 'path';
 import { Sequelize, DataTypes } from 'sequelize';
-const basename = path.basename(__filename);
+import { testBatchInsert } from '../test-batch';
+import { logger } from '../utils/logger';
+
 const env = process.env.NODE_ENV === 'development' ? 'development' : 'production';
 const config = require(path.join(__dirname, '/../config/config.json'))[env];
 
@@ -27,28 +29,28 @@ if (config.use_env_variable) {
   );
 }
 
-fs
-  .readdirSync(__dirname)
-  .filter((file: string) => {
-    return (
-      file.indexOf('.') !== 0 &&
-      file !== basename &&
-      file.slice(-3) === '.js' &&
-      file.indexOf('.test.js') === -1
-    );
-  })
-  .forEach((file: string) => {
-    const model = require(path.join(__dirname, file))(sequelize, DataTypes);
-    db[model.name] = model;
-  });
+// Import models
+import FixMessage from './FixMessage';
 
-Object.keys(db).forEach((modelName: string) => {
-  if ((db[modelName] as any).associate) {
-    (db[modelName] as any).associate(db);
-  }
-});
+// Add models to db object
+db.FixMessage = FixMessage;
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+
+// Run test batch after database initialization
+sequelize.authenticate()
+  .then(async () => {
+    logger.info('Database connection established successfully.');
+    try {
+      const totalSaved = await testBatchInsert();
+      logger.info(`Test batch completed. Total messages saved: ${totalSaved}`);
+    } catch (error) {
+      logger.error('Error running test batch:', error);
+    }
+  })
+  .catch(err => {
+    logger.error('Unable to connect to the database:', err);
+  });
 
 export default db;

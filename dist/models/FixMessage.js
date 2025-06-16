@@ -4,26 +4,47 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const sequelize_1 = require("sequelize");
-const index_1 = __importDefault(require("../db/index"));
-const FixMessage = index_1.default.define('FixMessage', {
+const sequelize_2 = __importDefault(require("./sequelize"));
+class FixMessage extends sequelize_1.Model {
+}
+FixMessage.init({
     id: {
-        type: sequelize_1.DataTypes.BIGINT,
+        type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
     },
-    symbol: sequelize_1.DataTypes.STRING,
-    channel_no: sequelize_1.DataTypes.STRING,
-    message: sequelize_1.DataTypes.TEXT('long'),
-    created_at: sequelize_1.DataTypes.DATE,
-    updated_at: sequelize_1.DataTypes.DATE,
-    last_seen_at: sequelize_1.DataTypes.DATE,
-    deleted_at: sequelize_1.DataTypes.DATE,
+    symbol: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+    },
+    channel_no: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: false,
+    },
+    message: {
+        type: sequelize_1.DataTypes.TEXT,
+        allowNull: false,
+    },
+    created_at: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: false,
+    },
+    updated_at: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: false,
+    },
+    last_seen_at: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: false,
+    },
+    deleted_at: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: true,
+    },
 }, {
+    sequelize: sequelize_2.default.sequelize,
+    modelName: 'FixMessage',
     tableName: 'fix_messages',
-    timestamps: true,
-    paranoid: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
-    deletedAt: 'deleted_at',
+    timestamps: false,
 });
 exports.default = FixMessage;

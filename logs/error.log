@@ -1,2 +1,64 @@
 2025-04-24T07:18:18.616Z [error]: Failed to establish VPN connection. Exiting.
 2025-04-24T07:30:23.002Z [error]: Failed to establish VPN connection. Exiting.
+2025-06-16T05:53:44.618Z [error]: [TEST] Error in test batch insert: Access denied for user ''@'localhost' (using password: NO)
+SequelizeAccessDeniedError: Access denied for user ''@'localhost' (using password: NO)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async MySQLQueryInterface.bulkInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/query-interface.js:346:21)
+    at async recursiveBulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1697:25)
+    at async FixMessage.bulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1786:12)
+    at async testBatchInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js:35:24)
+2025-06-16T06:16:42.369Z [error]: [TEST] Error in test batch insert: Access denied for user 'root'@'localhost' (using password: NO)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: NO)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async MySQLQueryInterface.bulkInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/query-interface.js:346:21)
+    at async recursiveBulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1697:25)
+    at async FixMessage.bulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1786:12)
+    at async testBatchInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js:35:24)
+2025-06-16T08:04:41.335Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:05:11.305Z [error]: Connection timed out
+2025-06-16T08:05:32.281Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:11:05.204Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:11:35.170Z [error]: Connection timed out
+2025-06-16T08:11:57.154Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)

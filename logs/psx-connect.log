@@ -88,3 +88,209 @@
 2025-06-13T09:30:13.710Z [info]: Initializing Redis to DB batch processing job
 2025-06-13T09:30:13.711Z [info]: PSX-Connect running. Press Ctrl+C to exit.
 2025-06-13T09:30:15.038Z [info]: Received SIGINT. Shutting down...
+2025-06-16T05:53:44.563Z [info]: Starting database insertion test...
+2025-06-16T05:53:44.566Z [info]: [TEST] Starting test batch insert with sample data...
+2025-06-16T05:53:44.568Z [info]: [TEST] Generated 5 sample messages
+2025-06-16T05:53:44.618Z [error]: [TEST] Error in test batch insert: Access denied for user ''@'localhost' (using password: NO)
+SequelizeAccessDeniedError: Access denied for user ''@'localhost' (using password: NO)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async MySQLQueryInterface.bulkInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/query-interface.js:346:21)
+    at async recursiveBulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1697:25)
+    at async FixMessage.bulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1786:12)
+    at async testBatchInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js:35:24)
+2025-06-16T06:16:42.315Z [info]: Starting database insertion test...
+2025-06-16T06:16:42.319Z [info]: [TEST] Starting test batch insert with sample data...
+2025-06-16T06:16:42.320Z [info]: [TEST] Generated 5 sample messages
+2025-06-16T06:16:42.369Z [error]: [TEST] Error in test batch insert: Access denied for user 'root'@'localhost' (using password: NO)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: NO)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async MySQLQueryInterface.bulkInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/query-interface.js:346:21)
+    at async recursiveBulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1697:25)
+    at async FixMessage.bulkCreate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/model.js:1786:12)
+    at async testBatchInsert (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js:35:24)
+2025-06-16T07:33:33.865Z [info]: Starting database insertion test...
+2025-06-16T07:33:33.869Z [info]: [TEST] Starting test batch insert with sample data...
+2025-06-16T07:33:33.885Z [info]: [TEST] Generated 5 sample messages
+2025-06-16T07:33:33.936Z [info]: Database connection has been established successfully.
+2025-06-16T07:33:33.943Z [info]: [TEST] Successfully saved 5 messages to DB
+2025-06-16T08:04:41.288Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-16T08:04:41.296Z [info]: PSX-Connect starting...
+2025-06-16T08:04:41.297Z [info]: Node.js version: v20.18.0
+2025-06-16T08:04:41.297Z [info]: Operating system: darwin x64
+2025-06-16T08:04:41.299Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:04:41.299Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:04:41.300Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:04:41.300Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:04:41.302Z [info]: WebSocket server started on port 8080
+2025-06-16T08:04:41.303Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:04:41.303Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:04:41.303Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:04:41.304Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:04:41.310Z [info]: API server listening on port 3000
+2025-06-16T08:04:41.314Z [info]: Initializing Redis to DB batch processing job
+2025-06-16T08:04:41.314Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-16T08:04:41.335Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:05:00.019Z [info]: [BATCH] Total messages saved to DB: 0
+2025-06-16T08:05:11.305Z [error]: Connection timed out
+2025-06-16T08:05:11.306Z [info]: [STATE] Connection state updated: connected=false
+2025-06-16T08:05:11.308Z [info]: Socket disconnected
+2025-06-16T08:05:11.308Z [info]: [STATE] Connection state reset
+2025-06-16T08:05:11.309Z [info]: Scheduling reconnect in 5 seconds
+2025-06-16T08:05:11.309Z [info]: [STATE] Request state updated: equitySecurities=false
+2025-06-16T08:05:11.309Z [info]: [STATE] Request state updated: indexSecurities=false
+2025-06-16T08:05:11.309Z [info]: [STATE] Request state updated: futSecurities=false
+2025-06-16T08:05:16.311Z [info]: Attempting to reconnect
+2025-06-16T08:05:16.311Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:05:27.112Z [info]: Received SIGINT. Shutting down...
+2025-06-16T08:05:32.239Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-16T08:05:32.245Z [info]: PSX-Connect starting...
+2025-06-16T08:05:32.246Z [info]: Node.js version: v20.18.0
+2025-06-16T08:05:32.246Z [info]: Operating system: darwin x64
+2025-06-16T08:05:32.247Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:05:32.248Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:05:32.248Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:05:32.249Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:05:32.250Z [info]: WebSocket server started on port 8080
+2025-06-16T08:05:32.251Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:05:32.251Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:05:32.251Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:05:32.252Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:05:32.258Z [info]: API server listening on port 3000
+2025-06-16T08:05:32.261Z [info]: Initializing Redis to DB batch processing job
+2025-06-16T08:05:32.262Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-16T08:05:32.281Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:06:01.792Z [info]: Received SIGINT. Shutting down...
+2025-06-16T08:11:05.157Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-16T08:11:05.164Z [info]: PSX-Connect starting...
+2025-06-16T08:11:05.165Z [info]: Node.js version: v20.18.0
+2025-06-16T08:11:05.165Z [info]: Operating system: darwin x64
+2025-06-16T08:11:05.166Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:05.166Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:05.167Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:11:05.167Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:11:05.169Z [info]: WebSocket server started on port 8080
+2025-06-16T08:11:05.169Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:05.169Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:05.170Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:11:05.170Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:11:05.176Z [info]: API server listening on port 3000
+2025-06-16T08:11:05.180Z [info]: Initializing Redis to DB batch processing job
+2025-06-16T08:11:05.180Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-16T08:11:05.204Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:11:35.170Z [error]: Connection timed out
+2025-06-16T08:11:35.171Z [info]: [STATE] Connection state updated: connected=false
+2025-06-16T08:11:35.172Z [info]: Socket disconnected
+2025-06-16T08:11:35.172Z [info]: [STATE] Connection state reset
+2025-06-16T08:11:35.173Z [info]: Scheduling reconnect in 5 seconds
+2025-06-16T08:11:35.173Z [info]: [STATE] Request state updated: equitySecurities=false
+2025-06-16T08:11:35.173Z [info]: [STATE] Request state updated: indexSecurities=false
+2025-06-16T08:11:35.173Z [info]: [STATE] Request state updated: futSecurities=false
+2025-06-16T08:11:40.174Z [info]: Attempting to reconnect
+2025-06-16T08:11:40.175Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:11:54.179Z [info]: Received SIGINT. Shutting down...
+2025-06-16T08:11:57.109Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-16T08:11:57.115Z [info]: PSX-Connect starting...
+2025-06-16T08:11:57.116Z [info]: Node.js version: v20.18.0
+2025-06-16T08:11:57.116Z [info]: Operating system: darwin x64
+2025-06-16T08:11:57.117Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:57.118Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:57.118Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:11:57.119Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:11:57.120Z [info]: WebSocket server started on port 8080
+2025-06-16T08:11:57.121Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:57.121Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:11:57.121Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:11:57.121Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:11:57.130Z [info]: API server listening on port 3000
+2025-06-16T08:11:57.134Z [info]: Initializing Redis to DB batch processing job
+2025-06-16T08:11:57.134Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-16T08:11:57.154Z [error]: Unable to connect to the database: Access denied for user 'root'@'localhost' (using password: YES)
+SequelizeAccessDeniedError: Access denied for user 'root'@'localhost' (using password: YES)
+    at ConnectionManager.connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:94:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ConnectionManager._connect (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:222:24)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:174:32
+    at async ConnectionManager.getConnection (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/dialects/abstract/connection-manager.js:197:7)
+    at async /Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:305:26
+    at async Sequelize.authenticate (/Users/mac/Desktop/Projetcs/psx/psx-connect/node_modules/sequelize/lib/sequelize.js:457:5)
+2025-06-16T08:12:07.324Z [info]: Received SIGINT. Shutting down...
+2025-06-16T08:12:16.606Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-16T08:12:16.612Z [info]: PSX-Connect starting...
+2025-06-16T08:12:16.613Z [info]: Node.js version: v20.18.0
+2025-06-16T08:12:16.613Z [info]: Operating system: darwin x64
+2025-06-16T08:12:16.614Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:12:16.615Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:12:16.615Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:12:16.616Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:12:16.617Z [info]: WebSocket server started on port 8080
+2025-06-16T08:12:16.618Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:12:16.618Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:12:16.618Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:12:16.619Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:12:16.625Z [info]: API server listening on port 3000
+2025-06-16T08:12:16.629Z [info]: Initializing Redis to DB batch processing job
+2025-06-16T08:12:16.630Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-16T08:12:16.663Z [info]: Database connection established successfully.
+2025-06-16T08:12:16.663Z [info]: [TEST] Starting test batch insert with sample data...
+2025-06-16T08:12:16.664Z [info]: [TEST] Generated 5 sample messages
+2025-06-16T08:12:16.673Z [info]: [TEST] Successfully saved 5 messages to DB
+2025-06-16T08:12:16.673Z [info]: [TEST] Sample saved message:
+2025-06-16T08:12:16.673Z [info]: Test batch completed. Total messages saved: 5
+2025-06-16T08:12:35.262Z [info]: Received SIGINT. Shutting down...
+2025-06-16T08:21:44.775Z [info]: [REDIS_BATCH] Batch processing job scheduled to run every 10 minutes
+2025-06-16T08:21:44.782Z [info]: PSX-Connect starting...
+2025-06-16T08:21:44.782Z [info]: Node.js version: v20.18.0
+2025-06-16T08:21:44.782Z [info]: Operating system: darwin x64
+2025-06-16T08:21:44.784Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:21:44.784Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:21:44.785Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:21:44.785Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:21:44.787Z [info]: WebSocket server started on port 8080
+2025-06-16T08:21:44.787Z [info]: [SEQUENCE_STORE] Initialized with file path: /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:21:44.788Z [info]: [SEQUENCE_STORE] No sequence store file found at /Users/mac/Desktop/Projetcs/psx/psx-connect/sequence-store.json
+2025-06-16T08:21:44.788Z [info]: [SEQUENCE] Initializing sequence manager with:
+2025-06-16T08:21:44.788Z [info]: Establishing TCP connection to 172.21.101.36:8016
+2025-06-16T08:21:44.795Z [info]: API server listening on port 3000
+2025-06-16T08:21:44.799Z [info]: Initializing Redis to DB batch processing job
+2025-06-16T08:21:44.800Z [info]: PSX-Connect running. Press Ctrl+C to exit.
+2025-06-16T08:21:44.834Z [info]: Database connection established successfully.
+2025-06-16T08:21:44.835Z [info]: [TEST] Starting test batch insert with sample data...
+2025-06-16T08:21:44.835Z [info]: [TEST] Generated 5 sample messages
+2025-06-16T08:21:44.843Z [info]: [TEST] Successfully saved 5 messages to DB
+2025-06-16T08:21:44.844Z [info]: [TEST] Sample saved message:
+2025-06-16T08:21:44.844Z [info]: Test batch completed. Total messages saved: 5
+2025-06-16T08:21:47.876Z [info]: Received SIGINT. Shutting down...

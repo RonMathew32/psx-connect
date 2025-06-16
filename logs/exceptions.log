@@ -103,3 +103,242 @@ Require stack:
     at Module.load (node:internal/modules/cjs/loader:1288:32)
     at Module._load (node:internal/modules/cjs/loader:1104:12)
     at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-16T07:42:25.183Z [error]: uncaughtException: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-16T07:42:40.492Z [error]: uncaughtException: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/test-batch.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-16T07:43:04.606Z [error]: uncaughtException: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-16T07:43:36.022Z [error]: uncaughtException: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-16T08:00:42.896Z [error]: uncaughtException: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+Error: Cannot find module '/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/config/config.json'
+Require stack:
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/fix/index.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/utils/websocket-server.js
+- /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+    at Module._load (node:internal/modules/cjs/loader:1051:27)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:13:16)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+2025-06-16T08:03:26.160Z [error]: uncaughtException: require(...) is not a function
+TypeError: require(...) is not a function
+    at /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:31:64
+    at Array.forEach (<anonymous>)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:30:6)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js:7:37)
+TypeError: require(...) is not a function
+    at /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:31:64
+    at Array.forEach (<anonymous>)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:30:6)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js:7:37)
+2025-06-16T08:03:39.205Z [error]: uncaughtException: require(...) is not a function
+TypeError: require(...) is not a function
+    at /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:31:64
+    at Array.forEach (<anonymous>)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:30:6)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js:7:37)
+TypeError: require(...) is not a function
+    at /Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:31:64
+    at Array.forEach (<anonymous>)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/sequelize.js:30:6)
+    at Module._compile (node:internal/modules/cjs/loader:1469:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+    at Module.load (node:internal/modules/cjs/loader:1288:32)
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/Users/mac/Desktop/Projetcs/psx/psx-connect/dist/models/FixMessage.js:7:37)
