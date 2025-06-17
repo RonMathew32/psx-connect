@@ -42,12 +42,12 @@ db.Sequelize = Sequelize;
 sequelize.authenticate()
   .then(async () => {
     logger.info('Database connection established successfully.');
-    try {
-      const totalSaved = await testBatchInsert();
-      logger.info(`Test batch completed. Total messages saved: ${totalSaved}`);
-    } catch (error) {
-      logger.error('Error running test batch:', error);
-    }
+    // try {
+    //   const totalSaved = await testBatchInsert();
+    //   logger.info(`Test batch completed. Total messages saved: ${totalSaved}`);
+    // } catch (error) {
+    //   logger.error('Error running test batch:', error);
+    // }
   })
   .catch(err => {
     logger.error('Unable to connect to the database:', err);
