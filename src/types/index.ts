@@ -93,7 +93,7 @@ export interface FixClientOptions {
   } 
 
   export interface WebSocketMessage {
-    type: 'marketData' | 'tradingSessionStatus' | 'securityList' | 'equitySecurityList' | 'indexSecurityList' | 'logon' | 'logout' | 'kseData' | 'error' | 'status';
+    type: 'realtime'| 'logon' | 'logout' | 'kseData' | 'error' | 'status';
     data?: MarketDataItem[] | TradingSessionInfo | SecurityInfo[] | any;
     message?: string;
     timestamp?: number;
@@ -115,4 +115,14 @@ export interface FixClientOptions {
     password: string;
     heartbeatIntervalSecs: number;
     resetOnLogon: boolean;
+  }
+
+  export interface FixClient {
+    on(event: 'reject' | 'logon' | 'logout' | 'error' | 'disconnected' | 'connected' | 'realtime', listener: (...args: any[]) => void): FixClient;
+    connect(): Promise<void>;
+    disconnect(): Promise<void>;
+    sendLogon(): void;
+    sendLogout(text?: string): void;
+    start(): void;
+    stop(): void;
   }

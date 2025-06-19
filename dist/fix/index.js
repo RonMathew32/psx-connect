@@ -223,6 +223,7 @@ function createFixClient(options) {
                     logger_1.logger.info(`[REDIS] Saving message for symbol: ${symbol} and channelNo: ${channelNoStr}`);
                     logger_1.logger.info(`[REDIS] Parsed message: ${JSON.stringify(parsedMessage)}`);
                     await cache_1.redisClient.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
+                    emitter.emit('realtime', parsedMessage);
                 }
             }
             if (parsedMessage[constants_1.FieldTag.MSG_SEQ_NUM]) {

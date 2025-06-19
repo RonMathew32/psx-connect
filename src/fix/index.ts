@@ -11,6 +11,7 @@ import { parseFixMessage, ParsedFixMessage } from "./message-parser";
 import { SOH, MessageType, FieldTag, MDStreamIDMeanings, MDEntryTypeMeanings } from "../constants";
 import { Socket } from "net";
 import { FixClientOptions } from "../types";
+import { MarketDataItem } from "../types";
 import {
   handleLogon,
   handleLogout,
@@ -265,6 +266,7 @@ export function createFixClient(options: FixClientOptions): FixClient {
           logger.info(`[REDIS] Saving message for symbol: ${symbol} and channelNo: ${channelNoStr}`);
           logger.info(`[REDIS] Parsed message: ${JSON.stringify(parsedMessage)}`);
           await redisClient.hset(`fix-latest:${channelNoStr}`, symbol, JSON.stringify(parsedMessage));
+          emitter.emit('realtime', parsedMessage);
         }
       }
 
@@ -495,12 +497,12 @@ export interface FixClient {
   on(event: "logout", listener: (message: ParsedFixMessage) => void): this;
   on(event: "error", listener: (error: Error) => void): this;
   on(event: "message", listener: (message: ParsedFixMessage) => void): this;
+  on(event: "realtime", listener: (data: MarketDataItem[]) => void): this;
   on(
     event: "reject",
     listener: (reject: {
       refSeqNum: string;
       refTagId: string;
-      text: string | undefined;
       msgType: string;
     }) => void
   ): this;
