@@ -13,10 +13,12 @@ const helpers_1 = require("./utils/helpers");
 const messages_formatter_1 = require("./utils/messages-formatter");
 const cache_1 = require("./utils/cache");
 const redisToDbBatch_1 = __importDefault(require("./jobs/redisToDbBatch"));
+const cors_1 = __importDefault(require("cors"));
 // Load environment variables
 dotenv_1.default.config();
 // Initialize Redis and Express
 const app = (0, express_1.default)();
+app.use((0, cors_1.default)());
 /**
  * Configuration for the FIX client
  */

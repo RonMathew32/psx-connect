@@ -9,12 +9,13 @@ import { getMessageTypeByChannelNo } from './utils/helpers';
 import { formatMessages } from './utils/messages-formatter';
 import { redisClient } from './utils/cache';
 import batchJob from './jobs/redisToDbBatch';
-
+import cors from 'cors';
 // Load environment variables
 dotenv.config();
 
 // Initialize Redis and Express
 const app = express();
+app.use(cors());
 
 /**
  * Configuration for the FIX client
