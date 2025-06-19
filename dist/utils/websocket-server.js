@@ -62,6 +62,7 @@ function createWebSocketServer(port, fixConfig = {
             return;
         fixClient.on('realtime', (data) => {
             try {
+                console.log('[WEBSOCKET] Emitting CHECKING');
                 if (Array.isArray(data) && data.length > 0) {
                     logger_1.logger.info('[WEBSOCKET] Emitting realtime data');
                     broadcast({ type: 'realtime', data, timestamp: Date.now() });

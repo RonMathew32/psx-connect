@@ -64,6 +64,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
 
     fixClient.on('realtime', (data: MarketDataItem[]) => {
       try {
+        console.log('[WEBSOCKET] Emitting CHECKING');
         if (Array.isArray(data) && data.length > 0) {
           logger.info('[WEBSOCKET] Emitting realtime data');
           broadcast({ type: 'realtime', data, timestamp: Date.now() });
