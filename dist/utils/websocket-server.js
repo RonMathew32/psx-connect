@@ -71,6 +71,9 @@ function createWebSocketServer(port, fixConfig = {
                     broadcast({ type: 'realtime', data: arr, timestamp: Date.now() });
                     // Send trade data to FIX feed service
                     arr.forEach(async (item) => {
+                        logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${item.entryType}`);
+                        logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${constants_1.MDEntryType.TRADE}`);
+                        logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${item.entryType === constants_1.MDEntryType.TRADE}`);
                         // Only send if it's a trade entry type
                         if (item.entryType === constants_1.MDEntryType.TRADE) {
                             try {
