@@ -69,13 +69,12 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
         console.log('[WEBSOCKET] Emitting CHECKING');
         let arr = Array.isArray(data) ? data : [data];
         if (arr.length > 0) {
-          logger.info('[WEBSOCKET] Emitting realtime data');
           broadcast({ type: 'realtime', data: arr, timestamp: Date.now() });
 
           // Send trade data to FIX feed service
           arr.forEach(async (item) => {
-            logger.info(`[WEBSOCKET] Emitting trade data: ${data}`);
-            console.log(`[WEBSOCKET] Emitting trade item: ${item}`);
+            logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(data)}`);
+            console.log(`[WEBSOCKET] Emitting trade item: ${JSON.stringify(item)}`);
             logger.info(`[WEBSOCKET] Emitting trade entrytype: ${item.entryType }`);
             logger.info(`[WEBSOCKET] Emitting trade tradetype: ${MDEntryType.TRADE}`);
             logger.info(`[WEBSOCKET] Emitting trade is trade: ${item.entryType === MDEntryType.TRADE}`);
