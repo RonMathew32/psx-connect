@@ -74,8 +74,8 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
 
           // Send trade data to FIX feed service
           arr.forEach(async (item) => {
-            logger.info('[WEBSOCKET] Emitting trade data: ', data);
-            console.log('[WEBSOCKET] Emitting trade item: ', item);
+            logger.info(`[WEBSOCKET] Emitting trade data: ${data}`);
+            console.log(`[WEBSOCKET] Emitting trade item: ${item}`);
             logger.info(`[WEBSOCKET] Emitting trade entrytype: ${item.entryType }`);
             logger.info(`[WEBSOCKET] Emitting trade tradetype: ${MDEntryType.TRADE}`);
             logger.info(`[WEBSOCKET] Emitting trade is trade: ${item.entryType === MDEntryType.TRADE}`);
