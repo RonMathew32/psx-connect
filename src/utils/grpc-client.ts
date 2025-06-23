@@ -1,6 +1,6 @@
-import grpc from '@grpc/grpc-js';
-import protoLoader from '@grpc/proto-loader';
-import path from 'path';
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+const path = require('path');
 
 // Define types for the gRPC service
 interface TradeData {

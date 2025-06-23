@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package fix;
+
+// The FIX feed service definition
+service FIXFeed {
+  // Your trade method - adjust the request/response types as needed
+  rpc YourTradeMethod (TradeRequest) returns (TradeResponse);
+}
+
+// Trade request message
+message TradeRequest {
+  // Add your trade data fields here
+  // Example fields:
+  string symbol = 1;
+  double price = 2;
+  int32 quantity = 3;
+  string timestamp = 4;
+}
+
+// Trade response message
+message TradeResponse {
+  // Add your response fields here
+  bool success = 1;
+  string message = 2;
+} 
