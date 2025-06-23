@@ -2,6 +2,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createFixClient, FixClient } from '../fix';
 import { MarketDataItem, TradingSessionInfo, SecurityInfo, WebSocketMessage, FixConfig } from '../types';
 import { logger } from './logger';
+import { sendTradeMessage } from './grpc-client';
+import { MDEntryType } from '../constants';
 
 
 export function createWebSocketServer(port: number, fixConfig: FixConfig = {
@@ -69,6 +71,24 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
         if (arr.length > 0) {
           logger.info('[WEBSOCKET] Emitting realtime data');
           broadcast({ type: 'realtime', data: arr, timestamp: Date.now() });
+
+          // Send trade data to FIX feed service
+          arr.forEach(async (item) => {
+            // Only send if it's a trade entry type
+            if (item.entryType === MDEntryType.TRADE) {
+              try {
+                await sendTradeMessage({
+                  symbol: item.symbol,
+                  price: item.price,
+                  quantity: item.size,
+                  timestamp: item.timestamp || new Date().toISOString()
+                });
+                logger.info(`[GRPC] Trade sent for ${item.symbol}`);
+              } catch (error) {
+                logger.error(`[GRPC] Failed to send trade for ${item.symbol}: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            }
+          });
         }
       } catch (error) {
         logger.error(`[WEBSOCKET] Error processing market data: ${error instanceof Error ? error.message : String(error)}`);

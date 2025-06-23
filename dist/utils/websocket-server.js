@@ -4,6 +4,8 @@ exports.createWebSocketServer = createWebSocketServer;
 const ws_1 = require("ws");
 const fix_1 = require("../fix");
 const logger_1 = require("./logger");
+const grpc_client_1 = require("./grpc-client");
+const constants_1 = require("../constants");
 function createWebSocketServer(port, fixConfig = {
     host: '172.21.101.36',
     port: 8016,
@@ -67,6 +69,24 @@ function createWebSocketServer(port, fixConfig = {
                 if (arr.length > 0) {
                     logger_1.logger.info('[WEBSOCKET] Emitting realtime data');
                     broadcast({ type: 'realtime', data: arr, timestamp: Date.now() });
+                    // Send trade data to FIX feed service
+                    arr.forEach(async (item) => {
+                        // Only send if it's a trade entry type
+                        if (item.entryType === constants_1.MDEntryType.TRADE) {
+                            try {
+                                await (0, grpc_client_1.sendTradeMessage)({
+                                    symbol: item.symbol,
+                                    price: item.price,
+                                    quantity: item.size,
+                                    timestamp: item.timestamp || new Date().toISOString()
+                                });
+                                logger_1.logger.info(`[GRPC] Trade sent for ${item.symbol}`);
+                            }
+                            catch (error) {
+                                logger_1.logger.error(`[GRPC] Failed to send trade for ${item.symbol}: ${error instanceof Error ? error.message : String(error)}`);
+                            }
+                        }
+                    });
                 }
             }
             catch (error) {
