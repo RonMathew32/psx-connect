@@ -4,6 +4,7 @@ exports.createWebSocketServer = createWebSocketServer;
 const ws_1 = require("ws");
 const fix_1 = require("../fix");
 const logger_1 = require("./logger");
+const grpc_client_1 = require("./grpc-client");
 function createWebSocketServer(port, fixConfig = {
     host: '172.21.101.36',
     port: 8016,
@@ -70,6 +71,13 @@ function createWebSocketServer(port, fixConfig = {
                     // Send trade data to FIX feed service
                     arr.forEach(async (item) => {
                         try {
+                            if (item["269"]) {
+                                logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(item)}`);
+                            }
+                            else {
+                                logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(item)}`);
+                                return;
+                            }
                             // Parse the FIX message fields
                             const tradeData = {
                                 symbol: item['55'] || '', // SYMBOL
@@ -81,13 +89,8 @@ function createWebSocketServer(port, fixConfig = {
                                 channelDescription: item.channelDescription || ''
                             };
                             logger_1.logger.info(`[GRPC] Sending trade data for ${tradeData.symbol}: ${JSON.stringify(tradeData)}`);
-                            if (isTradable(tradeData)) {
-                                // await sendTradeMessage(tradeData);
-                                logger_1.logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
-                            }
-                            else {
-                                logger_1.logger.info(`[GRPC] Trade data for ${tradeData.symbol} is not tradable, skipping.`);
-                            }
+                            await (0, grpc_client_1.sendTradeMessage)(tradeData);
+                            logger_1.logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
                         }
                         catch (error) {
                             logger_1.logger.error(`[GRPC] Failed to send trade: ${error instanceof Error ? error.message : String(error)}`);

@@ -75,6 +75,13 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
           // Send trade data to FIX feed service
           arr.forEach(async (item) => {
             try {
+              if (item["269"]) {
+                logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(item)}`);
+              } else {
+                logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(item)}`);
+                return;
+              }
+
               // Parse the FIX message fields
               const tradeData = {
                 symbol: item['55'] || '',                   // SYMBOL
@@ -87,12 +94,9 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
               };
 
               logger.info(`[GRPC] Sending trade data for ${tradeData.symbol}: ${JSON.stringify(tradeData)}`);
-              if (isTradable(tradeData)) {
-                // await sendTradeMessage(tradeData);
+                await sendTradeMessage(tradeData);
                 logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
-              } else {
-                logger.info(`[GRPC] Trade data for ${tradeData.symbol} is not tradable, skipping.`);
-              }
+
             } catch (error) {
               logger.error(`[GRPC] Failed to send trade: ${error instanceof Error ? error.message : String(error)}`);
             }
