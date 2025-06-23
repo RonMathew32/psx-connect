@@ -1,3 +1,5 @@
+import { FieldTag } from '../constants';
+
 export interface FixClientOptions {
     host: string;
     port: number;
@@ -31,6 +33,14 @@ export interface FixClientOptions {
     size?: number;
     entryId?: string;
     timestamp?: string;
+    '55'?: string;   // SYMBOL
+    '270'?: string;  // MD_ENTRY_PX
+    '387'?: string;  // TOTAL_VOLUME_TRADED
+    '52'?: string;   // SENDING_TIME
+    '269'?: string;  // MD_ENTRY_TYPE
+    '1500'?: string; // Channel number
+    channelDescription?: string;
+    [key: string]: any; // Allow any other FIX fields
   }
 
   
@@ -63,13 +73,6 @@ export interface FixClientOptions {
     minTradeVolume?: number;    // Minimum trading volume
   }
   
-  export interface MarketDataItem {
-    symbol: string;
-    entryType: string;
-    price?: number;
-    size?: number;
-    timestamp?: string;
-  }
   export interface FixClientOptions {
     host: string;
     port: number;

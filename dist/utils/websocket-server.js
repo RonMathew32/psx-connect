@@ -4,8 +4,6 @@ exports.createWebSocketServer = createWebSocketServer;
 const ws_1 = require("ws");
 const fix_1 = require("../fix");
 const logger_1 = require("./logger");
-const grpc_client_1 = require("./grpc-client");
-const constants_1 = require("../constants");
 function createWebSocketServer(port, fixConfig = {
     host: '172.21.101.36',
     port: 8016,
@@ -67,28 +65,32 @@ function createWebSocketServer(port, fixConfig = {
                 console.log('[WEBSOCKET] Emitting CHECKING');
                 let arr = Array.isArray(data) ? data : [data];
                 if (arr.length > 0) {
+                    logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(data)}`);
                     broadcast({ type: 'realtime', data: arr, timestamp: Date.now() });
                     // Send trade data to FIX feed service
                     arr.forEach(async (item) => {
-                        logger_1.logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(data)}`);
-                        console.log(`[WEBSOCKET] Emitting trade item: ${JSON.stringify(item)}`);
-                        logger_1.logger.info(`[WEBSOCKET] Emitting trade entrytype: ${item.entryType}`);
-                        logger_1.logger.info(`[WEBSOCKET] Emitting trade tradetype: ${constants_1.MDEntryType.TRADE}`);
-                        logger_1.logger.info(`[WEBSOCKET] Emitting trade is trade: ${item.entryType === constants_1.MDEntryType.TRADE}`);
-                        // Only send if it's a trade entry type
-                        if (item.entryType === constants_1.MDEntryType.TRADE) {
-                            try {
-                                await (0, grpc_client_1.sendTradeMessage)({
-                                    symbol: item.symbol,
-                                    price: item.price,
-                                    quantity: item.size,
-                                    timestamp: item.timestamp || new Date().toISOString()
-                                });
-                                logger_1.logger.info(`[GRPC] Trade sent for ${item.symbol}`);
+                        try {
+                            // Parse the FIX message fields
+                            const tradeData = {
+                                symbol: item['55'] || '', // SYMBOL
+                                price: parseFloat(item['270'] || '0'), // MD_ENTRY_PX
+                                quantity: parseFloat(item['387'] || '0'), // TOTAL_VOLUME_TRADED
+                                timestamp: item['52'] || new Date().toISOString(), // SENDING_TIME
+                                entryType: item['269'] || '', // MD_ENTRY_TYPE
+                                channelNo: item['1500'] || '', // Channel number
+                                channelDescription: item.channelDescription || ''
+                            };
+                            logger_1.logger.info(`[GRPC] Sending trade data for ${tradeData.symbol}: ${JSON.stringify(tradeData)}`);
+                            if (isTradable(tradeData)) {
+                                // await sendTradeMessage(tradeData);
+                                logger_1.logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
                             }
-                            catch (error) {
-                                logger_1.logger.error(`[GRPC] Failed to send trade for ${item.symbol}: ${error instanceof Error ? error.message : String(error)}`);
+                            else {
+                                logger_1.logger.info(`[GRPC] Trade data for ${tradeData.symbol} is not tradable, skipping.`);
                             }
+                        }
+                        catch (error) {
+                            logger_1.logger.error(`[GRPC] Failed to send trade: ${error instanceof Error ? error.message : String(error)}`);
                         }
                     });
                 }
@@ -155,4 +157,15 @@ function createWebSocketServer(port, fixConfig = {
         },
         isFixConnected: () => isFixConnected
     };
+}
+function isTradable(tradeData) {
+    return (tradeData.symbol &&
+        typeof tradeData.symbol === 'string' &&
+        tradeData.symbol.trim() !== '' &&
+        typeof tradeData.price === 'number' &&
+        tradeData.price > 0 &&
+        typeof tradeData.quantity === 'number' &&
+        tradeData.quantity > 0 &&
+        // Only allow certain entry types (e.g., '2' for trade, or 'T' for trade)
+        (tradeData.entryType === '2' || tradeData.entryType === 'T'));
 }
