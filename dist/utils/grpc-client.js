@@ -22,6 +22,7 @@ class GRPCClient {
             oneofs: true,
         });
         const proto = grpc.loadPackageDefinition(packageDef);
+        logger_1.logger.info(`Loaded proto: ${Object.keys(proto)}`);
         const FIXFeed = proto.fix.FIXFeed;
         const server = process.env.PKFSERVER || 'pkfinance.info:31039';
         logger_1.logger.info(`[SERVER] ${server}`);
