@@ -17,7 +17,7 @@ class GRPCClient {
         });
         const proto = grpc.loadPackageDefinition(packageDef);
         const FIXFeed = proto.fix.FIXFeed;
-        const server = process.env.PKFSERVER || 'pkfinance.info:30039';
+        const server = process.env.PKFSERVER || 'pkfinance.info:31039';
         try {
             this.client = new FIXFeed(server, grpc.credentials.createInsecure());
             // Check connection status
