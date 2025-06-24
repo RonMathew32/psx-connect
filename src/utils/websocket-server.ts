@@ -75,7 +75,7 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
           // Send trade data to FIX feed service
           arr.forEach(async (item) => {
             try {
-              if (item["269"]) {
+              if (item && item['269']) {
                 logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(item)}`);
               } else {
                 logger.info(`[WEBSOCKET] Emitting trade data: ${JSON.stringify(item)}`);
