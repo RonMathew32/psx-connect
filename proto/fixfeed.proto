@@ -11,8 +11,6 @@ syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "pkfinance.info/fix/output";
-
 service FIXFeed {
 
   rpc PSXFeedHeartbeat (stream HeartbeatMessage) returns (stream ServerReply) {}
