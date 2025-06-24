@@ -1,10 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendTradeMessage = exports.grpcClient = void 0;
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const logger_1 = require("./logger");
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 class GRPCClient {
     constructor() {
         const PROTO_PATH = path.resolve(__dirname, '../../proto/fixfeed.proto');

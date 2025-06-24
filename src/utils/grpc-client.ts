@@ -3,6 +3,9 @@ const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 import { logger } from "./logger";
 import { Client } from '@grpc/grpc-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Define types for the gRPC service
 interface TradeData {
