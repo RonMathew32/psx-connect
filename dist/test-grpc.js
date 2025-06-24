@@ -31,13 +31,13 @@ call.on('error', (err) => {
 const now = Math.floor(Date.now() / 1000);
 call.write({
     timestamp: { seconds: now, nanos: 0 },
-    symbol: "HBL",
+    //   symbol: "HBL",
     entry_time: "13:45:00",
     entry_date: "2024-06-24",
     price: "250.75",
     quantity: "1000",
-    price_delta: "-0.50",
-    net_change: "-2.00"
+    //   price_delta: "-0.50",
+    //   net_change: "-2.00"
 });
 // If you are done sending messages:
 call.end();
