@@ -1,24 +1,37 @@
-import { sendSymbolSnapshot } from './utils/grpc-client';
+import { grpcClient } from './utils/grpc-client';
 import { logger } from './utils/logger';
 
-async function testGRPC() {
-  try {
-    const testData = {
-      symbol: "TEST",
-      price: "123.45",
-      quantity: "100",
-      entry_date: "2024-06-24",
-      entry_time: "12:00:00",
-      net_change: "+1.23",
-      trade_volume: "1000",
-      session_status: "open"
-    };
+// Access the raw gRPC client instance
+const client = (grpcClient as any).client;
 
-    const response = await sendSymbolSnapshot(testData);
-    logger.info(`Test snapshot response:', ${response}`);
-  } catch (error) {
-    logger.info(`Test snapshot error:', ${error}`);
-  }
-}
+const call = client.SymbolSnapshot();
 
-testGRPC();
+call.on('data', (response: any) => {
+  logger.info('Received:', response);
+});
+
+call.on('end', () => {
+  logger.info('Stream ended');
+  client.close();
+  process.exit(0);
+});
+
+call.on('error', (err: any) => {
+  logger.error('Stream error:', err);
+  process.exit(1);
+});
+
+// Send a test message to start the stream
+call.write({
+  symbol: "TEST",
+  price: "123.45",
+  quantity: "100",
+  entry_date: "2024-06-24",
+  entry_time: "12:00:00",
+  net_change: "+1.23",
+  trade_volume: "1000",
+  session_status: "open"
+});
+
+// If you are done sending messages:
+call.end();
