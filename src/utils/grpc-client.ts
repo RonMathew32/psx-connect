@@ -48,7 +48,7 @@ class GRPCClient {
       const state = ((this.client as unknown) as Client).getChannel().getConnectivityState(false);
       
       if (state === grpc.connectivityState.READY) {
-        logger.info(`gRPC connection established successfully to ${server}`);
+        logger.info(`gRPC connection established successfully to ${process.env.PKFSERVER}`);
       } else {
         logger.warn(`gRPC connection not ready, current state: ${state} for server ${server}`);
         // Watch for state changes
