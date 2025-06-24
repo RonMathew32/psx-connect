@@ -94,8 +94,8 @@ export function createWebSocketServer(port: number, fixConfig: FixConfig = {
               };
 
               logger.info(`[GRPC] Sending trade data for ${tradeData.symbol}: ${JSON.stringify(tradeData)}`);
-                await sendTradeMessage(tradeData);
-                logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
+                // await sendTradeMessage(tradeData);
+              logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
 
             } catch (error) {
               logger.error(`[GRPC] Failed to send trade: ${error instanceof Error ? error.message : String(error)}`);

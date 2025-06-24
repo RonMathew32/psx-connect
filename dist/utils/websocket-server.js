@@ -4,7 +4,6 @@ exports.createWebSocketServer = createWebSocketServer;
 const ws_1 = require("ws");
 const fix_1 = require("../fix");
 const logger_1 = require("./logger");
-const grpc_client_1 = require("./grpc-client");
 function createWebSocketServer(port, fixConfig = {
     host: '172.21.101.36',
     port: 8016,
@@ -89,7 +88,7 @@ function createWebSocketServer(port, fixConfig = {
                                 channelDescription: item.channelDescription || ''
                             };
                             logger_1.logger.info(`[GRPC] Sending trade data for ${tradeData.symbol}: ${JSON.stringify(tradeData)}`);
-                            await (0, grpc_client_1.sendTradeMessage)(tradeData);
+                            // await sendTradeMessage(tradeData);
                             logger_1.logger.info(`[GRPC] Trade sent successfully for ${tradeData.symbol}`);
                         }
                         catch (error) {
