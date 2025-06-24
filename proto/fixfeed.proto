@@ -1,18 +1,37 @@
-syntax = "proto3";
+/*
+  generate files with
 
-package fix;
+  protoc \
+  --go_out=. --go_opt=paths=source_relative \
+  --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+  fixnetwork.proto
+*/
+
+syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
 
-// The FIX feed service definition
+option go_package = "pkfinance.info/fix/output";
+
 service FIXFeed {
-  rpc FeedHeartbeat (HeartbeatMessage) returns (ServerReply);
-  rpc MarketStatus (MarketStatusMessage) returns (ServerReply);
-  rpc IndexList (IndexListMessage) returns (ServerReply);
-  rpc SymbolList (SymbolListMessage) returns (ServerReply);
-  rpc IndexSnapshot (IndexSnapshotMessage) returns (ServerReply);
-  rpc SymbolSnapshot (SymbolSnapshotMessage) returns (ServerReply);
-  rpc SymbolUpdate (SymbolUpdateMessage) returns (ServerReply);
+
+  rpc PSXFeedHeartbeat (stream HeartbeatMessage) returns (stream ServerReply) {}
+
+  rpc MarketStatus (stream MarketStatusMessage) returns (stream ServerReply) {}
+
+  rpc IndexList (stream IndexListMessage) returns (stream ServerReply) {}
+  rpc SymbolList (stream SymbolListMessage) returns (stream ServerReply) {}
+
+  rpc IndexSnapshot (stream IndexSnapshotMessage) returns (stream ServerReply) {}
+  rpc SymbolSnapshot (stream SymbolSnapshotMessage) returns (stream ServerReply) {}
+
+  rpc SymbolUpdate (stream SymbolUpdateMessage) returns (stream ServerReply) {}
+}
+
+enum Product {
+  UNKNOWN = 0;
+  EQUITY = 5;
+  INDEX = 7;
 }
 
 message HeartbeatMessage {
@@ -27,55 +46,61 @@ message MarketStatusMessage {
 
 message IndexListMessage {
   google.protobuf.Timestamp timestamp = 1;
-  string product = 2;
-  string session_id = 3;
+  string session_id = 2; // should always be REG
+  Product product = 3; // should always be INDEX
+  // todo: index fields
 }
 
 message SymbolListMessage {
   google.protobuf.Timestamp timestamp = 1;
-  string product = 2;
-  string session_id = 3;
-  repeated string symbols = 4;
+  string session_id = 2; // can be REG or FUT
+  Product product = 3; // should always be EQUITY
+  string symbol = 10;
+  string isin = 11;
+  string source = 12;
+  string cficode = 13;
+  string issuer = 14;
+  string description = 15;
 }
 
 message IndexSnapshotMessage {
   google.protobuf.Timestamp timestamp = 1;
-  string indexname = 2;
-  string value = 3;
-  string volume = 4;
-  string net_change = 5;
+  string indexname = 10;
+  string entry_time = 11;
+  string entry_date = 12;
+  string value = 13;            // GetMDEntryPx()
+  string volume = 14;           // GetMDEntrySize()
+  string price_delta = 15;      // GetPriceDelta()
+
 }
 
 message SymbolSnapshotMessage {
   google.protobuf.Timestamp timestamp = 1;
-  string entry_date = 2;
-  string entry_time = 3;
-  string symbol = 4;
-  string price = 5;
-  string quantity = 6;
-  string net_change = 7;
-  string change = 8;
-  string price_delta = 9;
-  string trade_volume = 10;
-  string session_status = 11;
+  string symbol = 10;
+  string entry_time = 11;
+  string entry_date = 12;
+  string price = 13;            // GetMDEntryPx()
+  string quantity = 14;         // GetMDEntrySize()
+  string price_delta = 15;      // GetPriceDelta()
+  string net_change = 16;       // GetNetChgPrevDay()
 }
 
 message SymbolUpdateMessage {
   google.protobuf.Timestamp timestamp = 1;
-  string entry_date = 2;
-  string entry_time = 3;
-  string symbol = 4;
-  string price = 5;
-  string quantity = 6;
-  string net_change = 7;
-  string change = 8;
-  string price_delta = 9;
-  string trade_volume = 10;
-  string session_status = 11;
+  // todo symbol fields
+  // copied from symbol snapshot for now
+  string symbol = 10;
+  string entry_time = 11;
+  string entry_date = 12;
+  string price = 13;            // GetMDEntryPx()
+  string quantity = 14;         // GetMDEntrySize()
+  string price_delta = 15;      // GetPriceDelta()
+  string net_change = 16;       // GetNetChgPrevDay()
+
 }
 
 message ServerReply {
   google.protobuf.Timestamp timestamp = 1;
-  int32 status = 2;
+  uint32 status = 2;
   string message = 3;
-} 
+}
