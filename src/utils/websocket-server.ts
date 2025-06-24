@@ -1,9 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { createFixClient, FixClient } from '../fix';
-import { MarketDataItem, TradingSessionInfo, SecurityInfo, WebSocketMessage, FixConfig } from '../types';
+import { MarketDataItem, WebSocketMessage, FixConfig } from '../types';
 import { logger } from './logger';
-import { sendTradeMessage } from './grpc-client';
-import { MDEntryType, FieldTag } from '../constants';
 
 
 export function createWebSocketServer(port: number, fixConfig: FixConfig = {
