@@ -6,7 +6,7 @@ const logger_1 = require("./utils/logger");
 const client = grpc_client_1.grpcClient.client;
 const call = client.SymbolSnapshot();
 call.on('data', (response) => {
-    logger_1.logger.info('Received:', response);
+    logger_1.logger.info('Received: ' + JSON.stringify(response, null, 2));
 });
 call.on('end', () => {
     logger_1.logger.info('Stream ended');

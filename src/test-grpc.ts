@@ -7,7 +7,7 @@ const client = (grpcClient as any).client;
 const call = client.SymbolSnapshot();
 
 call.on('data', (response: any) => {
-  logger.info('Received:', response);
+  logger.info('Received: ' + JSON.stringify(response, null, 2));
 });
 
 call.on('end', () => {
