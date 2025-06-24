@@ -36,13 +36,13 @@ call.on('error', (err: any) => {
 const now = Math.floor(Date.now() / 1000);
 call.write({
   timestamp: { seconds: now, nanos: 0 },
-  symbol: "PSX",
-  entry_time: "12:34:56",
+  symbol: "HBL",
+  entry_time: "13:45:00",
   entry_date: "2024-06-24",
-  price: "100.50",
-  quantity: "500",
-  price_delta: "0.25",
-  net_change: "1.00"
+  price: "250.75",
+  quantity: "1000",
+  price_delta: "-0.50",
+  net_change: "-2.00"
 });
 
 // If you are done sending messages:
