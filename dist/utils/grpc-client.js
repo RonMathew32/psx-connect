@@ -17,6 +17,7 @@ class GRPCClient {
         });
         const proto = grpc.loadPackageDefinition(packageDef);
         const FIXFeed = proto.fix.FIXFeed;
+        logger_1.logger.info(`[SERVER] ${process.env.PKFSERVER}`);
         const server = process.env.PKFSERVER || 'pkfinance.info:31039';
         try {
             this.client = new FIXFeed(server, grpc.credentials.createInsecure());
