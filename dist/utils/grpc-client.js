@@ -22,12 +22,12 @@ class GRPCClient {
             oneofs: true,
         });
         const proto = grpc.loadPackageDefinition(packageDef);
+        const FIXFeedService = proto.FIXFeed;
         logger_1.logger.info(`Loaded proto: ${Object.keys(proto)}`);
-        const FIXFeed = proto.fix.FIXFeed;
         const server = process.env.PKFSERVER || 'pkfinance.info:31039';
         logger_1.logger.info(`[SERVER] ${server}`);
         try {
-            this.client = new FIXFeed(server, grpc.credentials.createInsecure());
+            this.client = new FIXFeedService(server, grpc.credentials.createInsecure());
             // Check connection status
             this.client.getChannel().getConnectivityState(true); // Force a connection attempt
             const state = this.client.getChannel().getConnectivityState(false);
