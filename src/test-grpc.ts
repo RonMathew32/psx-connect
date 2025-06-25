@@ -9,6 +9,7 @@ function done() {
   process.exit(0);
 }
 
+logger.info(`Available client methods: ${Object.keys(client)}`);
 // FeedHeartbeat
 const feedHeartbeatCall = client.feedHeartbeat();
 

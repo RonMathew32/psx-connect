@@ -8,6 +8,7 @@ function done() {
     client.close();
     process.exit(0);
 }
+logger_1.logger.info(`Available client methods: ${Object.keys(client)}`);
 // FeedHeartbeat
 const feedHeartbeatCall = client.feedHeartbeat();
 feedHeartbeatCall.on('data', (response) => {
