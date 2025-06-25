@@ -12,7 +12,7 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
     defaults: true,
     oneofs: true,
 });
-logger_1.logger.info(`Available client methods: ${Object.keys(grpc_client_1.rawClient)}`);
+logger_1.logger.info(`Available client methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(grpc_client_1.rawClient))}`);
 // const now = Math.floor(Date.now() / 1000);
 // function done() {
 //   client.close();

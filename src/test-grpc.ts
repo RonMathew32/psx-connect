@@ -12,8 +12,7 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
   oneofs: true,
 });
 
-logger.info(`Available client methods: ${Object.keys(rawClient)}`);
-
+logger.info(`Available client methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(rawClient))}`);
 
 // const now = Math.floor(Date.now() / 1000);
 
