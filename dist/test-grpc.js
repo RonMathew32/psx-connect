@@ -4,20 +4,51 @@ const grpc_client_1 = require("./utils/grpc-client");
 const logger_1 = require("./utils/logger");
 logger_1.logger.info(`Available client methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(grpc_client_1.rawClient))}`);
 const now = Math.floor(Date.now() / 1000);
-grpc_client_1.rawClient.MarketStatus({
-    timestamp: { seconds: now, nanos: 0 },
-    session_id: "REG",
-    status: "open"
-}, (err, res) => {
-    logger_1.logger.info('MarketStatus callback fired');
-    logger_1.logger.info('MarketStatus:', err ? err : res);
-    grpc_client_1.rawClient.close();
-    process.exit(0);
-});
+const tests = [
+    {
+        name: 'MarketStatus',
+        call: (cb) => grpc_client_1.rawClient.MarketStatus({
+            timestamp: { seconds: now, nanos: 0 },
+            session_id: "REG",
+            status: "open"
+        }, cb)
+    },
+    {
+        name: 'IndexList',
+        call: (cb) => grpc_client_1.rawClient.IndexList({
+            timestamp: { seconds: now, nanos: 0 },
+            product: "INDEX",
+            session_id: "REG"
+        }, cb)
+    },
+    {
+        name: 'SymbolList',
+        call: (cb) => grpc_client_1.rawClient.SymbolList({
+            timestamp: { seconds: now, nanos: 0 },
+            product: "EQUITY",
+            session_id: "REG",
+            symbols: ["PSX", "HBL"]
+        }, cb)
+    }
+];
+function runTests(i = 0) {
+    if (i >= tests.length) {
+        grpc_client_1.rawClient.close();
+        process.exit(0);
+        return;
+    }
+    logger_1.logger.info(`Testing ${tests[i].name}`);
+    tests[i].call((err, res) => {
+        logger_1.logger.info(`${tests[i].name} callback fired`);
+        logger_1.logger.info(`${tests[i].name}:`, err ? err : res);
+        runTests(i + 1);
+    });
+}
+runTests();
 setTimeout(() => {
-    logger_1.logger.warn('Forcing process exit after 5 seconds (no response from server)');
+    logger_1.logger.warn('Forcing process exit after 10 seconds (no response from server)');
     process.exit(1);
-}, 5000);
+}, 10000);
 // const now = Math.floor(Date.now() / 1000);
 // function done() {
 //   client.close();

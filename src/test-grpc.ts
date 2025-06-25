@@ -5,21 +5,54 @@ logger.info(`Available client methods: ${Object.getOwnPropertyNames(Object.getPr
 
 const now = Math.floor(Date.now() / 1000);
 
-rawClient.MarketStatus({
-  timestamp: { seconds: now, nanos: 0 },
-  session_id: "REG",
-  status: "open"
-}, (err: any, res: any) => {
-  logger.info('MarketStatus callback fired');
-  logger.info('MarketStatus:', err ? err : res);
-  rawClient.close();
-  process.exit(0);
-});
+const tests = [
+  {
+    name: 'MarketStatus',
+    call: (cb: (err: any, res: any) => void) => rawClient.MarketStatus({
+      timestamp: { seconds: now, nanos: 0 },
+      session_id: "REG",
+      status: "open"
+    }, cb)
+  },
+  {
+    name: 'IndexList',
+    call: (cb: (err: any, res: any) => void) => rawClient.IndexList({
+      timestamp: { seconds: now, nanos: 0 },
+      product: "INDEX",
+      session_id: "REG"
+    }, cb)
+  },
+  {
+    name: 'SymbolList',
+    call: (cb: (err: any, res: any) => void) => rawClient.SymbolList({
+      timestamp: { seconds: now, nanos: 0 },
+      product: "EQUITY",
+      session_id: "REG",
+      symbols: ["PSX", "HBL"]
+    }, cb)
+  }
+];
+
+function runTests(i = 0) {
+  if (i >= tests.length) {
+    rawClient.close();
+    process.exit(0);
+    return;
+  }
+  logger.info(`Testing ${tests[i].name}`);
+  tests[i].call((err: any, res: any) => {
+    logger.info(`${tests[i].name} callback fired`);
+    logger.info(`${tests[i].name}:`, err ? err : res);
+    runTests(i + 1);
+  });
+}
+
+runTests();
 
 setTimeout(() => {
-  logger.warn('Forcing process exit after 5 seconds (no response from server)');
+  logger.warn('Forcing process exit after 10 seconds (no response from server)');
   process.exit(1);
-}, 5000);
+}, 10000);
 
 // const now = Math.floor(Date.now() / 1000);
 
