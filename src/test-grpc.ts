@@ -10,7 +10,7 @@ function done() {
 }
 
 // FeedHeartbeat
-const feedHeartbeatCall = client.FeedHeartbeat();
+const feedHeartbeatCall = client.feedHeartbeat();
 
 feedHeartbeatCall.on('data', (response: any) => {
   logger.info('FeedHeartbeat received:', response);

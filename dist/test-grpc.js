@@ -9,7 +9,7 @@ function done() {
     process.exit(0);
 }
 // FeedHeartbeat
-const feedHeartbeatCall = client.FeedHeartbeat();
+const feedHeartbeatCall = client.feedHeartbeat();
 feedHeartbeatCall.on('data', (response) => {
     logger_1.logger.info('FeedHeartbeat received:', response);
 });
