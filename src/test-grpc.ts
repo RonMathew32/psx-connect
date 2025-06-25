@@ -14,7 +14,7 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
 });
 
 const client = (grpcClient as any).client;
-logger.info(`Available client methods: ${Object.keys(client)}`);
+logger.info(`Available client methods: ${Object.keys(grpcClient)}`);
 
 const proto = grpc.loadPackageDefinition(packageDef) as any;
 logger.info(`Proto structure: ${JSON.stringify(proto)}`);
