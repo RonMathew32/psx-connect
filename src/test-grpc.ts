@@ -2,31 +2,32 @@ import { grpcClient } from './utils/grpc-client';
 import { logger } from './utils/logger';
 
 const client = (grpcClient as any).client;
-const now = Math.floor(Date.now() / 1000);
-
-function done() {
-  client.close();
-  process.exit(0);
-}
-
 logger.info(`Available client methods: ${Object.keys(client)}`);
-// FeedHeartbeat
-const feedHeartbeatCall = client.feedHeartbeat();
 
-feedHeartbeatCall.on('data', (response: any) => {
-  logger.info('FeedHeartbeat received:', response);
-});
-feedHeartbeatCall.on('end', () => {
-  logger.info('FeedHeartbeat stream ended');
-});
-feedHeartbeatCall.on('error', (err: any) => {
-  logger.error('FeedHeartbeat stream error:', err);
-});
+// const now = Math.floor(Date.now() / 1000);
 
-// Send a message
-feedHeartbeatCall.write({ timestamp: { seconds: now, nanos: 0 } });
-// End the stream if you don't want to send more
-feedHeartbeatCall.end();
+// function done() {
+//   client.close();
+//   process.exit(0);
+// }
+
+// const feedHeartbeatCall = client.feedHeartbeat();
+// // FeedHeartbeat
+
+// feedHeartbeatCall.on('data', (response: any) => {
+//   logger.info('FeedHeartbeat received:', response);
+// });
+// feedHeartbeatCall.on('end', () => {
+//   logger.info('FeedHeartbeat stream ended');
+// });
+// feedHeartbeatCall.on('error', (err: any) => {
+//   logger.error('FeedHeartbeat stream error:', err);
+// });
+
+// // Send a message
+// feedHeartbeatCall.write({ timestamp: { seconds: now, nanos: 0 } });
+// // End the stream if you don't want to send more
+// feedHeartbeatCall.end();
 
 // // MarketStatus
 // client.MarketStatus({
