@@ -11,6 +11,8 @@ rawClient.MarketStatus({
   status: "open"
 }, (err: any, res: any) => {
   logger.info('MarketStatus:', err ? err : res);
+  rawClient.close(); // <-- This closes the gRPC client connection
+  process.exit(0);   // <-- This exits the Node.js process
 });
 
 // const now = Math.floor(Date.now() / 1000);
