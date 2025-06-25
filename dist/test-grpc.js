@@ -9,9 +9,10 @@ grpc_client_1.rawClient.MarketStatus({
     session_id: "REG",
     status: "open"
 }, (err, res) => {
+    logger_1.logger.info('MarketStatus callback fired');
     logger_1.logger.info('MarketStatus:', err ? err : res);
-    grpc_client_1.rawClient.close(); // <-- This closes the gRPC client connection
-    process.exit(0); // <-- This exits the Node.js process
+    grpc_client_1.rawClient.close();
+    process.exit(0);
 });
 // const now = Math.floor(Date.now() / 1000);
 // function done() {
