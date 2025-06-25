@@ -2,17 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const grpc_client_1 = require("./utils/grpc-client");
 const logger_1 = require("./utils/logger");
-const protoLoader = require('@grpc/proto-loader');
-const path = require('path');
-const PROTO_PATH = path.resolve(__dirname, '../proto/fixfeed.proto');
-const packageDef = protoLoader.loadSync(PROTO_PATH, {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true,
-});
 logger_1.logger.info(`Available client methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(grpc_client_1.rawClient))}`);
+const now = Math.floor(Date.now() / 1000);
+grpc_client_1.rawClient.MarketStatus({
+    timestamp: { seconds: now, nanos: 0 },
+    session_id: "REG",
+    status: "open"
+}, (err, res) => {
+    logger_1.logger.info('MarketStatus:', err ? err : res);
+});
 // const now = Math.floor(Date.now() / 1000);
 // function done() {
 //   client.close();
