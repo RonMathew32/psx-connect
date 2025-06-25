@@ -1,6 +1,5 @@
-import { grpcClient } from './utils/grpc-client';
+import { rawClient } from './utils/grpc-client';
 import { logger } from './utils/logger';
-const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 
@@ -13,11 +12,8 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
   oneofs: true,
 });
 
-const client = (grpcClient as any).client;
-logger.info(`Available client methods: ${Object.keys(grpcClient)}`);
+logger.info(`Available client methods: ${Object.keys(rawClient)}`);
 
-const proto = grpc.loadPackageDefinition(packageDef) as any;
-logger.info(`Proto structure: ${JSON.stringify(proto)}`);
 
 // const now = Math.floor(Date.now() / 1000);
 

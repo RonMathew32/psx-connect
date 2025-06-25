@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getProcessedData = exports.sendSymbolUpdate = exports.sendSymbolSnapshot = exports.grpcClient = void 0;
+exports.getProcessedData = exports.sendSymbolUpdate = exports.sendSymbolSnapshot = exports.rawClient = exports.grpcClient = void 0;
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
@@ -111,6 +111,8 @@ class GRPCClient {
 }
 // Export singleton instance
 exports.grpcClient = new GRPCClient();
+// Export the raw gRPC client for direct access to all methods
+exports.rawClient = exports.grpcClient.client;
 // Export convenience methods
 const sendSymbolSnapshot = (data) => exports.grpcClient.sendSymbolSnapshot(data);
 exports.sendSymbolSnapshot = sendSymbolSnapshot;

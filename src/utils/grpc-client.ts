@@ -155,6 +155,9 @@ class GRPCClient {
 // Export singleton instance
 export const grpcClient = new GRPCClient();
 
+// Export the raw gRPC client for direct access to all methods
+export const rawClient = (grpcClient as any).client;
+
 // Export convenience methods
 export const sendSymbolSnapshot = (data: SymbolData) => grpcClient.sendSymbolSnapshot(data);
 export const sendSymbolUpdate = (data: SymbolData) => grpcClient.sendSymbolUpdate(data);

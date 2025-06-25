@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const grpc_client_1 = require("./utils/grpc-client");
 const logger_1 = require("./utils/logger");
-const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const path = require('path');
 const PROTO_PATH = path.resolve(__dirname, '../proto/fixfeed.proto');
@@ -13,10 +12,7 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
     defaults: true,
     oneofs: true,
 });
-const client = grpc_client_1.grpcClient.client;
-logger_1.logger.info(`Available client methods: ${Object.keys(grpc_client_1.grpcClient)}`);
-const proto = grpc.loadPackageDefinition(packageDef);
-logger_1.logger.info(`Proto structure: ${JSON.stringify(proto)}`);
+logger_1.logger.info(`Available client methods: ${Object.keys(grpc_client_1.rawClient)}`);
 // const now = Math.floor(Date.now() / 1000);
 // function done() {
 //   client.close();
