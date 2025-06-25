@@ -17,7 +17,7 @@ const client = (grpcClient as any).client;
 logger.info(`Available client methods: ${Object.keys(client)}`);
 
 const proto = grpc.loadPackageDefinition(packageDef) as any;
-logger.info(`Proto structure: ${proto}`);
+logger.info(`Proto structure: ${JSON.stringify(proto)}`);
 
 // const now = Math.floor(Date.now() / 1000);
 
