@@ -16,6 +16,11 @@ rawClient.MarketStatus({
   process.exit(0);
 });
 
+setTimeout(() => {
+  logger.warn('Forcing process exit after 5 seconds (no response from server)');
+  process.exit(1);
+}, 5000);
+
 // const now = Math.floor(Date.now() / 1000);
 
 // function done() {
